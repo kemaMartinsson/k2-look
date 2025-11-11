@@ -1,14 +1,13 @@
 {
     "servers": {
-		"GitKraken": {
-			"command": "c:\\Users\\kema\\AppData\\Roaming\\Code\\User\\globalStorage\\eamodio.gitlens\\gk.exe",
-			"type": "stdio",
-			"args": [
-				"mcp",
-				"--host=vscode",
-				"--source=gitlens",
-				"--scheme=vscode"
-			]
-		}
+		
+		"github": {
+			"command": "npx",
+			"args": ["-y", "@modelcontextprotocol/server-github"]
+		},
+		"filesystem": {
+			"command": "npx",
+			"args": ["-y", "@modelcontextprotocol/server-filesystem", "C:\\Project\\k2-look"]
+		},
     }
 }

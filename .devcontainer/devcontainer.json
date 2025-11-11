@@ -2,6 +2,8 @@
   "name": "Karoo2-ActiveLook DevContainer",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu-22.04",
   "runArgs": ["--userns=keep-id"],
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/${localWorkspaceFolderBasename},type=bind",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
   "onCreateCommand": "bash .devcontainer/setup.sh",
   "customizations": {
     "vscode": {
@@ -32,14 +34,12 @@
         "mathiasfrohlich.kotlin",
         "redhat.vscode-xml",
         "vscjava.vscode-checkstyle",
-        "shengchen.vscode-checkstyle"
+        "shengchen.vscode-checkstyle",
+        "vivaxy.vscode-conventional-commits"
       ]
     }
   },
   "features": {},
-  "mounts": [
-    "source=${localWorkspaceFolder}/src,target=/workspace/src,type=bind,consistency=cached"
-  ],
   "postCreateCommand": "sdkmanager --licenses || true",
   "remoteUser": "vscode"
 }
