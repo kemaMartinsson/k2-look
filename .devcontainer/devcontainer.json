@@ -1,0 +1,45 @@
+{
+  "name": "Karoo2-ActiveLook DevContainer",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-22.04",
+  "runArgs": ["--userns=keep-id"],
+  "onCreateCommand": "bash .devcontainer/setup.sh",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.shell.linux": "/bin/bash",
+        "java.configuration.updateBuildConfiguration": "automatic",
+        "java.compile.nullAnalysis.mode": "automatic",
+        "java.saveActions.organizeImports": true,
+        "files.exclude": {
+          "**/.gradle": true,
+          "**/build": true
+        },
+        "java.jdt.ls.java.home": "/usr/lib/jvm/java-11-openjdk-amd64",
+        "gradle.nestedProjects": true,
+        "[kotlin]": {
+          "editor.formatOnSave": true
+        }
+      },
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "vscjava.vscode-gradle",
+        "redhat.java",
+        "vscjava.vscode-java-debug",
+        "vscjava.vscode-java-test",
+        "vscjava.vscode-java-dependency",
+        "vscjava.vscode-maven",
+        "fwcd.kotlin",
+        "mathiasfrohlich.kotlin",
+        "redhat.vscode-xml",
+        "vscjava.vscode-checkstyle",
+        "shengchen.vscode-checkstyle"
+      ]
+    }
+  },
+  "features": {},
+  "mounts": [
+    "source=${localWorkspaceFolder}/src,target=/workspace/src,type=bind,consistency=cached"
+  ],
+  "postCreateCommand": "sdkmanager --licenses || true",
+  "remoteUser": "vscode"
+}

@@ -1,0 +1,14 @@
+{
+    "servers": {
+		"GitKraken": {
+			"command": "c:\\Users\\kema\\AppData\\Roaming\\Code\\User\\globalStorage\\eamodio.gitlens\\gk.exe",
+			"type": "stdio",
+			"args": [
+				"mcp",
+				"--host=vscode",
+				"--source=gitlens",
+				"--scheme=vscode"
+			]
+		}
+    }
+}

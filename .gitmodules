@@ -1,0 +1,6 @@
+[submodule "reference/android-sdk"]
+	path = reference/android-sdk
+	url = https://github.com/ActiveLook/android-sdk.git
+[submodule "reference/karoo-ext"]
+	path = reference/karoo-ext
+	url = https://github.com/hammerheadnav/karoo-ext.git
