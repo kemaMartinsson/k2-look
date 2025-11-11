@@ -9,5 +9,10 @@
 			"command": "npx",
 			"args": ["-y", "@modelcontextprotocol/server-filesystem", "C:\\Project\\k2-look"]
 		},
+		"maven-tools": {
+			"type": "stdio",
+			"command": "docker",
+			"args": ["run", "-i", "--rm", "arvindand/maven-tools-mcp:latest"]
+		}
     }
 }

@@ -4,6 +4,9 @@
   "runArgs": ["--userns=keep-id"],
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/${localWorkspaceFolderBasename},type=bind",
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "mounts": [
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached"
+  ],
   "onCreateCommand": "bash .devcontainer/setup.sh",
   "customizations": {
     "vscode": {
@@ -39,7 +42,11 @@
       ]
     }
   },
-  "features": {},
+  "features": {
+    "ghcr.io/devcontainers/features/sshd:1": {
+      "version": "latest"
+    }
+  },
   "postCreateCommand": "sdkmanager --licenses || true",
   "remoteUser": "vscode"
 }
