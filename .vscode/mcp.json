@@ -7,7 +7,7 @@
 		},
 		"filesystem": {
 			"command": "npx",
-			"args": ["-y", "@modelcontextprotocol/server-filesystem", "C:\\Project\\k2-look"]
+			"args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspaces/k2-look"]
 		},
 		"maven-tools": {
 			"type": "stdio",

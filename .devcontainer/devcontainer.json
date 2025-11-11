@@ -45,6 +45,9 @@
   "features": {
     "ghcr.io/devcontainers/features/sshd:1": {
       "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "lts"
     }
   },
   "postCreateCommand": "sdkmanager --licenses || true",
