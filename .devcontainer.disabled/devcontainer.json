@@ -4,9 +4,6 @@
   "runArgs": ["--userns=keep-id"],
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/${localWorkspaceFolderBasename},type=bind",
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
-  "mounts": [
-    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached"
-  ],
   "onCreateCommand": "bash .devcontainer/setup.sh",
   "customizations": {
     "vscode": {
@@ -19,7 +16,7 @@
           "**/.gradle": true,
           "**/build": true
         },
-        "java.jdt.ls.java.home": "/usr/lib/jvm/java-11-openjdk-amd64",
+        "java.jdt.ls.java.home": "/usr/local/sdkman/candidates/java/current",
         "gradle.nestedProjects": true,
         "[kotlin]": {
           "editor.formatOnSave": true
@@ -51,6 +48,10 @@
     },
     "ghcr.io/devcontainers/features/docker-in-docker:2": {
       "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "21",
+      "installGradle": "true"
     }
   },
   "postCreateCommand": "sdkmanager --licenses || true",

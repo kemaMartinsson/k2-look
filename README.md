@@ -71,13 +71,51 @@ git clone --recurse-submodules git@github.com:kemaMartinsson/k2-look.git
 
 ## Development Setup
 
-See [Dev Setup Guide](./docs/Karoo2-ActiveLook-Dev-Setup.md) for complete environment configuration.
+### Install Android Studio
 
-**Quick Start:**
-1. Install Android Studio with Android SDK
-2. Clone this repository with submodules
-3. Configure GitHub Packages access for karoo-ext dependency
-4. Build and sideload to Karoo2 device
+1. **Download Android Studio**
+   - Visit [developer.android.com/studio](https://developer.android.com/studio)
+   - Download the latest stable version for Windows
+
+2. **Install Android Studio**
+   - Run the installer
+   - Follow the setup wizard (install Android SDK, Android Virtual Device)
+   - Choose "Standard" installation type
+
+3. **Configure Android SDK**
+   - Open Android Studio
+   - Go to **Settings → Appearance & Behavior → System Settings → Android SDK**
+   - Ensure these are installed:
+     - Android SDK Platform 30 (or higher)
+     - Android SDK Build-Tools 30.0.3 (or higher)
+     - Android SDK Platform-Tools
+
+4. **Install GitHub Copilot (Optional)**
+   - Go to **File → Settings → Plugins**
+   - Search for "GitHub Copilot"
+   - Click **Install** and restart
+   - Sign in with your GitHub account
+
+5. **Open the Project**
+   - In Android Studio: **File → Open**
+   - Navigate to `c:\Project\k2-look\src`
+   - Let Gradle sync (may take several minutes on first run)
+
+### GitHub Packages Authentication
+
+Configure access to the Karoo Extensions library:
+
+1. Create a GitHub Personal Access Token with `read:packages` scope
+2. Edit `src/local.properties` (create if doesn't exist):
+
+   ```properties
+   gpr.user=your-github-username
+   gpr.key=your-personal-access-token
+   ```
+
+3. This file is in `.gitignore` to protect your credentials
+
+See [Dev Setup Guide](./docs/Karoo2-ActiveLook-Dev-Setup.md) for complete environment configuration and advanced topics.
 
 ## Building
 
@@ -88,11 +126,13 @@ See [Dev Setup Guide](./docs/Karoo2-ActiveLook-Dev-Setup.md) for complete enviro
 ## Installation
 
 ### Via ADB (USB)
+
 ```bash
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
 ### Via Karoo Companion App
+
 Share the APK to the Hammerhead Companion App on your phone for wireless installation.
 
 ## Documentation
@@ -104,11 +144,13 @@ Share the APK to the Hammerhead Companion App on your phone for wireless install
 ## External Resources
 
 ### Karoo
+
 - [Karoo Extensions Documentation](https://hammerheadnav.github.io/karoo-ext/index.html)
 - [Karoo Extensions GitHub](https://github.com/hammerheadnav/karoo-ext)
 - [Developer Community](https://support.hammerhead.io/hc/en-us/community/topics/31298804001435-Hammerhead-Extensions-Developers)
 
 ### ActiveLook
+
 - [ActiveLook Android SDK](https://github.com/ActiveLook/android-sdk)
 - [ActiveLook API Documentation](https://github.com/ActiveLook/Activelook-API-Documentation)
 - [Development Guide](https://www.activelook.net/news-blog/developing-with-activelook-getting-started)
