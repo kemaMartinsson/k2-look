@@ -26,47 +26,66 @@ This Karoo Extension streams cycling metrics (speed, heart rate, power, cadence,
 └── [gradle files]
 ```
 
-## Reference Submodules
+## Reference Projects
 
-The `reference/` directory contains **git submodules** pointing to upstream repositories. These are read-only references for development:
+The `reference/` directory contains **local clones** of upstream repositories. These provide source code for dependencies and serve as reference implementations:
 
 - **`reference/android-sdk`** → [ActiveLook Android SDK](https://github.com/ActiveLook/android-sdk) (v4.5.6)
 - **`reference/karoo-ext`** → [Karoo Extensions](https://github.com/hammerheadnav/karoo-ext) (v1.1.7)
+- **`reference/ki2`** → [Ki2 Reference Project](https://github.com/valterc/ki2) (working Karoo extension example)
 
-### Updating Reference Submodules
+### Setup Reference Projects
 
-To pull the latest updates from upstream:
+If you've cloned this repository without the reference projects, run:
 
+**Windows (PowerShell):**
+```powershell
+.\setup-references.ps1
+```
+
+**Linux/Mac (Bash):**
 ```bash
-# Update ActiveLook SDK
-cd reference/android-sdk
-git pull origin main
+chmod +x setup-references.sh
+./setup-references.sh
+```
 
-# Update Karoo Extensions
-cd reference/karoo-ext
-git pull origin master
+This will clone all reference projects into the `reference/` directory.
 
-# Return to root and commit submodule updates
-cd /workspaces/k2-look
-git add reference/
-git commit -m "Update reference submodules"
+### Updating Reference Projects
+
+To pull the latest updates from upstream repositories:
+
+**Windows (PowerShell):**
+```powershell
+.\update-references.ps1
+```
+
+**Linux/Mac (Bash):**
+```bash
+chmod +x update-references.sh
+./update-references.sh
+```
+
+This script will:
+- Fetch latest changes from all reference projects
+- Stash any local modifications
+- Pull updates for each repository
+- Show the latest commit information
+- Report any errors
+
+**After updating, rebuild the project:**
+```bash
+.\gradlew clean :app:assembleDebug
 ```
 
 ### Cloning This Repository
 
-When cloning this repo, initialize submodules:
+When cloning this repo for the first time:
 
 ```bash
-git clone git@github.com:kemaMartinsson/k2-look.git
+git clone https://github.com/kemaMartinsson/k2-look.git
 cd k2-look
-git submodule init
-git submodule update
-```
-
-Or clone with submodules in one command:
-
-```bash
-git clone --recurse-submodules git@github.com:kemaMartinsson/k2-look.git
+.\setup-references.ps1  # or ./setup-references.sh on Linux/Mac
 ```
 
 ## Development Setup

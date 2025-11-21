@@ -16,12 +16,12 @@
 
 ## Phase 1: Core Integration (Foundation)
 
-### 1.1 Karoo System Integration
-- [ ] Implement KarooSystemService connection
-  - [ ] Create service lifecycle management (connect/disconnect)
-  - [ ] Implement RideState consumer registration
-  - [ ] Add error handling and reconnection logic
-  - [ ] Test basic data retrieval from Karoo
+### 1.1 Karoo System Integration ✅
+- [x] Implement KarooSystemService connection
+  - [x] Create service lifecycle management (connect/disconnect)
+  - [x] Implement RideState consumer registration
+  - [x] Add error handling and reconnection logic
+  - [x] Test basic data retrieval from Karoo
 
 ### 1.2 ActiveLook BLE Integration
 - [ ] Initialize ActiveLook SDK
@@ -263,13 +263,20 @@
 
 ## Current Sprint Focus
 
-**Sprint 1: Foundation (Current)**
+**Sprint 1: Foundation (In Progress)**
 - Focus: Establish core integration between Karoo2 and ActiveLook
-- Priority Tasks:
-  1. Implement KarooSystemService connection
-  2. Initialize ActiveLook SDK
-  3. Create basic data bridge
-  4. Display first metric (speed) on glasses
+- Completed Tasks:
+  ✅ 1. Implement KarooSystemService connection
+  ✅ 2. Create service lifecycle management (connect/disconnect)
+  ✅ 3. Implement RideState consumer registration
+  ✅ 4. Add error handling and reconnection logic
+  ✅ 5. Register metric data stream consumers (speed, HR, cadence, power, distance, time)
+  ✅ 6. Create MainViewModel with UI state management
+  ✅ 7. Build UI to display connection status and live metrics
+- Next Tasks:
+  🔄 8. Initialize ActiveLook SDK (Phase 1.2)
+  🔄 9. Test basic text display on glasses (Phase 1.2)
+  🔄 10. Create data bridge between Karoo and ActiveLook (Phase 1.3)
 
 ---
 

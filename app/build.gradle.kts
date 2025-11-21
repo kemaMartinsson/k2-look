@@ -35,8 +35,8 @@ android {
 }
 
 dependencies {
-    implementation(libs.hammerhead.karoo.ext)
-    implementation(libs.activelook.sdk)
+    implementation(project(":karoo-ext"))
+    implementation(project(":activelook-sdk"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.bundles.androidx.lifeycle)
     implementation(libs.androidx.activity.compose)

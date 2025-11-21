@@ -29,3 +29,9 @@ local.properties
 
 # Logs
 *.log
+
+# Reference projects (cloned for reference only, not part of our repo)
+reference/ki2/
+reference/android-sdk/
+reference/karoo-ext/
+

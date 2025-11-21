@@ -2,7 +2,7 @@
 **Project Name:** Karoo2 ↔ ActiveLook Gateway  
 **Version:** 1.0  
 **Date:** 2025-09-14  
-**Owner:** TBD  
+**Owner:** Kenneth Martinsson  
 
 ---
 
