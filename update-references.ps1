@@ -1,4 +1,4 @@
-﻿# Update Reference Projects Script
+﻿﻿# Update Reference Projects Script
 # This script pulls the latest updates from the reference repositories
 
 Write-Host "Updating reference projects..." -ForegroundColor Cyan
@@ -85,6 +85,18 @@ if ($hasErrors) {
 }
 else {
     Write-Host "All reference projects updated successfully!" -ForegroundColor Green
+    Write-Host ""
+
+    # Run post-update fixes
+    Write-Host "Running post-update fixes..." -ForegroundColor Yellow
+    $fixScript = Join-Path $scriptDir "post-update-fix.ps1"
+    if (Test-Path $fixScript) {
+        & $fixScript
+    }
+    else {
+        Write-Host "⚠ post-update-fix.ps1 not found - skipping automatic fixes" -ForegroundColor Yellow
+    }
+
     Write-Host ""
     Write-Host "Next steps:" -ForegroundColor Yellow
     Write-Host "  1. Review changes: git log in each reference directory" -ForegroundColor Gray

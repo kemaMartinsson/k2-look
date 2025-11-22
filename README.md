@@ -70,8 +70,11 @@ This script will:
 - Fetch latest changes from all reference projects
 - Stash any local modifications
 - Pull updates for each repository
+- **Automatically apply necessary build fixes** (Windows only)
 - Show the latest commit information
 - Report any errors
+
+**Important:** The reference projects use version catalogs and configurations that don't work with our local module setup. The `post-update-fix.ps1` script automatically applies the necessary fixes after updates.
 
 **After updating, rebuild the project:**
 ```bash
