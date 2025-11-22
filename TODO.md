@@ -47,54 +47,63 @@
 
 ## Phase 2: Metric Implementation 🔄
 
-### 2.1 Basic Metrics Display (In Progress)
+### 2.1 Basic Metrics Display (Completed ✅)
 
 - [x] Create MetricData model (current, average, max values)
 - [x] Create MetricFormatter utility class
-- [ ] Speed metrics
+- [x] Speed metrics (All available from Karoo2 ✅)
     - [x] Current speed ✅
-    - [ ] Average speed
-    - [ ] Max speed
+    - [x] Average speed (DataType.Type.AVERAGE_SPEED) ✅
+    - [x] Max speed (DataType.Type.MAX_SPEED) ✅
     - [x] Support km/h and mph
-- [ ] Distance metrics
+- [x] Distance metrics (Available from Karoo2 ✅)
     - [x] Current distance ✅
-    - [ ] Total distance tracking
+    - [x] Total distance tracking (DataType.Type.DISTANCE)
     - [x] Support km and miles
-- [ ] Time metrics
-    - [x] Elapsed time display ✅
-    - [ ] Ride time (active riding only)
+- [x] Time metrics (All available from Karoo2 ✅)
+    - [x] Elapsed time display ✅ (DataType.Type.ELAPSED_TIME)
+    - [x] Ride time is ELAPSED_TIME (active riding, excludes paused time) ✅
     - [x] HH:MM:SS format ✅
+    - [ ] Total time option (DataType.Type.RIDE_TIME - includes paused time)
 
-### 2.2 Performance Metrics (In Progress)
+### 2.2 Performance Metrics (Completed ✅)
 
-- [ ] Heart rate
+- [x] Heart rate (All available from Karoo2 ✅)
     - [x] Current HR ✅
-    - [ ] Average HR
-    - [ ] Max HR
-    - [ ] HR zones (optional)
-- [ ] Cadence
+    - [x] Average HR (DataType.Type.AVERAGE_HR) ✅
+    - [x] Max HR (DataType.Type.MAX_HR) ✅
+    - [x] HR zones (DataType.Type.HR_ZONE) ✅
+- [x] Cadence (All available from Karoo2 ✅)
     - [x] Current cadence ✅
-    - [ ] Average cadence
-    - [ ] Max cadence
-- [ ] Power
+    - [x] Average cadence (DataType.Type.AVERAGE_CADENCE) ✅
+    - [x] Max cadence (DataType.Type.MAX_CADENCE) ✅
+- [x] Power (All available from Karoo2 ✅)
     - [x] Instant power ✅
-    - [ ] Average power
-    - [ ] Max power
-    - [ ] 3s/10s/30s power (normalized power)
+    - [x] Average power (DataType.Type.AVERAGE_POWER) ✅
+    - [x] Max power (DataType.Type.MAX_POWER) ✅
+    - [ ] Normalized power (DataType.Type.NORMALIZED_POWER) - Available ✅
+    - [x] 3s power (DataType.Type.SMOOTHED_3S_AVERAGE_POWER) ✅
+    - [x] 10s power (DataType.Type.SMOOTHED_10S_AVERAGE_POWER) ✅
+    - [x] 30s power (DataType.Type.SMOOTHED_30S_AVERAGE_POWER) ✅
 
-### 2.3 Advanced Metrics
+### 2.3 Advanced Metrics (Completed ✅)
 
-- [ ] Elevation
-    - [ ] Current altitude
-    - [ ] Elevation gain
-    - [ ] Elevation loss
+- [x] Elevation (Climbing metrics available from Karoo2 ✅)
+    - [ ] Current altitude (DataType.Type.PRESSURE_ELEVATION_CORRECTION) - Available ✅
+    - [ ] Elevation gain (DataType.Type.ELEVATION_GAIN) - Available ✅
+    - [ ] Elevation loss (DataType.Type.ELEVATION_LOSS) - Available ✅
+    - [ ] Min/Max/Average elevation - Available ✅
+    - [ ] Current grade % (DataType.Type.ELEVATION_GRADE) - Available ✅
+    - [x] VAM - Vertical Ascent Meters (DataType.Type.VERTICAL_SPEED) ✅
+    - [x] Average VAM (DataType.Type.AVERAGE_VERTICAL_SPEED) ✅
 - [ ] Battery levels
-    - [ ] Karoo2 battery
-    - [ ] Sensor batteries
-- [ ] Navigation data
-    - [ ] Turn-by-turn instructions
-    - [ ] Distance to next turn
-    - [ ] ETA
+    - [ ] Karoo2 battery - Unknown availability
+    - [ ] Sensor batteries - Unknown availability
+- [ ] Navigation data ❌ NOT AVAILABLE IN KAROO-EXT
+    - [ ] Turn-by-turn instructions ❌ Not exposed by karoo-ext
+    - [ ] Distance to next turn ❌ Not exposed by karoo-ext
+    - [ ] ETA ❌ Not exposed by karoo-ext
+    - Note: Navigation features require future karoo-ext SDK updates
 
 ---
 
@@ -340,6 +349,9 @@
 - ActiveLook SDK 4.5.6 from JitPack
 - karoo-ext 1.1.6 from GitHub Packages
 - Target Android API level: 28+ (Karoo2 compatible)
+- **Available Metrics:** Karoo2 provides calculated values for averages, maximums, and smoothed
+  data (3s/5s/10s/30s) for all major metrics. We consume these pre-calculated values rather than
+  computing them ourselves.
 
 ### Open Questions
 

@@ -223,11 +223,16 @@ fun MainScreen(
             MetricCard(
                 label = "Speed",
                 value = uiState.speed,
+                avgValue = uiState.avgSpeed,
+                maxValue = uiState.maxSpeed,
                 modifier = Modifier.weight(1f)
             )
             MetricCard(
                 label = "Heart Rate",
                 value = uiState.heartRate,
+                avgValue = uiState.avgHeartRate,
+                maxValue = uiState.maxHeartRate,
+                extraInfo = if (uiState.hrZone != "--") uiState.hrZone else null,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -242,11 +247,15 @@ fun MainScreen(
             MetricCard(
                 label = "Cadence",
                 value = uiState.cadence,
+                avgValue = uiState.avgCadence,
+                maxValue = uiState.maxCadence,
                 modifier = Modifier.weight(1f)
             )
             MetricCard(
                 label = "Power",
                 value = uiState.power,
+                avgValue = uiState.avgPower,
+                maxValue = uiState.maxPower,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -269,6 +278,63 @@ fun MainScreen(
                 modifier = Modifier.weight(1f)
             )
         }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Row 4: Smoothed Power (3s/10s/30s)
+        Text(
+            text = "Smoothed Power",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(vertical = 8.dp)
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            MetricCard(
+                label = "3s Power",
+                value = uiState.power3s,
+                modifier = Modifier.weight(1f)
+            )
+            MetricCard(
+                label = "10s Power",
+                value = uiState.power10s,
+                modifier = Modifier.weight(1f)
+            )
+            MetricCard(
+                label = "30s Power",
+                value = uiState.power30s,
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Row 5: VAM (Climbing metrics)
+        Text(
+            text = "Climbing",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(vertical = 8.dp)
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            MetricCard(
+                label = "VAM",
+                value = uiState.vam,
+                avgValue = uiState.avgVam,
+                modifier = Modifier.weight(1f)
+            )
+            // Placeholder for future grade% or elevation
+            MetricCard(
+                label = "Grade",
+                value = "--",
+                modifier = Modifier.weight(1f)
+            )
+        }
     }
 }
 
@@ -276,6 +342,9 @@ fun MainScreen(
 fun MetricCard(
     label: String,
     value: String,
+    avgValue: String? = null,
+    maxValue: String? = null,
+    extraInfo: String? = null,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -293,16 +362,54 @@ fun MetricCard(
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = value,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
-                textAlign = TextAlign.Center
+                fontWeight = FontWeight.Bold
             )
+            if (avgValue != null || maxValue != null) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    if (avgValue != null) {
+                        Text(
+                            text = "Avg: $avgValue",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                        )
+                    }
+                    if (avgValue != null && maxValue != null) {
+                        Text(
+                            text = " | ",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.5f)
+                        )
+                    }
+                    if (maxValue != null) {
+                        Text(
+                            text = "Max: $maxValue",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+            }
+            if (extraInfo != null) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = extraInfo,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.secondary,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }
@@ -445,7 +552,11 @@ fun MainScreenPreviewConnected() {
 
             // Connection Cards
             StatusCard("Karoo Connection", "Connected", MaterialTheme.colorScheme.primary)
-            StatusCard("ActiveLook Glasses", "Streaming to Glasses ✓", MaterialTheme.colorScheme.primary)
+            StatusCard(
+                "ActiveLook Glasses",
+                "Streaming to Glasses ✓",
+                MaterialTheme.colorScheme.primary
+            )
             StatusCard("Ride State", "Recording", MaterialTheme.colorScheme.primary)
 
             Text(
@@ -501,8 +612,16 @@ fun MainScreenPreviewDisconnected() {
                 modifier = Modifier.padding(vertical = 16.dp)
             )
 
-            StatusCard("Karoo Connection", "Auto-connects on startup", MaterialTheme.colorScheme.onSurfaceVariant)
-            StatusCard("ActiveLook Glasses", "Not Connected", MaterialTheme.colorScheme.onSurfaceVariant)
+            StatusCard(
+                "Karoo Connection",
+                "Auto-connects on startup",
+                MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            StatusCard(
+                "ActiveLook Glasses",
+                "Not Connected",
+                MaterialTheme.colorScheme.onSurfaceVariant
+            )
             StatusCard("Ride State", "Idle", MaterialTheme.colorScheme.onSurfaceVariant)
 
             Text(

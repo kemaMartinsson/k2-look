@@ -39,20 +39,63 @@ class KarooDataService(context: Context) {
     private val _speedData = MutableStateFlow<StreamState?>(null)
     val speedData: StateFlow<StreamState?> = _speedData.asStateFlow()
 
+    private val _averageSpeedData = MutableStateFlow<StreamState?>(null)
+    val averageSpeedData: StateFlow<StreamState?> = _averageSpeedData.asStateFlow()
+
+    private val _maxSpeedData = MutableStateFlow<StreamState?>(null)
+    val maxSpeedData: StateFlow<StreamState?> = _maxSpeedData.asStateFlow()
+
     private val _heartRateData = MutableStateFlow<StreamState?>(null)
     val heartRateData: StateFlow<StreamState?> = _heartRateData.asStateFlow()
+
+    private val _averageHeartRateData = MutableStateFlow<StreamState?>(null)
+    val averageHeartRateData: StateFlow<StreamState?> = _averageHeartRateData.asStateFlow()
+
+    private val _maxHeartRateData = MutableStateFlow<StreamState?>(null)
+    val maxHeartRateData: StateFlow<StreamState?> = _maxHeartRateData.asStateFlow()
 
     private val _cadenceData = MutableStateFlow<StreamState?>(null)
     val cadenceData: StateFlow<StreamState?> = _cadenceData.asStateFlow()
 
+    private val _averageCadenceData = MutableStateFlow<StreamState?>(null)
+    val averageCadenceData: StateFlow<StreamState?> = _averageCadenceData.asStateFlow()
+
+    private val _maxCadenceData = MutableStateFlow<StreamState?>(null)
+    val maxCadenceData: StateFlow<StreamState?> = _maxCadenceData.asStateFlow()
+
     private val _powerData = MutableStateFlow<StreamState?>(null)
     val powerData: StateFlow<StreamState?> = _powerData.asStateFlow()
+
+    private val _averagePowerData = MutableStateFlow<StreamState?>(null)
+    val averagePowerData: StateFlow<StreamState?> = _averagePowerData.asStateFlow()
+
+    private val _maxPowerData = MutableStateFlow<StreamState?>(null)
+    val maxPowerData: StateFlow<StreamState?> = _maxPowerData.asStateFlow()
 
     private val _distanceData = MutableStateFlow<StreamState?>(null)
     val distanceData: StateFlow<StreamState?> = _distanceData.asStateFlow()
 
     private val _timeData = MutableStateFlow<StreamState?>(null)
     val timeData: StateFlow<StreamState?> = _timeData.asStateFlow()
+
+    // Advanced metrics
+    private val _hrZoneData = MutableStateFlow<StreamState?>(null)
+    val hrZoneData: StateFlow<StreamState?> = _hrZoneData.asStateFlow()
+
+    private val _smoothed3sPowerData = MutableStateFlow<StreamState?>(null)
+    val smoothed3sPowerData: StateFlow<StreamState?> = _smoothed3sPowerData.asStateFlow()
+
+    private val _smoothed10sPowerData = MutableStateFlow<StreamState?>(null)
+    val smoothed10sPowerData: StateFlow<StreamState?> = _smoothed10sPowerData.asStateFlow()
+
+    private val _smoothed30sPowerData = MutableStateFlow<StreamState?>(null)
+    val smoothed30sPowerData: StateFlow<StreamState?> = _smoothed30sPowerData.asStateFlow()
+
+    private val _vamData = MutableStateFlow<StreamState?>(null)
+    val vamData: StateFlow<StreamState?> = _vamData.asStateFlow()
+
+    private val _avgVamData = MutableStateFlow<StreamState?>(null)
+    val avgVamData: StateFlow<StreamState?> = _avgVamData.asStateFlow()
 
     // Reconnection management
     private var reconnectAttempts = 0
@@ -167,6 +210,28 @@ class KarooDataService(context: Context) {
             }
             consumerIds.add(speedId)
 
+            // Register Average Speed stream
+            val avgSpeedId = karooSystem.addConsumer(
+                OnStreamState.StartStreaming(DataType.Type.AVERAGE_SPEED),
+                onError = { error ->
+                    Log.e(TAG, "Average Speed stream error: $error")
+                }
+            ) { event: OnStreamState ->
+                _averageSpeedData.value = event.state
+            }
+            consumerIds.add(avgSpeedId)
+
+            // Register Max Speed stream
+            val maxSpeedId = karooSystem.addConsumer(
+                OnStreamState.StartStreaming(DataType.Type.MAX_SPEED),
+                onError = { error ->
+                    Log.e(TAG, "Max Speed stream error: $error")
+                }
+            ) { event: OnStreamState ->
+                _maxSpeedData.value = event.state
+            }
+            consumerIds.add(maxSpeedId)
+
             // Register Heart Rate stream
             val hrId = karooSystem.addConsumer(
                 OnStreamState.StartStreaming(DataType.Type.HEART_RATE),
@@ -177,6 +242,28 @@ class KarooDataService(context: Context) {
                 _heartRateData.value = event.state
             }
             consumerIds.add(hrId)
+
+            // Register Average Heart Rate stream
+            val avgHrId = karooSystem.addConsumer(
+                OnStreamState.StartStreaming(DataType.Type.AVERAGE_HR),
+                onError = { error ->
+                    Log.e(TAG, "Average Heart Rate stream error: $error")
+                }
+            ) { event: OnStreamState ->
+                _averageHeartRateData.value = event.state
+            }
+            consumerIds.add(avgHrId)
+
+            // Register Max Heart Rate stream
+            val maxHrId = karooSystem.addConsumer(
+                OnStreamState.StartStreaming(DataType.Type.MAX_HR),
+                onError = { error ->
+                    Log.e(TAG, "Max Heart Rate stream error: $error")
+                }
+            ) { event: OnStreamState ->
+                _maxHeartRateData.value = event.state
+            }
+            consumerIds.add(maxHrId)
 
             // Register Cadence stream
             val cadenceId = karooSystem.addConsumer(
@@ -189,6 +276,28 @@ class KarooDataService(context: Context) {
             }
             consumerIds.add(cadenceId)
 
+            // Register Average Cadence stream
+            val avgCadenceId = karooSystem.addConsumer(
+                OnStreamState.StartStreaming(DataType.Type.AVERAGE_CADENCE),
+                onError = { error ->
+                    Log.e(TAG, "Average Cadence stream error: $error")
+                }
+            ) { event: OnStreamState ->
+                _averageCadenceData.value = event.state
+            }
+            consumerIds.add(avgCadenceId)
+
+            // Register Max Cadence stream
+            val maxCadenceId = karooSystem.addConsumer(
+                OnStreamState.StartStreaming(DataType.Type.MAX_CADENCE),
+                onError = { error ->
+                    Log.e(TAG, "Max Cadence stream error: $error")
+                }
+            ) { event: OnStreamState ->
+                _maxCadenceData.value = event.state
+            }
+            consumerIds.add(maxCadenceId)
+
             // Register Power stream
             val powerId = karooSystem.addConsumer(
                 OnStreamState.StartStreaming(DataType.Type.POWER),
@@ -199,6 +308,28 @@ class KarooDataService(context: Context) {
                 _powerData.value = event.state
             }
             consumerIds.add(powerId)
+
+            // Register Average Power stream
+            val avgPowerId = karooSystem.addConsumer(
+                OnStreamState.StartStreaming(DataType.Type.AVERAGE_POWER),
+                onError = { error ->
+                    Log.e(TAG, "Average Power stream error: $error")
+                }
+            ) { event: OnStreamState ->
+                _averagePowerData.value = event.state
+            }
+            consumerIds.add(avgPowerId)
+
+            // Register Max Power stream
+            val maxPowerId = karooSystem.addConsumer(
+                OnStreamState.StartStreaming(DataType.Type.MAX_POWER),
+                onError = { error ->
+                    Log.e(TAG, "Max Power stream error: $error")
+                }
+            ) { event: OnStreamState ->
+                _maxPowerData.value = event.state
+            }
+            consumerIds.add(maxPowerId)
 
             // Register Distance stream
             val distanceId = karooSystem.addConsumer(
@@ -222,6 +353,72 @@ class KarooDataService(context: Context) {
             }
             consumerIds.add(timeId)
 
+            // Register HR Zone stream
+            val hrZoneId = karooSystem.addConsumer(
+                OnStreamState.StartStreaming(DataType.Type.HR_ZONE),
+                onError = { error ->
+                    Log.e(TAG, "HR Zone stream error: $error")
+                }
+            ) { event: OnStreamState ->
+                _hrZoneData.value = event.state
+            }
+            consumerIds.add(hrZoneId)
+
+            // Register 3s Power stream
+            val power3sId = karooSystem.addConsumer(
+                OnStreamState.StartStreaming(DataType.Type.SMOOTHED_3S_AVERAGE_POWER),
+                onError = { error ->
+                    Log.e(TAG, "3s Power stream error: $error")
+                }
+            ) { event: OnStreamState ->
+                _smoothed3sPowerData.value = event.state
+            }
+            consumerIds.add(power3sId)
+
+            // Register 10s Power stream
+            val power10sId = karooSystem.addConsumer(
+                OnStreamState.StartStreaming(DataType.Type.SMOOTHED_10S_AVERAGE_POWER),
+                onError = { error ->
+                    Log.e(TAG, "10s Power stream error: $error")
+                }
+            ) { event: OnStreamState ->
+                _smoothed10sPowerData.value = event.state
+            }
+            consumerIds.add(power10sId)
+
+            // Register 30s Power stream
+            val power30sId = karooSystem.addConsumer(
+                OnStreamState.StartStreaming(DataType.Type.SMOOTHED_30S_AVERAGE_POWER),
+                onError = { error ->
+                    Log.e(TAG, "30s Power stream error: $error")
+                }
+            ) { event: OnStreamState ->
+                _smoothed30sPowerData.value = event.state
+            }
+            consumerIds.add(power30sId)
+
+            // Register VAM stream
+            val vamId = karooSystem.addConsumer(
+                OnStreamState.StartStreaming(DataType.Type.VERTICAL_SPEED),
+                onError = { error ->
+                    Log.e(TAG, "VAM stream error: $error")
+                }
+            ) { event: OnStreamState ->
+                _vamData.value = event.state
+            }
+            consumerIds.add(vamId)
+
+            // Register Average VAM stream
+            val avgVamId = karooSystem.addConsumer(
+                OnStreamState.StartStreaming(DataType.Type.AVERAGE_VERTICAL_SPEED),
+                onError = { error ->
+                    Log.e(TAG, "Average VAM stream error: $error")
+                }
+            ) { event: OnStreamState ->
+                _avgVamData.value = event.state
+            }
+            consumerIds.add(avgVamId)
+
             Log.i(TAG, "Successfully registered ${consumerIds.size} data consumers")
         } catch (e: Exception) {
             Log.e(TAG, "Error registering consumers: ${e.message}", e)
@@ -237,8 +434,14 @@ class KarooDataService(context: Context) {
             reconnectAttempts++
             _connectionState.value = ConnectionState.Reconnecting(reconnectAttempts)
 
-            val delayMs = minOf(1000L * (1 shl (reconnectAttempts - 1)), 30000L) // Exponential backoff, max 30s
-            Log.i(TAG, "Attempting reconnection $reconnectAttempts/$maxReconnectAttempts in ${delayMs}ms...")
+            val delayMs = minOf(
+                1000L * (1 shl (reconnectAttempts - 1)),
+                30000L
+            ) // Exponential backoff, max 30s
+            Log.i(
+                TAG,
+                "Attempting reconnection $reconnectAttempts/$maxReconnectAttempts in ${delayMs}ms..."
+            )
 
             // Note: In a real implementation, we'd use a coroutine with delay here
             // For now, this is a placeholder for the reconnection logic
@@ -247,7 +450,8 @@ class KarooDataService(context: Context) {
             }, delayMs)
         } else {
             Log.e(TAG, "Max reconnection attempts reached. Manual reconnection required.")
-            _connectionState.value = ConnectionState.Error("Connection lost. Please reconnect manually.")
+            _connectionState.value =
+                ConnectionState.Error("Connection lost. Please reconnect manually.")
         }
     }
 
@@ -264,11 +468,25 @@ class KarooDataService(context: Context) {
      */
     private fun clearMetricData() {
         _speedData.value = null
+        _averageSpeedData.value = null
+        _maxSpeedData.value = null
         _heartRateData.value = null
+        _averageHeartRateData.value = null
+        _maxHeartRateData.value = null
         _cadenceData.value = null
+        _averageCadenceData.value = null
+        _maxCadenceData.value = null
         _powerData.value = null
+        _averagePowerData.value = null
+        _maxPowerData.value = null
         _distanceData.value = null
         _timeData.value = null
+        _hrZoneData.value = null
+        _smoothed3sPowerData.value = null
+        _smoothed10sPowerData.value = null
+        _smoothed30sPowerData.value = null
+        _vamData.value = null
+        _avgVamData.value = null
     }
 
     companion object {
