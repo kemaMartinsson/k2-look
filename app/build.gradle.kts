@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "io.hammerhead.karooexttemplate"
+    namespace = "com.kema.k2look"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "io.hammerhead.karooexttemplate"
+        applicationId = "com.kema.k2look"
         minSdk = 23
         targetSdk = 34
         versionCode = 1
@@ -19,7 +19,10 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
     compileOptions {

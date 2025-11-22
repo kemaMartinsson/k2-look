@@ -1,4 +1,4 @@
-package io.hammerhead.karooexttemplate.theme
+package com.kema.k2look.theme
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable

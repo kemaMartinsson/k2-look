@@ -1,4 +1,4 @@
-package io.hammerhead.karooexttemplate.extension
+package com.kema.k2look.extension
 
 import io.hammerhead.karooext.extension.KarooExtension
 

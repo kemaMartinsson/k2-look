@@ -1,11 +1,11 @@
-package io.hammerhead.karooexttemplate
+package com.kema.k2look
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import io.hammerhead.karooext.KarooSystemService
-import io.hammerhead.karooexttemplate.screens.MainScreen
-import io.hammerhead.karooexttemplate.theme.AppTheme
+import com.kema.k2look.screens.MainScreen
+import com.kema.k2look.theme.AppTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

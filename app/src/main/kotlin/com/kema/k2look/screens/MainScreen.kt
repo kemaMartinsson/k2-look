@@ -1,4 +1,4 @@
-package io.hammerhead.karooexttemplate.screens
+package com.kema.k2look.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -27,10 +27,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.activelook.activelooksdk.DiscoveredGlasses
+import com.kema.k2look.service.KarooActiveLookBridge
+import com.kema.k2look.service.KarooDataService
+import com.kema.k2look.viewmodel.MainViewModel
 import io.hammerhead.karooext.models.RideState
-import io.hammerhead.karooexttemplate.service.KarooActiveLookBridge
-import io.hammerhead.karooexttemplate.service.KarooDataService
-import io.hammerhead.karooexttemplate.viewmodel.MainViewModel
 
 @Composable
 fun MainScreen(
@@ -47,7 +47,7 @@ fun MainScreen(
     ) {
         // Title
         Text(
-            text = "K2-Look Gateway",
+            text = "K2-Look",
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.onBackground,
             fontWeight = FontWeight.Bold,

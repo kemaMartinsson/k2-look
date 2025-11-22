@@ -1,4 +1,4 @@
-package io.hammerhead.karooexttemplate.viewmodel
+package com.kema.k2look.viewmodel
 
 import android.app.Application
 import android.util.Log
@@ -7,8 +7,8 @@ import androidx.lifecycle.viewModelScope
 import com.activelook.activelooksdk.DiscoveredGlasses
 import io.hammerhead.karooext.models.RideState
 import io.hammerhead.karooext.models.StreamState
-import io.hammerhead.karooexttemplate.service.KarooActiveLookBridge
-import io.hammerhead.karooexttemplate.service.KarooDataService
+import com.kema.k2look.service.KarooActiveLookBridge
+import com.kema.k2look.service.KarooDataService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
