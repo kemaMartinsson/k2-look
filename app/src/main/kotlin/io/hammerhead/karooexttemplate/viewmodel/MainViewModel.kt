@@ -4,8 +4,10 @@ import android.app.Application
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.activelook.activelooksdk.DiscoveredGlasses
 import io.hammerhead.karooext.models.RideState
 import io.hammerhead.karooext.models.StreamState
+import io.hammerhead.karooexttemplate.service.KarooActiveLookBridge
 import io.hammerhead.karooexttemplate.service.KarooDataService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,11 +15,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
- * ViewModel for managing Karoo data and UI state
+ * ViewModel for managing Karoo data, ActiveLook connection, and UI state
  */
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val karooDataService = KarooDataService(application)
+    private val bridge = KarooActiveLookBridge(application)
+    private val karooDataService = bridge.getKarooDataService()
+    private val activeLookService = bridge.getActiveLookService()
 
     // UI State
     private val _uiState = MutableStateFlow(UiState())
@@ -25,6 +29,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     data class UiState(
         val connectionState: KarooDataService.ConnectionState = KarooDataService.ConnectionState.Disconnected,
+        val bridgeState: KarooActiveLookBridge.BridgeState = KarooActiveLookBridge.BridgeState.Idle,
+        val discoveredGlasses: List<DiscoveredGlasses> = emptyList(),
+        val isScanning: Boolean = false,
         val rideState: RideState = RideState.Idle,
         val speed: String = "--",
         val heartRate: String = "--",
@@ -36,23 +43,91 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         Log.i(TAG, "MainViewModel initialized")
+        bridge.initialize()
         observeKarooData()
+        observeActiveLookData()
+        observeBridgeState()
     }
 
     /**
      * Connect to Karoo System
      */
-    fun connect() {
+    fun connectKaroo() {
         Log.i(TAG, "User requested connection to Karoo")
-        karooDataService.connect()
+        bridge.connectKaroo()
     }
 
     /**
      * Disconnect from Karoo System
      */
-    fun disconnect() {
+    fun disconnectKaroo() {
         Log.i(TAG, "User requested disconnect from Karoo")
-        karooDataService.disconnect()
+        bridge.disconnectKaroo()
+    }
+
+    /**
+     * Start scanning for ActiveLook glasses
+     */
+    fun startActiveLookScan() {
+        Log.i(TAG, "User requested ActiveLook scan")
+        bridge.startActiveLookScan()
+    }
+
+    /**
+     * Stop scanning for ActiveLook glasses
+     */
+    fun stopActiveLookScan() {
+        Log.i(TAG, "User requested stop ActiveLook scan")
+        bridge.stopActiveLookScan()
+    }
+
+    /**
+     * Connect to ActiveLook glasses
+     */
+    fun connectActiveLook(glasses: DiscoveredGlasses) {
+        Log.i(TAG, "User requested connection to ActiveLook glasses: ${glasses.name}")
+        bridge.connectActiveLook(glasses)
+    }
+
+    /**
+     * Disconnect from ActiveLook glasses
+     */
+    fun disconnectActiveLook() {
+        Log.i(TAG, "User requested disconnect from ActiveLook")
+        bridge.disconnectActiveLook()
+    }
+
+    /**
+     * Observe bridge state
+     */
+    private fun observeBridgeState() {
+        viewModelScope.launch {
+            bridge.bridgeState.collect { state ->
+                Log.d(TAG, "Bridge state changed: $state")
+                _uiState.value = _uiState.value.copy(bridgeState = state)
+            }
+        }
+    }
+
+    /**
+     * Observe ActiveLook data
+     */
+    private fun observeActiveLookData() {
+        // Observe discovered glasses
+        viewModelScope.launch {
+            activeLookService.discoveredGlasses.collect { glasses ->
+                Log.d(TAG, "Discovered glasses updated: ${glasses.size} devices")
+                _uiState.value = _uiState.value.copy(discoveredGlasses = glasses)
+            }
+        }
+
+        // Observe scanning state
+        viewModelScope.launch {
+            activeLookService.isScanning.collect { scanning ->
+                Log.d(TAG, "Scanning state: $scanning")
+                _uiState.value = _uiState.value.copy(isScanning = scanning)
+            }
+        }
     }
 
     /**
@@ -180,8 +255,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     override fun onCleared() {
         super.onCleared()
-        Log.i(TAG, "MainViewModel cleared, disconnecting from Karoo")
-        karooDataService.disconnect()
+        Log.i(TAG, "MainViewModel cleared, cleaning up bridge")
+        bridge.cleanup()
     }
 
     companion object {

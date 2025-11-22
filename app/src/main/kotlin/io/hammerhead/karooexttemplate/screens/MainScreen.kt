@@ -1,8 +1,21 @@
 package io.hammerhead.karooexttemplate.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -13,7 +26,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.activelook.activelooksdk.DiscoveredGlasses
 import io.hammerhead.karooext.models.RideState
+import io.hammerhead.karooexttemplate.service.KarooActiveLookBridge
 import io.hammerhead.karooexttemplate.service.KarooDataService
 import io.hammerhead.karooexttemplate.viewmodel.MainViewModel
 
@@ -70,19 +85,94 @@ fun MainScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Button(
-                        onClick = { viewModel.connect() },
+                        onClick = { viewModel.connectKaroo() },
                         enabled = uiState.connectionState !is KarooDataService.ConnectionState.Connected
                     ) {
                         Text("Connect")
                     }
                     Button(
-                        onClick = { viewModel.disconnect() },
+                        onClick = { viewModel.disconnectKaroo() },
                         enabled = uiState.connectionState is KarooDataService.ConnectionState.Connected,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.error
                         )
                     ) {
                         Text("Disconnect")
+                    }
+                }
+            }
+        }
+
+        // ActiveLook Connection Card
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "ActiveLook Glasses",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = getBridgeStatusText(uiState.bridgeState),
+                    color = getBridgeStatusColor(uiState.bridgeState),
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Scan/Connect buttons
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            if (uiState.isScanning) {
+                                viewModel.stopActiveLookScan()
+                            } else {
+                                viewModel.startActiveLookScan()
+                            }
+                        },
+                        enabled = uiState.bridgeState !is KarooActiveLookBridge.BridgeState.FullyConnected &&
+                                uiState.bridgeState !is KarooActiveLookBridge.BridgeState.Streaming
+                    ) {
+                        Text(if (uiState.isScanning) "Stop Scan" else "Scan")
+                    }
+                    Button(
+                        onClick = { viewModel.disconnectActiveLook() },
+                        enabled = uiState.bridgeState is KarooActiveLookBridge.BridgeState.FullyConnected ||
+                                uiState.bridgeState is KarooActiveLookBridge.BridgeState.Streaming,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Text("Disconnect")
+                    }
+                }
+
+                // Show discovered glasses
+                if (uiState.discoveredGlasses.isNotEmpty() && uiState.isScanning) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "Discovered Glasses:",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    uiState.discoveredGlasses.forEach { glasses ->
+                        GlassesListItem(
+                            glasses = glasses,
+                            onClick = { viewModel.connectActiveLook(glasses) }
+                        )
                     }
                 }
             }
@@ -233,6 +323,7 @@ fun getConnectionStatusColor(state: KarooDataService.ConnectionState): androidx.
         is KarooDataService.ConnectionState.Connected -> MaterialTheme.colorScheme.primary
         is KarooDataService.ConnectionState.Connecting,
         is KarooDataService.ConnectionState.Reconnecting -> MaterialTheme.colorScheme.tertiary
+
         is KarooDataService.ConnectionState.Error -> MaterialTheme.colorScheme.error
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
@@ -253,6 +344,79 @@ fun getRideStateColor(state: RideState): androidx.compose.ui.graphics.Color {
         is RideState.Recording -> MaterialTheme.colorScheme.primary
         is RideState.Paused -> MaterialTheme.colorScheme.tertiary
         else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+}
+
+@Composable
+fun getBridgeStatusText(state: KarooActiveLookBridge.BridgeState): String {
+    return when (state) {
+        is KarooActiveLookBridge.BridgeState.Idle -> "Not Connected"
+        is KarooActiveLookBridge.BridgeState.KarooConnecting -> "Connecting to Karoo..."
+        is KarooActiveLookBridge.BridgeState.KarooConnected -> "Karoo Connected"
+        is KarooActiveLookBridge.BridgeState.ActiveLookScanning -> "Scanning for Glasses..."
+        is KarooActiveLookBridge.BridgeState.ActiveLookConnecting -> "Connecting to Glasses..."
+        is KarooActiveLookBridge.BridgeState.FullyConnected -> "Connected"
+        is KarooActiveLookBridge.BridgeState.Streaming -> "Streaming to Glasses ✓"
+        is KarooActiveLookBridge.BridgeState.Error -> "Error: ${state.message}"
+    }
+}
+
+@Composable
+fun getBridgeStatusColor(state: KarooActiveLookBridge.BridgeState): androidx.compose.ui.graphics.Color {
+    return when (state) {
+        is KarooActiveLookBridge.BridgeState.FullyConnected,
+        is KarooActiveLookBridge.BridgeState.Streaming -> MaterialTheme.colorScheme.primary
+
+        is KarooActiveLookBridge.BridgeState.KarooConnecting,
+        is KarooActiveLookBridge.BridgeState.ActiveLookScanning,
+        is KarooActiveLookBridge.BridgeState.ActiveLookConnecting -> MaterialTheme.colorScheme.tertiary
+
+        is KarooActiveLookBridge.BridgeState.Error -> MaterialTheme.colorScheme.error
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+}
+
+@Composable
+fun GlassesListItem(
+    glasses: DiscoveredGlasses,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = glasses.name,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+                Text(
+                    text = glasses.address,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                )
+            }
+            Text(
+                text = "Connect →",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
+            )
+        }
     }
 }
 
