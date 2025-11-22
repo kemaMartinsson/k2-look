@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -420,5 +421,181 @@ fun GlassesListItem(
     }
 }
 
-// Preview removed - MainScreen requires ViewModel with StateFlows which aren't compatible with @Preview
-// To preview UI, run the app on a device or emulator
+// ============================================================================
+// Previews - Shows UI in different states
+// ============================================================================
+
+@Preview(showBackground = true, showSystemUi = true, name = "Connected & Recording")
+@Composable
+fun MainScreenPreviewConnected() {
+    MaterialTheme {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "K2-Look",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(vertical = 16.dp)
+            )
+
+            // Connection Cards
+            StatusCard("Karoo Connection", "Connected", MaterialTheme.colorScheme.primary)
+            StatusCard("ActiveLook Glasses", "Streaming to Glasses ✓", MaterialTheme.colorScheme.primary)
+            StatusCard("Ride State", "Recording", MaterialTheme.colorScheme.primary)
+
+            Text(
+                text = "Live Metrics",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(vertical = 12.dp)
+            )
+
+            // Metrics Grid
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                PreviewMetricCard("Speed", "25,5 km/h", Modifier.weight(1f))
+                PreviewMetricCard("Heart Rate", "142 bpm", Modifier.weight(1f))
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                PreviewMetricCard("Cadence", "85 rpm", Modifier.weight(1f))
+                PreviewMetricCard("Power", "220 w", Modifier.weight(1f))
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                PreviewMetricCard("Distance", "12,34 km", Modifier.weight(1f))
+                PreviewMetricCard("Time", "01:23:45", Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true, name = "Disconnected")
+@Composable
+fun MainScreenPreviewDisconnected() {
+    MaterialTheme {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "K2-Look",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(vertical = 16.dp)
+            )
+
+            StatusCard("Karoo Connection", "Auto-connects on startup", MaterialTheme.colorScheme.onSurfaceVariant)
+            StatusCard("ActiveLook Glasses", "Not Connected", MaterialTheme.colorScheme.onSurfaceVariant)
+            StatusCard("Ride State", "Idle", MaterialTheme.colorScheme.onSurfaceVariant)
+
+            Text(
+                text = "Live Metrics",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(vertical = 12.dp)
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                PreviewMetricCard("Speed", "-- km/h", Modifier.weight(1f))
+                PreviewMetricCard("Heart Rate", "-- bpm", Modifier.weight(1f))
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                PreviewMetricCard("Cadence", "-- rpm", Modifier.weight(1f))
+                PreviewMetricCard("Power", "-- w", Modifier.weight(1f))
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                PreviewMetricCard("Distance", "-- km", Modifier.weight(1f))
+                PreviewMetricCard("Time", "--:--:--", Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+@Composable
+fun StatusCard(title: String, status: String, color: androidx.compose.ui.graphics.Color) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = status,
+                color = color,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
+fun PreviewMetricCard(label: String, value: String, modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}

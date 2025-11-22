@@ -45,37 +45,42 @@
 
 ---
 
-## Phase 2: Metric Implementation
+## Phase 2: Metric Implementation 🔄
 
-### 2.1 Basic Metrics Display
+### 2.1 Basic Metrics Display (In Progress)
 
+- [x] Create MetricData model (current, average, max values)
+- [x] Create MetricFormatter utility class
 - [ ] Speed metrics
-    - [ ] Current speed
+    - [x] Current speed ✅
     - [ ] Average speed
     - [ ] Max speed
+    - [x] Support km/h and mph
 - [ ] Distance metrics
-    - [ ] Current distance
-    - [ ] Total distance
+    - [x] Current distance ✅
+    - [ ] Total distance tracking
+    - [x] Support km and miles
 - [ ] Time metrics
-    - [ ] Ride time
-    - [ ] Elapsed time
+    - [x] Elapsed time display ✅
+    - [ ] Ride time (active riding only)
+    - [x] HH:MM:SS format ✅
 
-### 2.2 Performance Metrics
+### 2.2 Performance Metrics (In Progress)
 
 - [ ] Heart rate
-    - [ ] Current HR
+    - [x] Current HR ✅
     - [ ] Average HR
     - [ ] Max HR
     - [ ] HR zones (optional)
 - [ ] Cadence
-    - [ ] Current cadence
+    - [x] Current cadence ✅
     - [ ] Average cadence
     - [ ] Max cadence
 - [ ] Power
-    - [ ] Instant power
+    - [x] Instant power ✅
     - [ ] Average power
     - [ ] Max power
-    - [ ] 3s/10s/30s power
+    - [ ] 3s/10s/30s power (normalized power)
 
 ### 2.3 Advanced Metrics
 
@@ -314,6 +319,10 @@
 - ✅ ADB connectivity established for debugging
 - ✅ Package renamed from `io.hammerhead.karooexttemplate` to `com.kema.k2look`
 - ✅ **App successfully installed and running on real Karoo2 device (KAROO20ALA091101299)**
+- ✅ **Auto-connect to Karoo System on startup**
+- ✅ **Auto-connect to last paired ActiveLook glasses (optional, configurable)**
+- ✅ **Configuration system with Swedish locale (sv-SE) and metric units (km/h, km)**
+- ✅ **All user preferences persist across app restarts**
 - ⚠️ ActiveLook SDK initialization fails on emulator (expected - no real BLE hardware)
 - ⏳ ActiveLook glasses BLE connection testing (next step)
 - ⏳ Karoo data streaming testing during ride

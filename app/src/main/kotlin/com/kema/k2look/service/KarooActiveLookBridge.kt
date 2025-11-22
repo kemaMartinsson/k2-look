@@ -3,7 +3,9 @@ package com.kema.k2look.service
 import android.content.Context
 import android.graphics.Point
 import android.util.Log
+import com.activelook.activelooksdk.DiscoveredGlasses
 import com.activelook.activelooksdk.types.Rotation
+import com.kema.k2look.util.PreferencesManager
 import io.hammerhead.karooext.models.RideState
 import io.hammerhead.karooext.models.StreamState
 import kotlinx.coroutines.CoroutineScope
@@ -30,6 +32,7 @@ class KarooActiveLookBridge(context: Context) {
 
     private val karooDataService = KarooDataService(context)
     private val activeLookService = ActiveLookService(context)
+    private val preferencesManager = PreferencesManager(context)
 
     private val scope = CoroutineScope(Dispatchers.Main + Job())
     private var updateJob: Job? = null
@@ -74,15 +77,85 @@ class KarooActiveLookBridge(context: Context) {
     )
 
     /**
-     * Initialize both services
+     * Initialize both services and auto-connect based on preferences
      */
     fun initialize() {
         Log.i(TAG, "Initializing KarooActiveLookBridge...")
 
+        // Load user preferences
+        val config = preferencesManager.getConfig()
+        Log.i(TAG, "Loaded config: locale=${config.locale}, speedUnit=${config.speedUnit}")
+
         // Initialize ActiveLook SDK
         activeLookService.initializeSdk()
 
+        // Auto-connect to Karoo System if enabled (default: true)
+        if (config.autoConnectKaroo) {
+            Log.i(TAG, "Auto-connecting to Karoo System (enabled in preferences)...")
+            connectKaroo()
+        } else {
+            Log.i(TAG, "Auto-connect to Karoo disabled in preferences")
+        }
+
+        // Auto-connect to last paired glasses if enabled
+        if (config.autoConnectActiveLook) {
+            val lastGlassesAddress = config.lastConnectedGlassesAddress
+            if (lastGlassesAddress != null) {
+                Log.i(
+                    TAG,
+                    "Auto-connect to glasses enabled, will attempt connection to: $lastGlassesAddress"
+                )
+                // Start scanning to find the previously connected glasses
+                attemptAutoConnectToGlasses(lastGlassesAddress)
+            } else {
+                Log.i(TAG, "Auto-connect to glasses enabled, but no previous connection found")
+            }
+        } else {
+            Log.i(TAG, "Auto-connect to glasses disabled in preferences")
+        }
+
         Log.i(TAG, "✓ Bridge initialized")
+    }
+
+    /**
+     * Attempt to auto-connect to previously connected glasses
+     */
+    private fun attemptAutoConnectToGlasses(targetAddress: String) {
+        Log.i(TAG, "Scanning for previously connected glasses: $targetAddress")
+
+        // Start scanning
+        activeLookService.startScanning()
+
+        var glassesFound = false
+
+        // Observe discovered glasses and connect when found
+        val collectionJob = scope.launch {
+            activeLookService.discoveredGlasses.collect { glassesList ->
+                // Look for the target glasses
+                val targetGlasses = glassesList.find { it.address == targetAddress }
+                if (targetGlasses != null && !glassesFound) {
+                    glassesFound = true
+                    Log.i(TAG, "Found previously connected glasses: ${targetGlasses.name}")
+                    // Stop scanning
+                    activeLookService.stopScanning()
+                    // Connect to the glasses
+                    connectActiveLook(targetGlasses)
+                }
+            }
+        }
+
+        // Timeout after 10 seconds
+        scope.launch {
+            delay(10000)
+            if (!glassesFound && activeLookService.isScanning.value) {
+                Log.w(
+                    TAG,
+                    "Auto-connect timeout: Could not find glasses with address $targetAddress"
+                )
+                activeLookService.stopScanning()
+                collectionJob.cancel()
+            }
+        }
     }
 
     /**
@@ -129,11 +202,15 @@ class KarooActiveLookBridge(context: Context) {
     /**
      * Connect to ActiveLook glasses
      */
-    fun connectActiveLook(glasses: com.activelook.activelooksdk.DiscoveredGlasses) {
-        Log.i(TAG, "Connecting to ActiveLook glasses...")
+    fun connectActiveLook(glasses: DiscoveredGlasses) {
+        Log.i(TAG, "Connecting to ActiveLook glasses: ${glasses.name} (${glasses.address})...")
         _bridgeState.value = BridgeState.ActiveLookConnecting
 
         activeLookService.connect(glasses)
+
+        // Save glasses address for future auto-connect
+        preferencesManager.setLastConnectedGlasses(glasses.address)
+        Log.i(TAG, "Saved glasses address for auto-connect: ${glasses.address}")
 
         // Start observing ActiveLook connection state
         observeActiveLookState()
