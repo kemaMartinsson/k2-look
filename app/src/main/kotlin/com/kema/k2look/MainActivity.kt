@@ -2,6 +2,7 @@ package com.kema.k2look
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import com.kema.k2look.screens.MainScreen
 import com.kema.k2look.theme.AppTheme
@@ -12,6 +13,9 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             AppTheme {
+                BackHandler {
+                    finish()
+                }
                 MainScreen(
                     onBack = { finish() }
                 )
