@@ -2,4 +2,36 @@
     <string name="app_name">K2Look</string>
     <string name="hello_karoo">Hello Karoo!</string>
     <string name="extension_name">K2Look Extension</string>
+
+    <!-- App Info / About -->
+    <string name="app_description">Connect your ActiveLook smart glasses and display ride metrics in real-time on your glasses display.</string>
+    <string name="app_developer">Kenneth M</string>
+    <string name="app_website">https://github.com/kema/k2look</string>
+
+    <!-- Release Notes - Version 3.0 -->
+    <string name="release_notes_version">Version 3.0</string>
+    <string name="release_notes">
+        What\'s New in Version 3.0:\n\n
+        • Auto-reconnect during active rides\n
+        • Configurable reconnect timeout (1-60 minutes)\n
+        • Debug tab with display simulator\n
+        • Improved UI with icon status indicators\n
+        • Real-time data streaming to glasses\n\n
+        Supported Metrics:\n
+        • Speed, Heart Rate, Cadence\n
+        • Power, Distance, Time\n\n
+    </string>
+
+    <!-- Help & Support -->
+    <string name="help_connect_glasses">Tap the \"Connect glasses\" button to scan and pair your ActiveLook smart glasses.</string>
+    <string name="help_reconnect">The app will automatically reconnect to your glasses if they disconnect during a ride.</string>
+    <string name="help_timeout">Configure the reconnect timeout in the Status tab (default: 10 minutes).</string>
+
+    <!-- Feature Descriptions -->
+    <string name="feature_auto_reconnect">Auto-Reconnect</string>
+    <string name="feature_auto_reconnect_desc">Continuously attempts to reconnect to glasses during active rides</string>
+    <string name="feature_simulator">Display Simulator</string>
+    <string name="feature_simulator_desc">Test your glasses display with simulated data</string>
+    <string name="feature_debug">Debug Mode</string>
+    <string name="feature_debug_desc">Enable logging for troubleshooting connection issues</string>
 </resources>

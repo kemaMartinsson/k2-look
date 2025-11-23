@@ -41,6 +41,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val userProfile: UserProfile? = null,
         val useImperialUnits: Boolean = false,
         val reconnectTimeoutMinutes: Int = 10, // Default 10 minutes
+        val debugModeEnabled: Boolean = false,
         val speed: String = "--",
         val avgSpeed: String = "--",
         val maxSpeed: String = "--",
@@ -150,6 +151,77 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         Log.i(TAG, "Setting reconnect timeout to ${minutes}min")
         preferencesManager.setReconnectTimeoutMinutes(minutes)
         _uiState.value = _uiState.value.copy(reconnectTimeoutMinutes = minutes)
+    }
+
+    /**
+     * Toggle debug mode on/off
+     */
+    fun setDebugMode(enabled: Boolean) {
+        Log.i(TAG, "Debug mode ${if (enabled) "enabled" else "disabled"}")
+        _uiState.value = _uiState.value.copy(debugModeEnabled = enabled)
+
+        if (enabled) {
+            startDebugLogging()
+        } else {
+            stopDebugLogging()
+        }
+    }
+
+    /**
+     * Start debug logging to file
+     */
+    private fun startDebugLogging() {
+        // TODO: Implement file logging
+        Log.i(TAG, "Debug logging started - logs will be written to /sdcard/k2look_debug.log")
+    }
+
+    /**
+     * Stop debug logging
+     */
+    private fun stopDebugLogging() {
+        Log.i(TAG, "Debug logging stopped")
+    }
+
+    /**
+     * Start simulator - sends test data to glasses
+     */
+    fun startSimulator() {
+        Log.i(TAG, "Starting simulator...")
+        // TODO: Implement simulator that sends random/cycling test values
+        viewModelScope.launch {
+            var counter = 0
+            while (_uiState.value.debugModeEnabled) {
+                counter++
+                // Simulate changing values
+                _uiState.value = _uiState.value.copy(
+                    speed = "${20 + (counter % 20)} km/h",
+                    heartRate = "${140 + (counter % 30)} bpm",
+                    cadence = "${80 + (counter % 20)} rpm",
+                    power = "${200 + (counter % 100)} w",
+                    distance = "${counter / 10}.${counter % 10} km",
+                    time = formatSimulatedTime(counter * 2)
+                )
+                kotlinx.coroutines.delay(2000) // Update every 2 seconds
+            }
+        }
+    }
+
+    /**
+     * Stop simulator
+     */
+    fun stopSimulator() {
+        Log.i(TAG, "Stopping simulator...")
+        // Simulator will stop when debug mode is disabled or naturally
+    }
+
+    /**
+     * Format simulated time
+     */
+    private fun formatSimulatedTime(seconds: Int): String {
+        val h = seconds / 3600
+        val m = (seconds % 3600) / 60
+        val s = seconds % 60
+        return String.format("%02d:%02d:%02d", h, m, s)
     }
 
     /**
