@@ -8,10 +8,9 @@
     <string name="app_developer">Kenneth M</string>
     <string name="app_website">https://github.com/kema/k2look</string>
 
-    <!-- Release Notes - Version 3.0 -->
-    <string name="release_notes_version">Version 3.0</string>
+    <!-- Release Notes - Version dynamically set from git tag -->
     <string name="release_notes">
-        What\'s New in Version 3.0:\n\n
+        What\'s new:\n\n
         • Auto-reconnect during active rides\n
         • Configurable reconnect timeout (1-60 minutes)\n
         • Debug tab with display simulator\n

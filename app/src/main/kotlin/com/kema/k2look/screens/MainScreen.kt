@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -41,6 +42,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.kema.k2look.BuildConfig
 import com.kema.k2look.R
 import com.kema.k2look.service.ActiveLookService
 import com.kema.k2look.service.KarooDataService
@@ -353,7 +355,7 @@ fun StatusTab(viewModel: MainViewModel, uiState: MainViewModel.UiState, onBack: 
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Startup timeout:",
+                            text = "Timeout:",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium
                         )
@@ -382,7 +384,7 @@ fun StatusTab(viewModel: MainViewModel, uiState: MainViewModel.UiState, onBack: 
                                     )
                                 },
                                 singleLine = true,
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.width(80.dp),
                                 textStyle = MaterialTheme.typography.bodyMedium
                             )
 
@@ -393,6 +395,13 @@ fun StatusTab(viewModel: MainViewModel, uiState: MainViewModel.UiState, onBack: 
                             )
                         }
                     }
+
+                    Text(
+                        text = "Startup timeout, waiting for glasses.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
 
                     Text(
                         text = "Valid range: 1-60 minutes",
@@ -632,7 +641,7 @@ fun AboutTab(onBack: () -> Unit) {
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = stringResource(R.string.release_notes_version),
+                    text = "Version ${BuildConfig.VERSION_NAME}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1255,7 +1264,7 @@ fun MainScreenPreviewAbout() {
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Version 3.0",
+                                text = "Version 0.1",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

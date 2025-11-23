@@ -56,6 +56,28 @@ android {
             "BUILD_DATE",
             "\"${SimpleDateFormat("yyyy-MM-dd HH:mm").format(Date())}\""
         )
+
+        // Inject version name into strings.xml
+        resValue("string", "app_version", getGitTag())
+    }
+
+    signingConfigs {
+        create("release") {
+            // For local builds, use local keystore if it exists
+            // For CI builds, use environment variables
+            val keystorePath = System.getenv("KEYSTORE_FILE") ?: "keystore.jks"
+            val keystoreFile = file(keystorePath)
+
+            if (keystoreFile.exists() || System.getenv("KEYSTORE_FILE") != null) {
+                storeFile = keystoreFile
+                storePassword = System.getenv("KEYSTORE_PASSWORD")
+                    ?: project.findProperty("KEYSTORE_PASSWORD") as String?
+                keyAlias =
+                    System.getenv("KEY_ALIAS") ?: project.findProperty("KEY_ALIAS") as String?
+                keyPassword =
+                    System.getenv("KEY_PASSWORD") ?: project.findProperty("KEY_PASSWORD") as String?
+            }
+        }
     }
 
     buildTypes {
@@ -65,6 +87,15 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Only sign if signing config is properly configured
+            val releaseSigningConfig = signingConfigs.getByName("release")
+            if (releaseSigningConfig.storeFile?.exists() == true) {
+                signingConfig = releaseSigningConfig
+            }
+        }
+        debug {
+            // Also inject for debug builds
+            resValue("string", "app_version", getGitTag())
         }
     }
     compileOptions {

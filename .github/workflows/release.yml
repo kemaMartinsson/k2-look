@@ -1,0 +1,77 @@
+name: Build and Release APK
+
+on:
+  push:
+    tags:
+      - '*'  # Trigger on any tag push (e.g., 0.1, 0.2, v1.0)
+
+# Explicit permissions needed for private repos
+permissions:
+  contents: write  # Required to create releases
+  packages: write  # Optional, for future package publishing
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history so git describe works
+          submodules: recursive  # Fetch submodules if any
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build Release APK
+        run: ./gradlew assembleRelease --no-daemon
+        env:
+        # If you add signing later, uncomment these and add secrets in GitHub
+        # KEYSTORE_FILE: ${{ secrets.KEYSTORE_FILE }}
+        # KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        # KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        # KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Rename APK
+        run: |
+          mv app/build/outputs/apk/release/app-release.apk \
+             app/build/outputs/apk/release/K2Look-${{ steps.get_version.outputs.VERSION }}.apk
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: app/build/outputs/apk/release/K2Look-${{ steps.get_version.outputs.VERSION }}.apk
+          body: |
+            ## K2Look ${{ steps.get_version.outputs.VERSION }}
+            
+            ### Installation
+            1. Download the APK file below
+            2. Transfer to your Karoo 2 device
+            3. Install the APK
+            4. Launch K2Look from your apps
+            
+            ### Features
+            - Connect ActiveLook smart glasses to Karoo 2
+            - Real-time ride metrics on glasses display
+            - Auto-reconnect during active rides
+            - Debug mode with simulator
+            
+            **Built:** ${{ github.event.head_commit.timestamp }}
+            **Commit:** ${{ github.sha }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
