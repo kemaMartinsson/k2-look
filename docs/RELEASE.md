@@ -2,32 +2,80 @@
 
 ## Creating a New Release
 
-### 1. Update Version
+### 1. Update CHANGELOG.md
 
-Create a new git tag with your version number:
+Add your release notes to `CHANGELOG.md` at the top of the file:
 
-```bash
-# Example: Creating version 0.2
-git tag -a "0.2" -m "Release 0.2 - Description of changes"
+```markdown
+# Changelog
+
+## [0.2] - 2025-01-24
+
+### Added
+- New feature 1
+- New feature 2
+
+### Changed
+- Improved XYZ
+- Updated ABC
+
+### Fixed
+- Bug fix 1
+- Bug fix 2
+
+---
+
+## [0.1] - 2025-01-23
+... (previous versions below)
 ```
 
-### 2. Push the Tag
+### 2. Update strings.xml (Optional but Recommended)
 
-Push the tag to GitHub to trigger the CI build:
+Copy the relevant release notes to `app/src/main/res/values/strings.xml`:
+
+```xml
+<string name="release_notes">
+    Version 0.2 - 2025-01-24\n\n
+    Added:\n
+    • New feature 1\n
+    • New feature 2\n\n
+    ...
+</string>
+```
+
+This ensures the About tab in the app shows current release notes.
+
+### 3. Create Git Tag
+
+Create a tag (message can be brief now, CHANGELOG has the details):
 
 ```bash
+git tag -a "0.2" -m "Release 0.2"
+**📝 Note:** Release notes now come from `CHANGELOG.md`, not the git tag message!
+
+### 4. Push Changes and Tag
+
+Commit and push everything:
+
+```bash
+git add CHANGELOG.md app/src/main/res/values/strings.xml
+git commit -m "Release 0.2"
+git push
+
+# Push the tag to trigger CI build
 git push origin 0.2
 ```
 
-### 3. Automatic Build Process
+### 5. Automatic Build Process
 
 The GitHub Actions CI will automatically:
 
 - Build the release APK
+- Extract release notes from CHANGELOG.md
 - Create a GitHub Release
 - Attach the APK as `K2Look-0.2.apk`
 
-### 4. Find Your Release
+### 6. Find Your Release
 
 Go to: https://github.com/YOUR_USERNAME/k2-look/releases
 

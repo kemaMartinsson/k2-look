@@ -44,6 +44,16 @@ jobs:
         id: get_version
         run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
+      - name: Extract release notes from CHANGELOG
+        id: changelog
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/}"
+          # Extract the section for this version from CHANGELOG.md
+          sed -n "/## \[${VERSION}\]/,/## \[/p" CHANGELOG.md | sed '$d' | tail -n +2 > release_notes.txt
+          echo "NOTES<<EOF" >> $GITHUB_OUTPUT
+          cat release_notes.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Rename APK
         run: |
           mv app/build/outputs/apk/release/app-release.apk \
@@ -56,20 +66,23 @@ jobs:
           body: |
             ## K2Look ${{ steps.get_version.outputs.VERSION }}
             
+            ${{ steps.changelog.outputs.NOTES }}
+            
+            ---
+            
             ### Installation
             1. Download the APK file below
             2. Transfer to your Karoo 2 device
             3. Install the APK
             4. Launch K2Look from your apps
             
-            ### Features
-            - Connect ActiveLook smart glasses to Karoo 2
-            - Real-time ride metrics on glasses display
-            - Auto-reconnect during active rides
-            - Debug mode with simulator
+            ### Links
+            - [Installation Guide](https://github.com/${{ github.repository }}/blob/main/docs/INSTALLATION.md)
+            - [Full Changelog](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md)
+            - [Report Issues](https://github.com/${{ github.repository }}/issues)
             
             **Built:** ${{ github.event.head_commit.timestamp }}
-            **Commit:** ${{ github.sha }}
+            **Commit:** `${{ github.sha }}`
           draft: false
           prerelease: false
         env:

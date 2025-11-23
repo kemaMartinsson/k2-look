@@ -8,17 +8,22 @@
     <string name="app_developer">Kenneth M</string>
     <string name="app_website">https://github.com/kema/k2look</string>
 
-    <!-- Release Notes - Version dynamically set from git tag -->
+    <!-- Release Notes - Keep in sync with CHANGELOG.md -->
     <string name="release_notes">
-        What\'s new:\n\n
-        • Auto-reconnect during active rides\n
-        • Configurable reconnect timeout (1-60 minutes)\n
-        • Debug tab with display simulator\n
-        • Improved UI with icon status indicators\n
-        • Real-time data streaming to glasses\n\n
-        Supported Metrics:\n
-        • Speed, Heart Rate, Cadence\n
-        • Power, Distance, Time\n\n
+        Version 0.1 - 2025-01-23\n\n
+        Added:\n
+        • Initial release of K2Look\n
+        • ActiveLook smart glasses support\n
+        • Real-time ride metrics display\n
+        • Auto-reconnect during rides (1-60 min timeout)\n
+        • Debug mode with display simulator\n
+        • Status tab with connection management\n\n
+        Features:\n
+        • Connect ENGO 2, Julbo Evad-1, and other ActiveLook glasses\n
+        • Display: Speed, Heart Rate, Cadence, Power, Distance, Time\n
+        • System back button integration\n
+        • Git tag-based versioning\n\n
+        See CHANGELOG.md for full version history.
     </string>
 
     <!-- Help & Support -->
