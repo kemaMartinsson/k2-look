@@ -14,14 +14,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -119,330 +116,84 @@ fun MainScreen(
 
 @Composable
 fun StatusTab(viewModel: MainViewModel, uiState: MainViewModel.UiState, onBack: () -> Unit) {
-    Box(modifier = Modifier.fillMaxSize()) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(12.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
+        // Connection Status Section
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp)
-                .padding(bottom = 72.dp), // Extra padding for FABs
-            verticalArrangement = Arrangement.SpaceBetween
+            modifier = Modifier.fillMaxWidth()
         ) {
-            // Connection Status Section
-            Column(
-                modifier = Modifier.fillMaxWidth()
+            // Karoo Connection Status
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 2.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                ),
+                shape = androidx.compose.ui.graphics.RectangleShape
             ) {
-                // Karoo Connection Status
-                Card(
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.background
-                    ),
-                    shape = androidx.compose.ui.graphics.RectangleShape
+                        .padding(12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    Text(
+                        text = "Karoo service:",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Text(
-                            text = "Karoo service:",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Icon(
-                                imageVector = when (uiState.connectionState) {
-                                    is KarooDataService.ConnectionState.Connected -> Icons.Default.CheckCircle
-                                    else -> Icons.Default.Close
-                                },
-                                contentDescription = null,
-                                tint = when (uiState.connectionState) {
-                                    is KarooDataService.ConnectionState.Connected -> MaterialTheme.colorScheme.primary
-                                    is KarooDataService.ConnectionState.Connecting,
-                                    is KarooDataService.ConnectionState.Reconnecting -> MaterialTheme.colorScheme.secondary
+                        Icon(
+                            imageVector = when (uiState.connectionState) {
+                                is KarooDataService.ConnectionState.Connected -> Icons.Default.CheckCircle
+                                else -> Icons.Default.Close
+                            },
+                            contentDescription = null,
+                            tint = when (uiState.connectionState) {
+                                is KarooDataService.ConnectionState.Connected -> MaterialTheme.colorScheme.primary
+                                is KarooDataService.ConnectionState.Connecting,
+                                is KarooDataService.ConnectionState.Reconnecting -> MaterialTheme.colorScheme.secondary
 
-                                    else -> MaterialTheme.colorScheme.error
-                                },
-                                modifier = Modifier.height(16.dp)
-                            )
-                            Text(
-                                text = when (uiState.connectionState) {
-                                    is KarooDataService.ConnectionState.Connected -> "Connected"
-                                    is KarooDataService.ConnectionState.Connecting -> "Connecting..."
-                                    is KarooDataService.ConnectionState.Reconnecting -> "Reconnecting..."
-                                    is KarooDataService.ConnectionState.Disconnected -> "Disconnected"
-                                    is KarooDataService.ConnectionState.Error -> "Error"
-                                },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = when (uiState.connectionState) {
-                                    is KarooDataService.ConnectionState.Connected -> MaterialTheme.colorScheme.primary
-                                    is KarooDataService.ConnectionState.Connecting,
-                                    is KarooDataService.ConnectionState.Reconnecting -> MaterialTheme.colorScheme.secondary
-
-                                    else -> MaterialTheme.colorScheme.error
-                                },
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
-
-                // ActiveLook Glasses Status
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.background
-                    ),
-                    shape = androidx.compose.ui.graphics.RectangleShape
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp)
-                    ) {
-                        when (val state = uiState.activeLookState) {
-                            is ActiveLookService.ConnectionState.Connected -> {
-                                // Show connected glasses with icon
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "Glasses ${state.glasses.name}:",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    Icon(
-                                        imageVector = Icons.Default.CheckCircle,
-                                        contentDescription = "Connected",
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.height(20.dp)
-                                    )
-                                }
-                            }
-
-                            is ActiveLookService.ConnectionState.Connecting -> {
-                                // Show connecting status
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "ActiveLook Glasses:",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    Text(
-                                        text = "Connecting...",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.secondary,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-
-                            is ActiveLookService.ConnectionState.Scanning -> {
-                                // Show scanning status
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "ActiveLook Glasses:",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    Text(
-                                        text = "Scanning...",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.secondary,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-
-                            else -> {
-                                // Show connect button when no glasses connected
-                                Column(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = "No glasses connected",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                        Icon(
-                                            imageVector = Icons.Default.Close,
-                                            contentDescription = "Disconnected",
-                                            tint = MaterialTheme.colorScheme.error,
-                                            modifier = Modifier.height(20.dp)
-                                        )
-                                    }
-                                    Button(
-                                        onClick = { viewModel.startGlassesScan() },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(top = 8.dp)
-                                    ) {
-                                        Text(
-                                            "Connect glasses",
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Divider
-                HorizontalDivider(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 12.dp),
-                    thickness = 1.dp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-                )
-
-                // Reconnect Timeout Configuration
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.background
-                    ),
-                    shape = androidx.compose.ui.graphics.RectangleShape
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp)
-                    ) {
-                        Text(
-                            text = "Auto-Reconnect Settings",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(bottom = 4.dp)
+                                else -> MaterialTheme.colorScheme.error
+                            },
+                            modifier = Modifier.height(16.dp)
                         )
                         Text(
-                            text = "During an active ride, continuously attempt to reconnect to glasses if disconnected.",
+                            text = when (uiState.connectionState) {
+                                is KarooDataService.ConnectionState.Connected -> "Connected"
+                                is KarooDataService.ConnectionState.Connecting -> "Connecting..."
+                                is KarooDataService.ConnectionState.Reconnecting -> "Reconnecting..."
+                                is KarooDataService.ConnectionState.Disconnected -> "Disconnected"
+                                is KarooDataService.ConnectionState.Error -> "Error"
+                            },
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
+                            color = when (uiState.connectionState) {
+                                is KarooDataService.ConnectionState.Connected -> MaterialTheme.colorScheme.primary
+                                is KarooDataService.ConnectionState.Connecting,
+                                is KarooDataService.ConnectionState.Reconnecting -> MaterialTheme.colorScheme.secondary
 
-                        var timeoutText by remember { mutableStateOf(uiState.reconnectTimeoutMinutes.toString()) }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Timeout:",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium
-                            )
-
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                OutlinedTextField(
-                                    value = timeoutText,
-                                    onValueChange = { newValue ->
-                                        // Only allow digits
-                                        if (newValue.all { it.isDigit() } && newValue.length <= 2) {
-                                            timeoutText = newValue
-                                            // Update the preference if valid
-                                            val minutes = newValue.toIntOrNull()
-                                            if (minutes != null && minutes in 1..60) {
-                                                viewModel.setReconnectTimeout(minutes)
-                                            }
-                                        }
-                                    },
-                                    label = {
-                                        Text(
-                                            "Minutes",
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
-                                    },
-                                    singleLine = true,
-                                    modifier = Modifier.weight(1f),
-                                    textStyle = MaterialTheme.typography.bodyMedium
-                                )
-
-                                Text(
-                                    text = "min",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-
-                        Text(
-                            text = "Valid range: 1-60 minutes",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                            modifier = Modifier.padding(top = 4.dp)
+                                else -> MaterialTheme.colorScheme.error
+                            },
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
             }
-        }
 
-        // Back Button - Karoo 2 style
-        FloatingActionButton(
-            onClick = onBack,
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(16.dp),
-            containerColor = MaterialTheme.colorScheme.surface,
-            elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.ArrowBack,
-                contentDescription = "Back",
-                tint = MaterialTheme.colorScheme.onSurface
-            )
-        }
-    }
-}
-
-@Composable
-fun DebugTab(viewModel: MainViewModel, uiState: MainViewModel.UiState, onBack: () -> Unit) {
-    Box(modifier = Modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)
-                .padding(bottom = 72.dp), // Extra padding for FABs
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Debug Toggle Card
+            // ActiveLook Glasses Status
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp),
+                    .padding(vertical = 2.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.background
                 ),
@@ -451,51 +202,108 @@ fun DebugTab(viewModel: MainViewModel, uiState: MainViewModel.UiState, onBack: (
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp)
+                        .padding(12.dp)
                 ) {
-                    Text(
-                        text = "Debug Mode",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                    Text(
-                        text = "Enable debug logging and simulator features",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 12.dp)
-                    )
-
-                    var debugEnabled by remember { mutableStateOf(uiState.debugModeEnabled) }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Debug Mode:",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium
-                        )
-
-
-                        androidx.compose.material3.Switch(
-                            checked = debugEnabled,
-                            onCheckedChange = {
-                                debugEnabled = it
-                                viewModel.setDebugMode(it)
+                    when (val state = uiState.activeLookState) {
+                        is ActiveLookService.ConnectionState.Connected -> {
+                            // Show connected glasses with icon
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Glasses ${state.glasses.name}:",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = "Connected",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.height(20.dp)
+                                )
                             }
-                        )
-                    }
+                        }
 
-                    if (debugEnabled) {
-                        Text(
-                            text = "✓ Logging to: /sdcard/k2look_debug.log",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(top = 8.dp)
-                        )
+                        is ActiveLookService.ConnectionState.Connecting -> {
+                            // Show connecting status
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "ActiveLook Glasses:",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Text(
+                                    text = "Connecting...",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.secondary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        is ActiveLookService.ConnectionState.Scanning -> {
+                            // Show scanning status
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "ActiveLook Glasses:",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Text(
+                                    text = "Scanning...",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.secondary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        else -> {
+                            // Show connect button when no glasses connected
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "No glasses connected",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Disconnected",
+                                        tint = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.height(20.dp)
+                                    )
+                                }
+                                Button(
+                                    onClick = { viewModel.startGlassesScan() },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 8.dp)
+                                ) {
+                                    Text(
+                                        "Connect glasses",
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -504,16 +312,16 @@ fun DebugTab(viewModel: MainViewModel, uiState: MainViewModel.UiState, onBack: (
             HorizontalDivider(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 16.dp),
+                    .padding(vertical = 6.dp),
                 thickness = 1.dp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
             )
 
-            // Simulator Card
+            // Reconnect Timeout Configuration
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp),
+                    .padding(vertical = 2.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.background
                 ),
@@ -522,311 +330,444 @@ fun DebugTab(viewModel: MainViewModel, uiState: MainViewModel.UiState, onBack: (
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp)
+                        .padding(12.dp)
                 ) {
                     Text(
-                        text = "Display Simulator",
-                        style = MaterialTheme.typography.titleMedium,
+                        text = "Auto-Reconnect Settings",
+                        style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 8.dp)
+                        modifier = Modifier.padding(bottom = 4.dp)
                     )
                     Text(
-                        text = "Test glasses display with simulated values",
+                        text = "During an active ride, continuously attempt to reconnect to glasses if disconnected.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 16.dp)
+                        modifier = Modifier.padding(bottom = 8.dp)
                     )
 
-                    // Simulator controls
-                    var simulatorActive by remember { mutableStateOf(false) }
+                    var timeoutText by remember { mutableStateOf(uiState.reconnectTimeoutMinutes.toString()) }
 
-                    if (!simulatorActive) {
-                        Button(
-                            onClick = {
-                                simulatorActive = true
-                                viewModel.startSimulator()
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = uiState.activeLookState is ActiveLookService.ConnectionState.Connected
-                        ) {
-                            Text("Start Simulator")
-                        }
-
-                        if (uiState.activeLookState !is ActiveLookService.ConnectionState.Connected) {
-                            Text(
-                                text = "Connect glasses first",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.padding(top = 8.dp)
-                            )
-                        }
-                    } else {
-                        Button(
-                            onClick = {
-                                simulatorActive = false
-                                viewModel.stopSimulator()
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.error
-                            )
-                        ) {
-                            Text("Stop Simulator")
-                        }
-
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Text(
-                            text = "✓ Sending test data to glasses...",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(top = 12.dp)
+                            text = "Startup timeout:",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium
                         )
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = timeoutText,
+                                onValueChange = { newValue ->
+                                    // Only allow digits
+                                    if (newValue.all { it.isDigit() } && newValue.length <= 2) {
+                                        timeoutText = newValue
+                                        // Update the preference if valid
+                                        val minutes = newValue.toIntOrNull()
+                                        if (minutes != null && minutes in 1..60) {
+                                            viewModel.setReconnectTimeout(minutes)
+                                        }
+                                    }
+                                },
+                                label = {
+                                    Text(
+                                        "Minutes",
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                },
+                                singleLine = true,
+                                modifier = Modifier.weight(1f),
+                                textStyle = MaterialTheme.typography.bodyMedium
+                            )
+
+                            Text(
+                                text = "min",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
+
+                    Text(
+                        text = "Valid range: 1-60 minutes",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
                 }
             }
+        }
+    }
 
-            Spacer(modifier = Modifier.height(16.dp))
+}
 
-            // Current Values Display
-            Card(
+@Composable
+fun DebugTab(viewModel: MainViewModel, uiState: MainViewModel.UiState, onBack: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Debug Toggle Card
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.background
+            ),
+            shape = androidx.compose.ui.graphics.RectangleShape
+        ) {
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
+                    .padding(16.dp)
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
+                Text(
+                    text = "Debug Mode",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                Text(
+                    text = "Enable debug logging and simulator features",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+
+                var debugEnabled by remember { mutableStateOf(uiState.debugModeEnabled) }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Current Values on Glasses",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 12.dp)
+                        text = "Debug Mode:",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium
                     )
 
-                    // Display current values in compact format
-                    DebugValueRow("Speed", uiState.speed)
-                    DebugValueRow("Heart Rate", uiState.heartRate)
-                    DebugValueRow("Cadence", uiState.cadence)
-                    DebugValueRow("Power", uiState.power)
-                    DebugValueRow("Distance", uiState.distance)
-                    DebugValueRow("Time", uiState.time)
+
+                    androidx.compose.material3.Switch(
+                        checked = debugEnabled,
+                        onCheckedChange = {
+                            debugEnabled = it
+                            viewModel.setDebugMode(it)
+                        }
+                    )
+                }
+
+                if (debugEnabled) {
+                    Text(
+                        text = "✓ Logging to: /sdcard/k2look_debug.log",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
                 }
             }
         }
 
-        // Back Button - Karoo 2 style
-        FloatingActionButton(
-            onClick = onBack,
+        // Divider
+        HorizontalDivider(
             modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(16.dp),
-            containerColor = MaterialTheme.colorScheme.surface,
-            elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp)
+                .fillMaxWidth()
+                .padding(vertical = 16.dp),
+            thickness = 1.dp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+        )
+
+        // Simulator Card
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.background
+            ),
+            shape = androidx.compose.ui.graphics.RectangleShape
         ) {
-            Icon(
-                imageVector = Icons.Default.ArrowBack,
-                contentDescription = "Back",
-                tint = MaterialTheme.colorScheme.onSurface
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = "Display Simulator",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                Text(
+                    text = "Test glasses display with simulated values",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
+                // Simulator controls
+                var simulatorActive by remember { mutableStateOf(false) }
+
+                if (!simulatorActive) {
+                    Button(
+                        onClick = {
+                            simulatorActive = true
+                            viewModel.startSimulator()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = uiState.activeLookState is ActiveLookService.ConnectionState.Connected
+                    ) {
+                        Text("Start Simulator")
+                    }
+
+                    if (uiState.activeLookState !is ActiveLookService.ConnectionState.Connected) {
+                        Text(
+                            text = "Connect glasses first",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
+                } else {
+                    Button(
+                        onClick = {
+                            simulatorActive = false
+                            viewModel.stopSimulator()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Text("Stop Simulator")
+                    }
+
+                    Text(
+                        text = "✓ Sending test data to glasses...",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(top = 12.dp)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Current Values Display
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
             )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = "Current Values on Glasses",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+
+                // Display current values in compact format
+                DebugValueRow("Speed", uiState.speed)
+                DebugValueRow("Heart Rate", uiState.heartRate)
+                DebugValueRow("Cadence", uiState.cadence)
+                DebugValueRow("Power", uiState.power)
+                DebugValueRow("Distance", uiState.distance)
+                DebugValueRow("Time", uiState.time)
+            }
         }
     }
 }
 
 @Composable
 fun AboutTab(onBack: () -> Unit) {
-    Box(modifier = Modifier.fillMaxSize()) {
-        Column(
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(12.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
+        // App Info
+        Card(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp)
-                .padding(bottom = 72.dp)
-                .verticalScroll(rememberScrollState())
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.background
+            ),
+            shape = androidx.compose.ui.graphics.RectangleShape
         ) {
-            // App Info
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                ),
-                shape = androidx.compose.ui.graphics.RectangleShape
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Image(
-                        painter = painterResource(id = com.kema.k2look.R.drawable.logo),
-                        contentDescription = "K2Look Logo",
-                        modifier = Modifier.height(48.dp)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = stringResource(R.string.app_name),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = stringResource(R.string.release_notes_version),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = stringResource(R.string.app_description),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Developer: ${stringResource(R.string.app_developer)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            // Release Notes
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                ),
-                shape = androidx.compose.ui.graphics.RectangleShape
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp)
-                ) {
-                    Text(
-                        text = "Release Notes",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                    Text(
-                        text = stringResource(R.string.release_notes),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            // Features
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                ),
-                shape = androidx.compose.ui.graphics.RectangleShape
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp)
-                ) {
-                    Text(
-                        text = "Features",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-
-                    FeatureItem(
-                        stringResource(R.string.feature_auto_reconnect),
-                        stringResource(R.string.feature_auto_reconnect_desc)
-                    )
-                    FeatureItem(
-                        stringResource(R.string.feature_simulator),
-                        stringResource(R.string.feature_simulator_desc)
-                    )
-                    FeatureItem(
-                        stringResource(R.string.feature_debug),
-                        stringResource(R.string.feature_debug_desc)
-                    )
-                }
-            }
-
-            // Help & Support
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                ),
-                shape = androidx.compose.ui.graphics.RectangleShape
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp)
-                ) {
-                    Text(
-                        text = "Help & Support",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-
-                    HelpItem("Connect Glasses", stringResource(R.string.help_connect_glasses))
-                    HelpItem("Auto-Reconnect", stringResource(R.string.help_reconnect))
-                    HelpItem("Timeout Settings", stringResource(R.string.help_timeout))
-                }
-            }
-
-            // Build Info Section at bottom
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                HorizontalDivider(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    thickness = 1.dp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                Image(
+                    painter = painterResource(id = com.kema.k2look.R.drawable.logo),
+                    contentDescription = "K2Look Logo",
+                    modifier = Modifier.height(48.dp)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = stringResource(R.string.app_name),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Version: ${com.kema.k2look.BuildConfig.VERSION_NAME} (${com.kema.k2look.BuildConfig.VERSION_CODE})",
+                    text = stringResource(R.string.release_notes_version),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Build: ${com.kema.k2look.BuildConfig.BUILD_DATE}",
+                    text = stringResource(R.string.app_description),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 2.dp, bottom = 8.dp)
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Developer: ${stringResource(R.string.app_developer)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
 
-        // Back Button - Karoo 2 style
-        FloatingActionButton(
-            onClick = onBack,
+        // Release Notes
+        Card(
             modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(16.dp),
-            containerColor = MaterialTheme.colorScheme.surface,
-            elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp)
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            ),
+            shape = androidx.compose.ui.graphics.RectangleShape
         ) {
-            Icon(
-                imageVector = Icons.Default.ArrowBack,
-                contentDescription = "Back",
-                tint = MaterialTheme.colorScheme.onSurface
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp)
+            ) {
+                Text(
+                    text = "Release Notes",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                Text(
+                    text = stringResource(R.string.release_notes),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        // Features
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.background
+            ),
+            shape = androidx.compose.ui.graphics.RectangleShape
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp)
+            ) {
+                Text(
+                    text = "Features",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                FeatureItem(
+                    stringResource(R.string.feature_auto_reconnect),
+                    stringResource(R.string.feature_auto_reconnect_desc)
+                )
+                FeatureItem(
+                    stringResource(R.string.feature_simulator),
+                    stringResource(R.string.feature_simulator_desc)
+                )
+                FeatureItem(
+                    stringResource(R.string.feature_debug),
+                    stringResource(R.string.feature_debug_desc)
+                )
+            }
+        }
+
+        // Help & Support
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.background
+            ),
+            shape = androidx.compose.ui.graphics.RectangleShape
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp)
+            ) {
+                Text(
+                    text = "Help & Support",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                HelpItem("Connect Glasses", stringResource(R.string.help_connect_glasses))
+                HelpItem("Auto-Reconnect", stringResource(R.string.help_reconnect))
+                HelpItem("Timeout Settings", stringResource(R.string.help_timeout))
+            }
+        }
+
+        // Build Info Section at bottom
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            HorizontalDivider(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                thickness = 1.dp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+            )
+            Text(
+                text = "Version: ${com.kema.k2look.BuildConfig.VERSION_NAME} (${com.kema.k2look.BuildConfig.VERSION_CODE})",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = "Build: ${com.kema.k2look.BuildConfig.BUILD_DATE}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 2.dp, bottom = 8.dp)
             )
         }
     }
@@ -901,7 +842,10 @@ fun DebugValueRow(label: String, value: String) {
 // Previews - Shows UI in different states
 // ============================================================================
 
-@Preview(showBackground = true, showSystemUi = true, name = "Status Tab")
+@Preview(
+    showBackground = true, showSystemUi = true, name = "Status Tab",
+    device = "spec:parent=K2,orientation=portrait"
+)
 @Composable
 fun MainScreenPreviewStatus() {
     MaterialTheme {
@@ -958,95 +902,76 @@ fun MainScreenPreviewStatus() {
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(16.dp)
-                        .padding(bottom = 72.dp),
-                    verticalArrangement = Arrangement.SpaceBetween
+                        .verticalScroll(rememberScrollState())
                 ) {
-                    Column {
-                        StatusCard("Karoo service:", "Connected", MaterialTheme.colorScheme.primary)
-                        StatusCard(
-                            "Glasses ENGO-2:",
-                            "Connected",
-                            MaterialTheme.colorScheme.primary
-                        )
+                    StatusCard("Karoo service:", "Connected", MaterialTheme.colorScheme.primary)
+                    StatusCard(
+                        "Glasses ENGO-2:",
+                        "Connected",
+                        MaterialTheme.colorScheme.primary
+                    )
 
-                        // Divider
-                        HorizontalDivider(
+                    // Divider
+                    HorizontalDivider(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp),
+                        thickness = 1.dp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                    )
+
+                    // Timeout Settings Card
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.background
+                        ),
+                        shape = androidx.compose.ui.graphics.RectangleShape
+                    ) {
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 16.dp),
-                            thickness = 1.dp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-                        )
-
-                        // Timeout Settings Card
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.background
-                            ),
-                            shape = androidx.compose.ui.graphics.RectangleShape
+                                .padding(16.dp)
                         ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp)
+                            Text(
+                                text = "Auto-Reconnect Settings",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                            Text(
+                                text = "If the glasses disconnect during an active ride, the app will continuously try to reconnect.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(bottom = 12.dp)
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "Auto-Reconnect Settings",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(bottom = 8.dp)
+                                    text = "Startup timeout:",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Medium
                                 )
                                 Text(
-                                    text = "If the glasses disconnect during an active ride, the app will continuously try to reconnect.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(bottom = 12.dp)
+                                    text = "10 min",
+                                    style = MaterialTheme.typography.bodyLarge
                                 )
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "Startup timeout:",
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    Text(
-                                        text = "10 min",
-                                        style = MaterialTheme.typography.bodyLarge
-                                    )
 
-                                }
-                                Text(
-                                    text = "Timeout for connecting to glasses on startup.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(bottom = 12.dp)
-                                )
                             }
+                            Text(
+                                text = "Timeout for connecting to glasses on startup.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(bottom = 12.dp)
+                            )
                         }
                     }
                 }
-            }
-
-            // Back Button - Karoo 2 style
-            FloatingActionButton(
-                onClick = { },
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(16.dp),
-                containerColor = MaterialTheme.colorScheme.surface,
-                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.ArrowBack,
-                    contentDescription = "Back",
-                    tint = MaterialTheme.colorScheme.onSurface
-                )
             }
         }
     }
@@ -1237,22 +1162,6 @@ fun MainScreenPreviewDashboard() {
                         }
                     }
                 }
-            }
-
-            // Back Button - Karoo 2 style
-            FloatingActionButton(
-                onClick = { },
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(16.dp),
-                containerColor = MaterialTheme.colorScheme.surface,
-                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.ArrowBack,
-                    contentDescription = "Back",
-                    tint = MaterialTheme.colorScheme.onSurface
-                )
             }
         }
     }
@@ -1449,22 +1358,6 @@ fun MainScreenPreviewAbout() {
                         )
                     }
                 }
-            }
-
-            // Back Button
-            FloatingActionButton(
-                onClick = { },
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(16.dp),
-                containerColor = MaterialTheme.colorScheme.surface,
-                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.ArrowBack,
-                    contentDescription = "Back",
-                    tint = MaterialTheme.colorScheme.onSurface
-                )
             }
         }
     }
