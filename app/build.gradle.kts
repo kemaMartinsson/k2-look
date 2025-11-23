@@ -1,5 +1,38 @@
+import java.io.ByteArrayOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
+
+// Function to get the latest git tag, or fallback to "0.1" if no tags exist
+fun getGitTag(): String {
+    return try {
+        val stdout = ByteArrayOutputStream()
+        exec {
+            commandLine("git", "describe", "--tags", "--abbrev=0")
+            standardOutput = stdout
+            isIgnoreExitValue = true
+        }
+        val tag = stdout.toString().trim()
+        if (tag.isNotEmpty()) tag else "0.1"
+    } catch (e: Exception) {
+        "0.1"
+    }
+}
+
+// Function to get version code from git tag count
+fun getGitVersionCode(): Int {
+    return try {
+        val stdout = ByteArrayOutputStream()
+        exec {
+            commandLine("git", "rev-list", "--count", "HEAD")
+            standardOutput = stdout
+            isIgnoreExitValue = true
+        }
+        val count = stdout.toString().trim()
+        if (count.isNotEmpty()) count.toInt() else 1
+    } catch (e: Exception) {
+        1
+    }
+}
 
 plugins {
     alias(libs.plugins.android.application)
@@ -15,8 +48,8 @@ android {
         applicationId = "com.kema.k2look"
         minSdk = 23
         targetSdk = 34
-        versionCode = 3
-        versionName = "3.0"
+        versionCode = getGitVersionCode()
+        versionName = getGitTag()
 
         buildConfigField(
             "String",
