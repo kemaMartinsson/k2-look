@@ -5,10 +5,13 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.activelook.activelooksdk.DiscoveredGlasses
+import com.kema.k2look.service.ActiveLookService
 import com.kema.k2look.service.KarooActiveLookBridge
 import com.kema.k2look.service.KarooDataService
+import com.kema.k2look.util.PreferencesManager
 import io.hammerhead.karooext.models.RideState
 import io.hammerhead.karooext.models.StreamState
+import io.hammerhead.karooext.models.UserProfile
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,6 +25,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val bridge = KarooActiveLookBridge(application)
     private val karooDataService = bridge.getKarooDataService()
     private val activeLookService = bridge.getActiveLookService()
+    private val preferencesManager = PreferencesManager(application)
 
     // UI State
     private val _uiState = MutableStateFlow(UiState())
@@ -30,9 +34,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     data class UiState(
         val connectionState: KarooDataService.ConnectionState = KarooDataService.ConnectionState.Disconnected,
         val bridgeState: KarooActiveLookBridge.BridgeState = KarooActiveLookBridge.BridgeState.Idle,
+        val activeLookState: ActiveLookService.ConnectionState = ActiveLookService.ConnectionState.Disconnected,
         val discoveredGlasses: List<DiscoveredGlasses> = emptyList(),
         val isScanning: Boolean = false,
         val rideState: RideState = RideState.Idle,
+        val userProfile: UserProfile? = null,
+        val useImperialUnits: Boolean = false,
+        val reconnectTimeoutMinutes: Int = 10, // Default 10 minutes
         val speed: String = "--",
         val avgSpeed: String = "--",
         val maxSpeed: String = "--",
@@ -62,6 +70,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         observeKarooData()
         observeActiveLookData()
         observeBridgeState()
+        observeUserProfile()
+        loadReconnectTimeout()
     }
 
     /**
@@ -89,6 +99,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
+     * Start scanning for glasses (alias for startActiveLookScan)
+     */
+    fun startGlassesScan() {
+        startActiveLookScan()
+    }
+
+    /**
      * Stop scanning for ActiveLook glasses
      */
     fun stopActiveLookScan() {
@@ -113,6 +130,29 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
+     * Load reconnect timeout from preferences
+     */
+    private fun loadReconnectTimeout() {
+        val timeout = preferencesManager.getReconnectTimeoutMinutes()
+        _uiState.value = _uiState.value.copy(reconnectTimeoutMinutes = timeout)
+        Log.d(TAG, "Loaded reconnect timeout: ${timeout}min")
+    }
+
+    /**
+     * Update reconnect timeout
+     */
+    fun setReconnectTimeout(minutes: Int) {
+        if (minutes < 1 || minutes > 60) {
+            Log.w(TAG, "Invalid reconnect timeout: $minutes (must be 1-60)")
+            return
+        }
+
+        Log.i(TAG, "Setting reconnect timeout to ${minutes}min")
+        preferencesManager.setReconnectTimeoutMinutes(minutes)
+        _uiState.value = _uiState.value.copy(reconnectTimeoutMinutes = minutes)
+    }
+
+    /**
      * Observe bridge state
      */
     private fun observeBridgeState() {
@@ -128,6 +168,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * Observe ActiveLook data
      */
     private fun observeActiveLookData() {
+        // Observe connection state
+        viewModelScope.launch {
+            activeLookService.connectionState.collect { state ->
+                Log.d(TAG, "ActiveLook connection state changed: $state")
+                _uiState.value = _uiState.value.copy(activeLookState = state)
+            }
+        }
+
         // Observe discovered glasses
         viewModelScope.launch {
             activeLookService.discoveredGlasses.collect { glasses ->
@@ -141,6 +189,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             activeLookService.isScanning.collect { scanning ->
                 Log.d(TAG, "Scanning state: $scanning")
                 _uiState.value = _uiState.value.copy(isScanning = scanning)
+            }
+        }
+    }
+
+    /**
+     * Observe user profile preferences from Karoo (including unit system)
+     */
+    private fun observeUserProfile() {
+        viewModelScope.launch {
+            karooDataService.getKarooSystem().addConsumer<UserProfile> { profile ->
+                Log.d(
+                    TAG,
+                    "User profile updated: distance=${profile.preferredUnit.distance}, elevation=${profile.preferredUnit.elevation}"
+                )
+                val useImperial =
+                    profile.preferredUnit.distance == UserProfile.PreferredUnit.UnitType.IMPERIAL
+                _uiState.value = _uiState.value.copy(
+                    userProfile = profile,
+                    useImperialUnits = useImperial
+                )
             }
         }
     }

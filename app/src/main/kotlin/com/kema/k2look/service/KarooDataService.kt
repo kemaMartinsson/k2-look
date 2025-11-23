@@ -489,6 +489,11 @@ class KarooDataService(context: Context) {
         _avgVamData.value = null
     }
 
+    /**
+     * Get the KarooSystemService instance for direct access
+     */
+    fun getKarooSystem(): KarooSystemService = karooSystem
+
     companion object {
         private const val TAG = "KarooDataService"
     }

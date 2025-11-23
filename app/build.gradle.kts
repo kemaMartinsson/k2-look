@@ -1,3 +1,6 @@
+import java.text.SimpleDateFormat
+import java.util.Date
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
@@ -12,8 +15,14 @@ android {
         applicationId = "com.kema.k2look"
         minSdk = 23
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 3
+        versionName = "3.0"
+
+        buildConfigField(
+            "String",
+            "BUILD_DATE",
+            "\"${SimpleDateFormat("yyyy-MM-dd HH:mm").format(Date())}\""
+        )
     }
 
     buildTypes {
@@ -34,6 +43,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
