@@ -1,0 +1,411 @@
+package com.kema.k2look.screens
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.kema.k2look.service.ActiveLookService
+import com.kema.k2look.service.KarooDataService
+import com.kema.k2look.viewmodel.MainViewModel
+
+@Composable
+fun StatusTab(viewModel: MainViewModel, uiState: MainViewModel.UiState) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(12.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
+        // Connection Status Section
+        Column(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            // Karoo Connection Status
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 2.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                ),
+                shape = androidx.compose.ui.graphics.RectangleShape
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Karoo service:",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = when (uiState.connectionState) {
+                                is KarooDataService.ConnectionState.Connected -> Icons.Default.CheckCircle
+                                else -> Icons.Default.Close
+                            },
+                            contentDescription = null,
+                            tint = when (uiState.connectionState) {
+                                is KarooDataService.ConnectionState.Connected -> MaterialTheme.colorScheme.primary
+                                is KarooDataService.ConnectionState.Connecting,
+                                is KarooDataService.ConnectionState.Reconnecting -> MaterialTheme.colorScheme.secondary
+
+                                else -> MaterialTheme.colorScheme.error
+                            },
+                            modifier = Modifier.height(16.dp)
+                        )
+                        Text(
+                            text = when (uiState.connectionState) {
+                                is KarooDataService.ConnectionState.Connected -> "Connected"
+                                is KarooDataService.ConnectionState.Connecting -> "Connecting..."
+                                is KarooDataService.ConnectionState.Reconnecting -> "Reconnecting..."
+                                is KarooDataService.ConnectionState.Disconnected -> "Disconnected"
+                                is KarooDataService.ConnectionState.Error -> "Error"
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = when (uiState.connectionState) {
+                                is KarooDataService.ConnectionState.Connected -> MaterialTheme.colorScheme.primary
+                                is KarooDataService.ConnectionState.Connecting,
+                                is KarooDataService.ConnectionState.Reconnecting -> MaterialTheme.colorScheme.secondary
+
+                                else -> MaterialTheme.colorScheme.error
+                            },
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
+            // ActiveLook Glasses Status
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 2.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                ),
+                shape = androidx.compose.ui.graphics.RectangleShape
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp)
+                ) {
+                    when (val state = uiState.activeLookState) {
+                        is ActiveLookService.ConnectionState.Connected -> {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Glasses ${state.glasses.name}:",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = "Connected",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.height(20.dp)
+                                )
+                            }
+                        }
+
+                        is ActiveLookService.ConnectionState.Connecting -> {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "ActiveLook Glasses:",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Text(
+                                    text = "Connecting...",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.secondary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        is ActiveLookService.ConnectionState.Scanning -> {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "ActiveLook Glasses:",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Text(
+                                    text = "Scanning...",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.secondary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        else -> {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "No glasses connected",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Disconnected",
+                                        tint = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.height(20.dp)
+                                    )
+                                }
+                                Button(
+                                    onClick = { viewModel.startGlassesScan() },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 8.dp)
+                                ) {
+                                    Text(
+                                        "Connect glasses",
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Divider
+            HorizontalDivider(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 6.dp),
+                thickness = 1.dp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+            )
+
+            // Auto-Reconnect Settings
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 2.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                ),
+                shape = androidx.compose.ui.graphics.RectangleShape
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp)
+                ) {
+                    Text(
+                        text = "Auto-Reconnect Settings",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+                    Text(
+                        text = "During an active ride, the app will continuously attempt to reconnect to glasses if disconnected.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+
+                    var timeoutMinutes by remember { mutableStateOf(uiState.reconnectTimeoutMinutes) }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Timeout:",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            // Decrement button
+                            Button(
+                                onClick = {
+                                    if (timeoutMinutes > 1) {
+                                        timeoutMinutes--
+                                        viewModel.setReconnectTimeout(timeoutMinutes)
+                                    }
+                                },
+                                modifier = Modifier
+                                    .height(36.dp)
+                                    .width(36.dp),
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
+                                enabled = timeoutMinutes > 1
+                            ) {
+                                Text("-", style = MaterialTheme.typography.titleLarge)
+                            }
+
+                            // Current value display
+                            Text(
+                                text = "$timeoutMinutes min",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.width(60.dp),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+
+                            // Increment button
+                            Button(
+                                onClick = {
+                                    if (timeoutMinutes < 60) {
+                                        timeoutMinutes++
+                                        viewModel.setReconnectTimeout(timeoutMinutes)
+                                    }
+                                },
+                                modifier = Modifier
+                                    .height(36.dp)
+                                    .width(36.dp),
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
+                                enabled = timeoutMinutes < 60
+                            ) {
+                                Text("+", style = MaterialTheme.typography.titleLarge)
+                            }
+                        }
+                    }
+
+                    Text(
+                        text = "Timeout for connecting to glasses on startup.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 2.dp, bottom = 8.dp)
+                    )
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 8.dp),
+                        thickness = 1.dp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
+                    )
+
+                    // Glasses before ride - Auto-connect switch
+                    var autoConnectEnabled by remember {
+                        mutableStateOf(viewModel.preferencesManager.isAutoConnectActiveLookEnabled())
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Glasses before ride",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = "Connect",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        androidx.compose.material3.Switch(
+                            checked = autoConnectEnabled,
+                            onCheckedChange = { enabled ->
+                                autoConnectEnabled = enabled
+                                viewModel.setAutoConnectGlasses(enabled)
+                            }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Glasses at ride end - Disconnect switch
+                    var disconnectWhenIdle by remember {
+                        mutableStateOf(viewModel.preferencesManager.isDisconnectWhenIdleEnabled())
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Glasses at ride end",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = "Disconnect",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        androidx.compose.material3.Switch(
+                            checked = disconnectWhenIdle,
+                            onCheckedChange = { enabled ->
+                                disconnectWhenIdle = enabled
+                                viewModel.setDisconnectWhenIdle(enabled)
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+

@@ -124,10 +124,13 @@ class KarooActiveLookBridge(context: Context) {
      * Attempt to auto-connect to previously connected glasses
      */
     private fun attemptAutoConnectToGlasses(targetAddress: String) {
-        val timeoutMinutes = preferencesManager.getReconnectTimeoutMinutes()
+        val timeoutMinutes = preferencesManager.getStartupTimeoutMinutes()
         val timeoutMs = timeoutMinutes * 60 * 1000L // Convert to milliseconds
 
-        Log.i(TAG, "Scanning for previously connected glasses: $targetAddress (timeout: ${timeoutMinutes}min)")
+        Log.i(
+            TAG,
+            "Scanning for previously connected glasses: $targetAddress (timeout: ${timeoutMinutes}min)"
+        )
 
         // Start scanning
         activeLookService.startScanning()
@@ -156,7 +159,11 @@ class KarooActiveLookBridge(context: Context) {
             if (!glassesFound && activeLookService.isScanning.value) {
                 Log.w(
                     TAG,
-                    "Auto-connect timeout (${timeoutMinutes}min): Could not find glasses with address $targetAddress"
+                    "Startup auto-connect timeout (${timeoutMinutes}min): Could not find glasses with address $targetAddress"
+                )
+                Log.i(
+                    TAG,
+                    "Service will continue running and will attempt reconnect when ride starts"
                 )
                 activeLookService.stopScanning()
                 collectionJob.cancel()
@@ -274,7 +281,10 @@ class KarooActiveLookBridge(context: Context) {
 
                         // Start continuous reconnect if we just entered a ride
                         if (!wasInActiveRide) {
-                            Log.i(TAG, "Entered active ride - starting continuous reconnect monitoring")
+                            Log.i(
+                                TAG,
+                                "Entered active ride - starting continuous reconnect monitoring"
+                            )
                             startContinuousReconnect()
                         }
                     }
@@ -282,7 +292,10 @@ class KarooActiveLookBridge(context: Context) {
                     else -> {
                         // Stop continuous reconnect when ride ends
                         if (wasInActiveRide) {
-                            Log.i(TAG, "Exited active ride - stopping continuous reconnect monitoring")
+                            Log.i(
+                                TAG,
+                                "Exited active ride - stopping continuous reconnect monitoring"
+                            )
                             stopContinuousReconnect()
                         }
                     }
@@ -350,7 +363,10 @@ class KarooActiveLookBridge(context: Context) {
                     is ActiveLookService.ConnectionState.Connected -> {
                         // Save the connected glasses address for reconnect attempts
                         lastConnectedGlassesAddress = state.glasses.address
-                        Log.d(TAG, "Tracking connected glasses address: $lastConnectedGlassesAddress")
+                        Log.d(
+                            TAG,
+                            "Tracking connected glasses address: $lastConnectedGlassesAddress"
+                        )
 
                         updateBridgeState()
                         // If Karoo is also connected and riding, start streaming
@@ -362,7 +378,10 @@ class KarooActiveLookBridge(context: Context) {
                     is ActiveLookService.ConnectionState.Disconnected -> {
                         // If we're in an active ride and glasses disconnected, trigger reconnect
                         if (isInActiveRide && lastConnectedGlassesAddress != null) {
-                            Log.w(TAG, "Glasses disconnected during active ride - will attempt reconnect")
+                            Log.w(
+                                TAG,
+                                "Glasses disconnected during active ride - will attempt reconnect"
+                            )
                         }
                         updateBridgeState()
                     }
@@ -613,14 +632,20 @@ class KarooActiveLookBridge(context: Context) {
                 // Check if we've exceeded the timeout
                 val elapsedMs = System.currentTimeMillis() - reconnectStartTime
                 if (elapsedMs > timeoutMs) {
-                    Log.w(TAG, "Reconnect timeout reached (${timeoutMinutes}min) - stopping reconnect attempts")
+                    Log.w(
+                        TAG,
+                        "Reconnect timeout reached (${timeoutMinutes}min) - stopping reconnect attempts"
+                    )
                     break
                 }
 
                 // If glasses are not connected and we have a last known address, try to reconnect
                 if (!activeLookService.isConnected && lastConnectedGlassesAddress != null) {
                     val remainingMinutes = ((timeoutMs - elapsedMs) / 60000).toInt()
-                    Log.i(TAG, "Glasses disconnected - attempting reconnect (${remainingMinutes}min remaining)...")
+                    Log.i(
+                        TAG,
+                        "Glasses disconnected - attempting reconnect (${remainingMinutes}min remaining)..."
+                    )
 
                     // Try to reconnect
                     tryReconnectToLastGlasses()
@@ -650,7 +675,8 @@ class KarooActiveLookBridge(context: Context) {
 
         // Don't start a new scan if already scanning or connecting
         if (activeLookService.isScanning.value ||
-            activeLookService.connectionState.value is ActiveLookService.ConnectionState.Connecting) {
+            activeLookService.connectionState.value is ActiveLookService.ConnectionState.Connecting
+        ) {
             Log.d(TAG, "Already scanning/connecting - skipping reconnect attempt")
             return
         }

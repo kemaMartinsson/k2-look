@@ -25,7 +25,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val bridge = KarooActiveLookBridge(application)
     private val karooDataService = bridge.getKarooDataService()
     private val activeLookService = bridge.getActiveLookService()
-    private val preferencesManager = PreferencesManager(application)
+
+    // Public access to preferences for UI
+    val preferencesManager = PreferencesManager(application)
 
     // UI State
     private val _uiState = MutableStateFlow(UiState())
@@ -128,6 +130,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun disconnectActiveLook() {
         Log.i(TAG, "User requested disconnect from ActiveLook")
         bridge.disconnectActiveLook()
+    }
+
+    /**
+     * Set auto-connect to glasses on startup
+     */
+    fun setAutoConnectGlasses(enabled: Boolean) {
+        Log.i(TAG, "Setting auto-connect glasses to: $enabled")
+        preferencesManager.setAutoConnectActiveLook(enabled)
+    }
+
+    /**
+     * Set disconnect glasses when ride ends (idle state)
+     */
+    fun setDisconnectWhenIdle(enabled: Boolean) {
+        Log.i(TAG, "Setting disconnect when idle to: $enabled")
+        preferencesManager.setDisconnectWhenIdle(enabled)
     }
 
     /**
