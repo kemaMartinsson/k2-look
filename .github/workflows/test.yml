@@ -49,7 +49,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Run unit tests
-        run: ./gradlew :app:testDebugUnitTest --continue --info
+        run: ./gradlew :app:testDebugUnitTest --continue
 
       - name: Generate test report
         if: always()
