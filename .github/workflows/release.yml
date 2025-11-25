@@ -32,7 +32,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build Release APK
-        run: ./gradlew assembleRelease --no-daemon
+        run: ./gradlew :app:assembleRelease --no-daemon --continue
         # If you add signing later, uncomment the env section below and add secrets in GitHub
         # env:
         #   KEYSTORE_FILE: ${{ secrets.KEYSTORE_FILE }}

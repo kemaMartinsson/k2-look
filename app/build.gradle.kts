@@ -156,4 +156,18 @@ dependencies {
     implementation(libs.bundles.androidx.lifeycle)
     implementation(libs.androidx.activity.compose)
     implementation(libs.bundles.compose.ui)
+
+    // Unit Testing
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+    testImplementation("io.mockk:mockk:1.13.8")
+    testImplementation("androidx.arch.core:core-testing:2.2.0")
+    testImplementation("com.google.truth:truth:1.1.5")
+
+    // Android Instrumented Tests
+    androidTestImplementation("androidx.test.ext:junit:1.1.5")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.5.4")
+
+    debugImplementation("androidx.compose.ui:ui-test-manifest:1.5.4")
 }
