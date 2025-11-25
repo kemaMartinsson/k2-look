@@ -34,6 +34,38 @@ fun getGitVersionCode(): Int {
     }
 }
 
+// Function to get git tag message (changelog)
+fun getGitTagMessage(): String {
+    return try {
+        // Get the latest tag first
+        var stdout = ByteArrayOutputStream()
+        exec {
+            commandLine("git", "tag", "--sort=-version:refname")
+            standardOutput = stdout
+            isIgnoreExitValue = true
+        }
+        val tags = stdout.toString().trim().split("\n")
+        val latestTag = if (tags.isNotEmpty() && tags[0].isNotBlank()) tags[0] else ""
+
+        if (latestTag.isEmpty()) {
+            return "Initial release"
+        }
+
+        // Get the message for that tag
+        stdout = ByteArrayOutputStream()
+        exec {
+            commandLine("git", "tag", "-l", "--format=%(contents)", latestTag)
+            standardOutput = stdout
+            isIgnoreExitValue = true
+        }
+        val message = stdout.toString().trim()
+        if (message.isNotEmpty()) message else "Release $latestTag"
+    } catch (e: Exception) {
+        println("Warning: Could not get git tag message")
+        "Initial release"
+    }
+}
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
@@ -55,6 +87,12 @@ android {
             "String",
             "BUILD_DATE",
             "\"${SimpleDateFormat("yyyy-MM-dd HH:mm").format(Date())}\""
+        )
+
+        buildConfigField(
+            "String",
+            "CHANGELOG",
+            "\"${getGitTagMessage().replace("\"", "\\\"").replace("\n", "\\n")}\""
         )
 
         // Inject version name into strings.xml

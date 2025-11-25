@@ -3,6 +3,8 @@
 *.iml
 .gradle/
 local.properties
+kotlin-compiler*
+*.kotlin_module
 
 # Android build outputs
 build/
