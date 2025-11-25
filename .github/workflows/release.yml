@@ -21,6 +21,12 @@ jobs:
           fetch-depth: 0  # Fetch all history so git describe works
           submodules: recursive  # Fetch submodules if any
 
+      - name: Fix ActiveLook SDK build configuration
+        run: |
+          # Fix the Kotlin serialization plugin version in the reference SDK
+          sed -i 's/version "1.6.21"/version "2.0.21"/' reference/android-sdk/ActiveLookSDK/build.gradle || true
+          sed -i "s/version \"\$kotlin_version\"/version \"2.0.21\"/" reference/android-sdk/ActiveLookSDK/build.gradle || true
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
