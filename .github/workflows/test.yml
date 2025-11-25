@@ -26,6 +26,12 @@ jobs:
           # Fix the Kotlin serialization plugin version in the reference SDK
           sed -i 's/version "1.6.21"/version "2.0.21"/' reference/android-sdk/ActiveLookSDK/build.gradle || true
           sed -i "s/version \"\$kotlin_version\"/version \"2.0.21\"/" reference/android-sdk/ActiveLookSDK/build.gradle || true
+          
+          # Comment out the problematic maven publishing section
+          sed -i '/^afterEvaluate {/,/^}$/s/^/\/\/ /' reference/android-sdk/ActiveLookSDK/build.gradle || true
+          
+          # Alternatively, just disable the publishing block completely
+          sed -i 's/from components.release/\/\/ from components.release/' reference/android-sdk/ActiveLookSDK/build.gradle || true
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
