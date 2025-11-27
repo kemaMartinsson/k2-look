@@ -56,8 +56,16 @@ jobs:
 
       - name: Rename APK
         run: |
-          mv app/build/outputs/apk/release/app-release.apk \
-             app/build/outputs/apk/release/K2Look-${{ steps.get_version.outputs.VERSION }}.apk
+          # Find the actual APK file (could be app-release-unsigned.apk or app-release.apk)
+          cd app/build/outputs/apk/release/
+          APK_FILE=$(ls *.apk | head -n 1)
+          if [ -z "$APK_FILE" ]; then
+            echo "Error: No APK file found!"
+            exit 1
+          fi
+          echo "Found APK: $APK_FILE"
+          mv "$APK_FILE" K2Look-${{ steps.get_version.outputs.VERSION }}.apk
+          ls -la
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
