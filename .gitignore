@@ -32,7 +32,7 @@ local.properties
 # Logs
 *.log
 
-# Reference projects - keeping modified copies we depend on
+git push origin master# Reference projects - keeping modified copies we depend on
 # Only ignore the ones we don't build
 reference/ki2/
 reference/Activelook-API-Documentation/
