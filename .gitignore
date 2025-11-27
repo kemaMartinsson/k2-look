@@ -34,8 +34,8 @@ local.properties
 
 # Reference projects (cloned for reference only, not part of our repo)
 reference/ki2/
-reference/android-sdk/
-reference/karoo-ext/
+#reference/android-sdk/
+#reference/karoo-ext/
 reference/Activelook-API-Documentation/
 reference/demo-app/
 
