@@ -32,10 +32,19 @@ local.properties
 # Logs
 *.log
 
-# Reference projects (cloned for reference only, not part of our repo)
+# Reference projects - keeping modified copies we depend on
+# Only ignore the ones we don't build
 reference/ki2/
-#reference/android-sdk/
-#reference/karoo-ext/
 reference/Activelook-API-Documentation/
 reference/demo-app/
+
+# Ignore build outputs and git metadata in reference projects
+reference/android-sdk/.git/
+reference/android-sdk/build/
+reference/android-sdk/.gradle/
+reference/android-sdk/local.properties
+reference/karoo-ext/.git/
+reference/karoo-ext/build/
+reference/karoo-ext/.gradle/
+reference/karoo-ext/local.properties
 
