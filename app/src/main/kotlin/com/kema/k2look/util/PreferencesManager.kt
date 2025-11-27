@@ -90,6 +90,39 @@ class PreferencesManager(context: Context) {
         prefs.edit { putBoolean(KEY_DISCONNECT_WHEN_IDLE, enabled) }
     }
 
+    /**
+     * Auto-check for updates on app start
+     */
+    fun isAutoCheckUpdatesEnabled(): Boolean {
+        return prefs.getBoolean(KEY_AUTO_CHECK_UPDATES, true) // Default: enabled
+    }
+
+    fun setAutoCheckUpdates(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_AUTO_CHECK_UPDATES, enabled) }
+    }
+
+    /**
+     * Last time we checked for updates (timestamp in milliseconds)
+     */
+    fun getLastUpdateCheckTime(): Long {
+        return prefs.getLong(KEY_LAST_UPDATE_CHECK, 0L)
+    }
+
+    fun setLastUpdateCheckTime(timestamp: Long) {
+        prefs.edit { putLong(KEY_LAST_UPDATE_CHECK, timestamp) }
+    }
+
+    /**
+     * Dismissed update version (user clicked "Later" for this version)
+     */
+    fun getDismissedUpdateVersion(): String? {
+        return prefs.getString(KEY_DISMISSED_UPDATE_VERSION, null)
+    }
+
+    fun setDismissedUpdateVersion(version: String?) {
+        prefs.edit { putString(KEY_DISMISSED_UPDATE_VERSION, version) }
+    }
+
     companion object {
         private const val PREFS_NAME = "k2look_preferences"
         private const val KEY_AUTO_CONNECT_KAROO = "auto_connect_karoo"
@@ -99,6 +132,8 @@ class PreferencesManager(context: Context) {
         private const val KEY_STARTUP_TIMEOUT_MINUTES = "startup_timeout_minutes"
         private const val KEY_RECONNECT_DURING_RIDES = "reconnect_during_rides"
         private const val KEY_DISCONNECT_WHEN_IDLE = "disconnect_when_idle"
+        private const val KEY_AUTO_CHECK_UPDATES = "auto_check_updates"
+        private const val KEY_LAST_UPDATE_CHECK = "last_update_check"
+        private const val KEY_DISMISSED_UPDATE_VERSION = "dismissed_update_version"
     }
 }
-
