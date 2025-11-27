@@ -20,22 +20,6 @@ jobs:
         with:
           fetch-depth: 0  # Fetch all history so git describe works
 
-      - name: Fix ActiveLook SDK build configuration
-        run: |
-          # Replace ALL occurrences of $kotlin_version with hardcoded version
-          sed -i 's/\$kotlin_version/1.6.21/g' reference/android-sdk/ActiveLookSDK/build.gradle || true
-          sed -i "s/\${kotlin_version}/1.6.21/g" reference/android-sdk/ActiveLookSDK/build.gradle || true
-          
-          # Fix the Kotlin serialization plugin version
-          sed -i 's/version "1.6.21"/version "2.0.21"/' reference/android-sdk/ActiveLookSDK/build.gradle || true
-          sed -i 's/version "2.0.21"/version "2.0.21"/' reference/android-sdk/ActiveLookSDK/build.gradle || true
-          
-          # Comment out the problematic maven publishing afterEvaluate block
-          sed -i '/^afterEvaluate {/,/^}$/s/^/\/\/ /' reference/android-sdk/ActiveLookSDK/build.gradle || true
-          
-          # Show the fixed file for debugging
-          echo "=== Fixed build.gradle content (first 60 lines) ==="
-          head -n 60 reference/android-sdk/ActiveLookSDK/build.gradle
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
