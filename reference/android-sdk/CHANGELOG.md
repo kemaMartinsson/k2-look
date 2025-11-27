@@ -1,0 +1,158 @@
+# CHANGELOG
+
+## Version 4.5.6
+
+### New
+
+- Added new firmware support for future devices
+- Updated Android SDK to version 35 to comply with Play Store requirements
+
+## Version 4.5.5
+
+### Fixes
+
+- UI freeze during Cfg update
+
+## Version 4.5.4
+
+### New
+
+- SDK init with simplified parameters
+
+### Fixes
+
+- Increase flow control overflow timer
+- UI freeze & crash during infinite commands rollback
+- FW update issue
+
+### Features
+
+- New commands : `animDisplay`, `animDelete` and `animClear`
+  
+## Version 4.5.2
+
+### Fixes
+- Block cfg update if battery level < 10%
+- Add getter for context & broadcasterceiver
+  
+## Version 4.5.1
+
+### Fixes
+- Recursivity issue
+- Fix api url
+  
+## Version 4.5.0
+
+### New features
+- `layoutClearAndDisplayExtended` & `layoutClearAndDisplay` : now accept `ExtraCmd` to modify existing layout without saving the modification
+- `layoutParameters` : add subCommandAnim & subCommandPolyline
+  
+### Fixes
+- `layoutParameters` : fix subCommandText
+  
+## Version 4.4.3
+
+### Fixes
+- Command Stacking
+
+## Version 4.4.2
+
+### New features
+- `holdFlush` : allows stacking multiple graphic operations and displaying them simultaneously without screen flickering.
+  
+### Fixes
+- image conversion to gray level
+  
+## Version 4.4.1
+
+### Fixes
+- Remove recursive call to avoid stackoverflow
+
+## Version 4.4.0
+
+### Breaking changes
+- Use an anonymous function to accept update
+  
+### New features
+- New commands :
+  - `layoutClearAndDisplayExtended` : clear a layout before displaying it at a position
+  - `layoutClearAndDisplay` : clear a layout before displaying it
+  - `layoutClearExtended` : clear a layout at a position
+  - `pageClearAndDisplay` : clear a page before displaying it
+  - `imgSave` : save image in new format
+  - `streamImg` : display an image without saving it
+  - `polyline` : choose the thickness of your polyline
+
+## Version 4.2.5
+
+### New features
+- Auto reconnect on BLE activation
+- Fine grained configuration update
+- Set default configuration on connection
+- Display update ongoing layout on configuration update
+
+### Fixes
+- Clear glasses screen before and after configuration update
+- Ensure glasses empty cmd stack on connection
+    - Workaround before FW patch
+    - Trigger a Flow Control CMD ERROR before first command
+    - Start configuration update on this Flow Control CMD ERROR
+- minor linter fixes
+
+## Version 4.2.4.1
+
+### Fixes
+- Api path for retrieving firmware and configuration
+- NullPointerException in web request
+
+## Version 4.2.4
+
+### New features
+- Add a callback in the SDK init for triggering the glasses update.
+
+### Changes
+- Forbid glasses usage if the token is not valid
+- Disable glasses update if battery under 10%
+
+### Fixes
+- fix inconsistent connection state while updating
+
+## Version 4.2.3
+
+### New features
+- add a failure callback for updating errors
+- add an up to date state for updates
+- Allow cancelling connection
+- Add a serialized glasses object allowing reconnecting without scanning
+
+### Changes
+- make update progress a double
+- update dependencies
+- On connection lost, directly trigger the disconnected glasses callback
+
+## Version 4.2.2
+
+### New features
+- Include firmware update
+    - get latest firmware from repository
+- Include configuration update
+    - get latest configuration from repository
+
+### Fixes
+- fix bad types.
+- fix pages command id & byte typing
+- fix version check for compatibility
+- fix blocking api unavailability
+- fix config update progress
+- fix suota synchronization
+- fix writting on characteristics twice
+- fix BLE scan permission
+- fix command unstacking
+- fix flow control after 1000ms
+- fix disconnect on disconnected
+
+## Version 4.0.0
+
+### Add
+
+- Initial import of the SDK compatible with the firmware 4.0.0

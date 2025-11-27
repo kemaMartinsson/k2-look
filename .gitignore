@@ -32,7 +32,7 @@ local.properties
 # Logs
 *.log
 
-git push origin master# Reference projects - keeping modified copies we depend on
+# Reference projects - keeping modified copies we depend on
 # Only ignore the ones we don't build
 reference/ki2/
 reference/Activelook-API-Documentation/
@@ -43,8 +43,10 @@ reference/android-sdk/.git/
 reference/android-sdk/build/
 reference/android-sdk/.gradle/
 reference/android-sdk/local.properties
+reference/android-sdk/**/build/
 reference/karoo-ext/.git/
 reference/karoo-ext/build/
 reference/karoo-ext/.gradle/
 reference/karoo-ext/local.properties
+reference/karoo-ext/**/build/
 
