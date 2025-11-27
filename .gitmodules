@@ -4,3 +4,4 @@
 [submodule "reference/karoo-ext"]
 	path = reference/karoo-ext
 	url = https://github.com/hammerheadnav/karoo-ext.git
+	branch = master
