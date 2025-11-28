@@ -4,7 +4,8 @@ This document explains the reference management scripts for k2-look project.
 
 ## Overview
 
-The k2-look project uses local clones of upstream repositories as dependencies and reference implementations. These scripts help manage those reference projects.
+The k2-look project uses local clones of upstream repositories as dependencies and reference
+implementations. These scripts help manage those reference projects.
 
 ---
 
@@ -15,11 +16,13 @@ The k2-look project uses local clones of upstream repositories as dependencies a
 **Purpose:** Initial setup - clones all reference repositories
 
 **When to use:**
+
 - First time setting up the project
 - After cloning the repository without reference projects
 - If reference projects were accidentally deleted
 
 **What it does:**
+
 1. Creates `reference/` directory if missing
 2. Clones ActiveLook SDK from GitHub
 3. Clones Karoo Extensions from GitHub
@@ -29,17 +32,20 @@ The k2-look project uses local clones of upstream repositories as dependencies a
 **Usage:**
 
 Windows (PowerShell):
+
 ```powershell
 .\setup-references.ps1
 ```
 
 Linux/Mac (Bash):
+
 ```bash
 chmod +x setup-references.sh
 ./setup-references.sh
 ```
 
 **Output:**
+
 ```
 Setting up reference projects...
 
@@ -73,12 +79,14 @@ Next steps:
 **Purpose:** Update existing reference repositories to latest versions
 
 **When to use:**
+
 - Weekly/monthly to get latest bug fixes
 - When upstream adds new features you need
 - After build errors that might be fixed upstream
 - Before starting a new development phase
 
 **What it does:**
+
 1. Fetches latest changes from remote
 2. Checks for local modifications
 3. Stashes local changes if any
@@ -89,17 +97,20 @@ Next steps:
 **Usage:**
 
 Windows (PowerShell):
+
 ```powershell
 .\update-references.ps1
 ```
 
 Linux/Mac (Bash):
+
 ```bash
 chmod +x update-references.sh
 ./update-references.sh
 ```
 
 **Output:**
+
 ```
 Updating reference projects...
 
@@ -114,7 +125,7 @@ Updating ActiveLook SDK...
 
 Updating Karoo Extensions...
   Fetching latest changes...
-  Current branch: master
+  Current branch: main
   Pulling latest changes...
   Latest commit: def5678 - Add new data types (1 week ago by Hammerhead)
   ✓ Karoo Extensions updated successfully
@@ -143,12 +154,14 @@ Next steps:
 ### When to Update
 
 **✅ GOOD times to update:**
+
 - At the start of a new sprint
 - When you need a specific new feature
 - During scheduled maintenance windows
 - After backing up your work
 
 **❌ AVOID updating:**
+
 - In the middle of implementing a feature
 - Right before a demo or release
 - When you have uncommitted local changes
@@ -165,9 +178,9 @@ Always follow these steps after running `update-references`:
    ```
 
 2. **Check for Breaking Changes**
-   - Read CHANGELOG.md in each repo
-   - Look for "breaking changes" in commit messages
-   - Check if API signatures changed
+    - Read CHANGELOG.md in each repo
+    - Look for "breaking changes" in commit messages
+    - Check if API signatures changed
 
 3. **Rebuild Project**
    ```bash
@@ -175,20 +188,21 @@ Always follow these steps after running `update-references`:
    ```
 
 4. **Test Thoroughly**
-   - Test basic connection to Karoo
-   - Test data streaming
-   - Test ActiveLook connection (when implemented)
+    - Test basic connection to Karoo
+    - Test data streaming
+    - Test ActiveLook connection (when implemented)
 
 5. **Fix Any Issues**
-   - Update our code if APIs changed
-   - Adjust build configurations if needed
-   - Update documentation
+    - Update our code if APIs changed
+    - Adjust build configurations if needed
+    - Update documentation
 
 ### Handling Local Modifications
 
 If you've made changes to reference projects for testing:
 
 **Option 1: Keep your changes**
+
 ```bash
 cd reference/android-sdk
 git stash                    # Script does this automatically
@@ -197,6 +211,7 @@ git stash pop               # Reapply your changes
 ```
 
 **Option 2: Discard your changes**
+
 ```bash
 cd reference/android-sdk
 git reset --hard HEAD       # Discard all changes
@@ -216,6 +231,7 @@ git reset --hard HEAD       # Discard all changes
 
 **Problem:** You have uncommitted changes in reference repos
 **Solution:** Script automatically stashes them, but review with:
+
 ```bash
 cd reference/android-sdk
 git stash list
@@ -226,6 +242,7 @@ git stash show stash@{0}
 
 **Problem:** Network issues or merge conflicts
 **Solution:**
+
 ```bash
 cd reference/[problem-repo]
 git status                  # Check what's wrong
@@ -237,6 +254,7 @@ git reset --hard origin/main  # If necessary, discard local changes
 
 **Problem:** Upstream changes broke compatibility
 **Solution:**
+
 1. Check git log for breaking changes
 2. Revert to previous commit:
    ```bash
@@ -252,6 +270,7 @@ git reset --hard origin/main  # If necessary, discard local changes
 ## Reference Projects Details
 
 ### ActiveLook SDK
+
 - **Repository:** https://github.com/ActiveLook/android-sdk
 - **Current Version:** 4.5.6
 - **Branch:** main
@@ -259,13 +278,15 @@ git reset --hard origin/main  # If necessary, discard local changes
 - **Update Frequency:** Monthly recommended
 
 ### Karoo Extensions
+
 - **Repository:** https://github.com/hammerheadnav/karoo-ext
 - **Current Version:** 1.1.7
-- **Branch:** master
+- **Branch:** main
 - **Purpose:** Integration with Karoo System
 - **Update Frequency:** Bi-weekly recommended
 
 ### Ki2 Reference
+
 - **Repository:** https://github.com/valterc/ki2
 - **Current Version:** Latest
 - **Branch:** main
@@ -320,9 +341,11 @@ mv reference-backup-20241121 reference
 
 ## Integration with Project
 
-The k2-look project uses these reference repositories as **local project modules**, not remote artifacts:
+The k2-look project uses these reference repositories as **local project modules**, not remote
+artifacts:
 
 **settings.gradle.kts:**
+
 ```kotlin
 include(":activelook-sdk")
 project(":activelook-sdk").projectDir = file("reference/android-sdk/ActiveLookSDK")
@@ -332,6 +355,7 @@ project(":karoo-ext").projectDir = file("reference/karoo-ext/lib")
 ```
 
 **app/build.gradle.kts:**
+
 ```kotlin
 dependencies {
     implementation(project(":karoo-ext"))
@@ -341,6 +365,7 @@ dependencies {
 ```
 
 This approach provides:
+
 - ✅ No need for remote artifact repositories
 - ✅ Full source code access for debugging
 - ✅ Faster builds (no network downloads)
@@ -353,12 +378,12 @@ This approach provides:
 
 Recommended update schedule:
 
-| Task | Frequency | Command |
-|------|-----------|---------|
-| Check for updates | Weekly | `git fetch` in each reference dir |
-| Update references | Bi-weekly | `.\update-references.ps1` |
+| Task              | Frequency         | Command                              |
+|-------------------|-------------------|--------------------------------------|
+| Check for updates | Weekly            | `git fetch` in each reference dir    |
+| Update references | Bi-weekly         | `.\update-references.ps1`            |
 | Test after update | After each update | `.\gradlew clean :app:assembleDebug` |
-| Review changelogs | Monthly | Check GitHub releases |
+| Review changelogs | Monthly           | Check GitHub releases                |
 
 ---
 
@@ -377,7 +402,7 @@ If you encounter issues:
 ## Version History
 
 - **v1.0** (2024-11-21) - Initial scripts created
-  - setup-references.ps1/sh
-  - update-references.ps1/sh
-  - Documentation added
+    - setup-references.ps1/sh
+    - update-references.ps1/sh
+    - Documentation added
 

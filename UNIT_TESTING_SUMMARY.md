@@ -83,7 +83,7 @@ debugImplementation("androidx.compose.ui:ui-test-manifest:1.5.4")
 
 **File**: `.github/workflows/test.yml`
 
-- Runs on push to main/master/develop
+- Runs on push to main/develop
 - Runs on all pull requests
 - Executes `:app:testDebugUnitTest`
 - Uploads test results as artifacts
