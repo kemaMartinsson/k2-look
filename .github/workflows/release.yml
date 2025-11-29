@@ -20,7 +20,6 @@ jobs:
         with:
           fetch-depth: 0  # Fetch all history so git describe works
 
-
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -33,12 +32,6 @@ jobs:
 
       - name: Build Release APK
         run: ./gradlew :app:assembleRelease --no-daemon --continue
-        # If you add signing later, uncomment the env section below and add secrets in GitHub
-        # env:
-        #   KEYSTORE_FILE: ${{ secrets.KEYSTORE_FILE }}
-        #   KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-        #   KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-        #   KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
       - name: Get version from tag
         id: get_version
@@ -48,7 +41,6 @@ jobs:
         id: changelog
         run: |
           VERSION="${GITHUB_REF#refs/tags/}"
-          # Get the tag message (annotation)
           git tag -l --format='%(contents)' "$VERSION" > release_notes.txt
           echo "NOTES<<EOF" >> $GITHUB_OUTPUT
           cat release_notes.txt >> $GITHUB_OUTPUT
@@ -56,7 +48,6 @@ jobs:
 
       - name: Rename APK
         run: |
-          # Find the actual APK file (could be app-release-unsigned.apk or app-release.apk)
           cd app/build/outputs/apk/release/
           APK_FILE=$(ls *.apk | head -n 1)
           if [ -z "$APK_FILE" ]; then
@@ -66,6 +57,15 @@ jobs:
           echo "Found APK: $APK_FILE"
           mv "$APK_FILE" K2Look-${{ steps.get_version.outputs.VERSION }}.apk
           ls -la
+
+      - name: Read Installation Guide
+        id: installation
+        run: |
+          {
+            echo 'INSTALL_GUIDE<<EOF'
+            cat INSTALLATION.md
+            echo EOF
+          } >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
@@ -78,17 +78,29 @@ jobs:
             
             ---
             
-            ### Installation
-            1. Download the APK file below
-            2. Transfer to your Karoo 2 device
-            3. Install the APK
-            4. Launch K2Look from your apps
+            ## 📥 Installation Instructions
+            
+            <details>
+            <summary><b>Click here for complete installation guide</b></summary>
+            
+            ${{ steps.installation.outputs.INSTALL_GUIDE }}
+            
+            </details>
+            
+            ---
+            
+            ### Quick Start
+            
+            1. Download the APK below
+            2. Install via USB + ADB (see full guide above)
+            3. Grant permissions and connect
+            4. Start riding! 🚴‍♂️👓
             
             ### Links
-            - [Detailed installation Guide](https://github.com/${{ github.repository }}/blob/main/docs/INSTALLATION.md)
-            - [Report Issues](https://github.com/${{ github.repository }}/issues)
             
-            **Built:** ${{ github.event.head_commit.timestamp }}
+            - 🐛 [Report Issues](https://github.com/${{ github.repository }}/issues)
+            
+            **Built:** ${{ github.event.head_commit.timestamp }}  
             **Commit:** `${{ github.sha }}`
           draft: false
           prerelease: false
