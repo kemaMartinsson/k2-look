@@ -169,7 +169,6 @@ Transfer the APK to your Karoo2 and install it.
   deployment!**
 - 📋 [Product Requirements Document](./docs/Karoo2-ActiveLook-PRD.md)
 - 🛠️ [Development Setup Guide](./docs/Karoo2-ActiveLook-Dev-Setup.md)
-- ✅ [Implementation TODO](./TODO.md)
 
 ## External Resources
 

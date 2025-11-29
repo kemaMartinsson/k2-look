@@ -70,7 +70,9 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          files: app/build/outputs/apk/release/K2Look-${{ steps.get_version.outputs.VERSION }}.apk
+          files: |
+            app/build/outputs/apk/release/K2Look-${{ steps.get_version.outputs.VERSION }}.apk
+            README.md
           body: |
             ## K2Look ${{ steps.get_version.outputs.VERSION }}
             
@@ -106,4 +108,3 @@ jobs:
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
