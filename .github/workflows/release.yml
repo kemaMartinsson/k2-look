@@ -85,8 +85,7 @@ jobs:
             4. Launch K2Look from your apps
             
             ### Links
-            - [Installation Guide](https://github.com/${{ github.repository }}/blob/main/docs/INSTALLATION.md)
-            - [Full Changelog](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md)
+            - [Detailed installation Guide](https://github.com/${{ github.repository }}/blob/main/docs/INSTALLATION.md)
             - [Report Issues](https://github.com/${{ github.repository }}/issues)
             
             **Built:** ${{ github.event.head_commit.timestamp }}

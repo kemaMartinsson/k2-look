@@ -1,9 +1,27 @@
-# Karoo2 ↔ ActiveLook Gateway (K2-Look)
+# Karoo2 ↔ ActiveLook (K2-Look)
 
-**Status:** 🎉 **Phase 1 Complete - Ready for Field Testing!**
+## ⚠️ Disclaimer
 
-Real-time data gateway between Hammerhead Karoo2 cycling computer and ActiveLook smart glasses,
-enabling cyclists to view critical ride data on a heads-up display without looking down.
+This is a **personal project** shared with the community.  
+The software is provided **"as is"** without warranty of any kind.  
+Please use at your own risk.
+
+**What this means:**
+
+- ✅ Bug reports and issues are welcome and appreciated
+- ✅ Compatibility issues can be reported
+- ⚠️ Fixes are provided on a best-effort basis with no guarantees
+- ⚠️ Support for different ActiveLook glasses brands can only be done if I have access to the
+  hardware
+- 💡 Community contributions, feature request and testing are encouraged!
+
+This project is developed and tested
+with [Engo2](https://engoeyewear.com/products/engo-2-photochromic).
+Function may vary with different devices, but should generally work with any ActiveLook glasses.
+
+---
+
+Real-time data gateway between Hammerhead Karoo2 and (hopefully any) ActiveLook glasses, .
 
 ## Project Overview
 
@@ -11,111 +29,51 @@ This Karoo Extension streams cycling metrics (speed, heart rate, power, cadence,
 from the Karoo2 to ActiveLook smart glasses via Bluetooth Low Energy, providing hands-free ride data
 visualization.
 
-### Current Features (Phase 1):
-
-- ✅ Real-time Karoo data streaming (6 core metrics)
-- ✅ ActiveLook BLE connection and display
-- ✅ Data bridge with 1Hz throttling
-- ✅ Hold/flush pattern for efficient updates
-- ✅ Connection state management
-- ✅ User-friendly Android UI
-
-### Planned Features (Phase 2+):
-
-- 🔄 Expanded metrics (HR zones, elevation, power averages)
-- 🔄 Customizable display layouts
-- 🔄 Navigation prompts on HUD
-- 🔄 User preferences and settings persistence
-- 🔄 Multiple layout presets
+Currently, displays are selected in ActiveLook app.  
+Depending on needs, K2Look configuration options may be added in future releases.
 
 ## Repository Structure
 
 ```
 /
 ├── app/                    # Main application code
-├── docs/                   # Documentation (PRD, dev setup)
-├── reference/              # Git submodules (upstream references)
-│   ├── android-sdk/       # ActiveLook Android SDK
-│   └── karoo-ext/         # Karoo Extensions SDK & samples
-├── TODO.md                # Implementation progress tracker
+├── reference/              # Vendored dependencies (included in repo)
+│   ├── android-sdk/       # ActiveLook Android SDK (v4.5.6)
+│   └── karoo-ext/         # Karoo Extensions SDK (v1.1.7)
 └── [gradle files]
 ```
 
 ## Reference Projects
 
-The `reference/` directory contains **local clones** of upstream repositories. These provide source
-code for dependencies and serve as reference implementations:
+The `reference/` directory contains **vendored copies** of upstream repositories that are **included
+directly in this repository**. These provide source code for the ActiveLook SDK and Karoo Extensions
+library that the app builds against.
+
+**Why vendored instead of downloaded?**
+
+- Ensures consistent builds across all environments
+- CI/CD pipelines work without external dependencies
+- Custom build fixes are maintained across updates
+- No authentication required for building
+
+**Included projects:**
 
 - **`reference/android-sdk`
   ** → [ActiveLook Android SDK](https://github.com/ActiveLook/android-sdk) (v4.5.6)
 - **`reference/karoo-ext`** → [Karoo Extensions](https://github.com/hammerheadnav/karoo-ext) (
   v1.1.7)
-- **`reference/ki2`** → [Ki2 Reference Project](https://github.com/valterc/ki2) (working Karoo
-  extension example)
 
-### Setup Reference Projects
+These are committed to the repository, so **no setup scripts are needed** - just clone and build!
 
-If you've cloned this repository without the reference projects, run:
-
-**Windows (PowerShell):**
-
-```powershell
-.\setup-references.ps1
-```
-
-**Linux/Mac (Bash):**
-
-```bash
-chmod +x setup-references.sh
-./setup-references.sh
-```
-
-This will clone all reference projects into the `reference/` directory.
-
-### Updating Reference Projects
-
-To pull the latest updates from upstream repositories:
-
-**Windows (PowerShell):**
-
-```powershell
-.\update-references.ps1
-```
-
-**Linux/Mac (Bash):**
-
-```bash
-chmod +x update-references.sh
-./update-references.sh
-```
-
-This script will:
-
-- Fetch latest changes from all reference projects
-- Stash any local modifications
-- Pull updates for each repository
-- **Automatically apply necessary build fixes** (Windows only)
-- Show the latest commit information
-- Report any errors
-
-**Important:** The reference projects use version catalogs and configurations that don't work with
-our local module setup. The `post-update-fix.ps1` script automatically applies the necessary fixes
-after updates.
-
-**After updating, rebuild the project:**
-
-```bash
-.\gradlew clean :app:assembleDebug
-```
+> **Note:** The `setup-references.*` and `update-references.*` scripts in the repository root are *
+*deprecated** and no longer needed since reference projects are now vendored directly in the repo.
 
 ### Cloning This Repository
-
-When cloning this repo for the first time:
 
 ```bash
 git clone https://github.com/kemaMartinsson/k2-look.git
 cd k2-look
-.\setup-references.ps1  # or ./setup-references.sh on Linux/Mac
+.\gradlew :app:assembleDebug  # That's it! Reference projects are already included
 ```
 
 ## Development Setup
@@ -139,33 +97,37 @@ cd k2-look
         - Android SDK Build-Tools 30.0.3 (or higher)
         - Android SDK Platform-Tools
 
-4. **Install GitHub Copilot (Optional)**
-    - Go to **File → Settings → Plugins**
-    - Search for "GitHub Copilot"
-    - Click **Install** and restart
-    - Sign in with your GitHub account
-
-5. **Open the Project**
+4. **Open the Project**
     - In Android Studio: **File → Open**
-    - Navigate to `c:\Project\k2-look\src`
+    - Navigate to the cloned repository directory
     - Let Gradle sync (may take several minutes on first run)
 
-### GitHub Packages Authentication
+### Alternative: VSCode with Dev Container
 
-Configure access to the Karoo Extensions library:
+For developers who prefer Visual Studio Code, a devcontainer configuration is available (currently
+disabled):
 
-1. Create a GitHub Personal Access Token with `read:packages` scope
-2. Edit `src/local.properties` (create if doesn't exist):
+1. **Enable the Dev Container:**
+    - Rename `.devcontainer.disabled/` to `.devcontainer/`
+    - This folder contains Docker configuration for a complete Android development environment
 
-   ```properties
-   gpr.user=your-github-username
-   gpr.key=your-personal-access-token
-   ```
+2. **Prerequisites:**
+    - Install [Docker Desktop](https://www.docker.com/products/docker-desktop)
+    - Install [Visual Studio Code](https://code.visualstudio.com/)
+    - Install the "Dev Containers" extension in VSCode
 
-3. This file is in `.gitignore` to protect your credentials
+3. **Open in Container:**
+    - Open VSCode
+    - Press **F1** and select **"Dev Containers: Open Folder in Container..."**
+    - Navigate to the cloned repository
+    - VSCode will build and start the development container (first time takes several minutes)
 
-See [Dev Setup Guide](./docs/Karoo2-ActiveLook-Dev-Setup.md) for complete environment configuration
-and advanced topics.
+4. **Build in Container:**
+    - Once the container is running, open the integrated terminal
+    - Run: `./gradlew :app:assembleDebug`
+
+> **Note:** The devcontainer is disabled by default to avoid confusion for Android Studio users. It
+> provides a consistent Linux-based development environment with all necessary tools pre-installed.
 
 ## Quick Start
 
@@ -175,7 +137,7 @@ and advanced topics.
 .\gradlew :app:assembleDebug
 ```
 
-**Expected output:** APK in `app/build/outputs/apk/debug/app-debug.apk`
+**Expected output:** APK in `app/build/outputs/apk/debug/`
 
 ### 2. Installation on Karoo2
 
@@ -183,25 +145,21 @@ and advanced topics.
 
 ```bash
 adb devices  # Verify Karoo2 is connected
-adb install -r app/build/outputs/apk/debug/app-debug.apk
-adb shell am start -n io.hammerhead.karooexttemplate/.MainActivity
+adb install -r app/build/outputs/apk/debug/*.apk
 ```
 
 **Via File Transfer:**
-Share the APK to the Hammerhead Companion App on your phone for wireless installation.
+Transfer the APK to your Karoo2 and install it.
 
 ### 3. First Run
 
-1. Launch "Karoo Extension Template" on Karoo2
+1. Launch "K2Look" on your Karoo2
 2. Grant Bluetooth and Location permissions
 3. Tap **"Connect"** to connect to Karoo System
-4. Turn on ActiveLook glasses
-5. Tap **"Scan"** to find your glasses
-6. Tap on discovered glasses to connect
-7. Start a ride - data will stream to glasses automatically!
-
-📖 **For detailed testing instructions, see:
-** [Quick Start & Testing Guide](./docs/Quick-Start-Testing-Guide.md)
+4. Turn on your ActiveLook glasses
+5. Tap **"Connect glasses"** to scan for glasses
+6. Select your glasses from the list
+7. Start a ride - data will stream to your glasses automatically!
 
 ## Documentation
 
@@ -212,13 +170,6 @@ Share the APK to the Hammerhead Companion App on your phone for wireless install
 - 📋 [Product Requirements Document](./docs/Karoo2-ActiveLook-PRD.md)
 - 🛠️ [Development Setup Guide](./docs/Karoo2-ActiveLook-Dev-Setup.md)
 - ✅ [Implementation TODO](./TODO.md)
-
-### Phase 1 Completion Reports
-
-- 🎉 [Phase 1 Complete Summary](./docs/Phase-1-Complete-Summary.md) - Overall Phase 1 achievement
-- ✅ [Phase 1.1 Complete](./docs/Phase-1.1-Complete.md) - Karoo integration
-- ✅ [Phase 1.2 Complete](./docs/Phase-1.2-Complete.md) - ActiveLook integration
-- ✅ [Phase 1.3 Complete](./docs/Phase-1.3-Complete.md) - Data bridge
 
 ## External Resources
 
@@ -237,33 +188,46 @@ Share the APK to the Hammerhead Companion App on your phone for wireless install
 
 ## Project Status
 
-### ✅ Phase 1: Core Integration (COMPLETE)
+### Transmitted Metrics
 
-- **Karoo System Integration** - Connect, stream 6 metrics, handle reconnection
-- **ActiveLook BLE Integration** - Scan, connect, display text on glasses
-- **Data Bridge** - Transform data, 1Hz throttling, hold/flush pattern
-- **Build Status:** ✅ Successful
-- **Field Testing:** ⏳ Pending
+K2Look transmits **6 core metrics** from your Karoo 2 to your ActiveLook glasses via Bluetooth:
 
-### 🔄 Phase 2: Metric Implementation (NEXT)
+**Real-time Data Stream:**
 
-- Expand to 12+ metrics (HR zones, elevation, power averages)
-- Improve data formatting and units
-- Add navigation support
-- Performance metrics (3s/10s/30s power)
+1. **Speed** (km/h) - Current speed
+2. **Heart Rate** (bpm) - Current heart rate
+3. **Power** (watts) - Current power output
+4. **Cadence** (rpm) - Current pedaling cadence
+5. **Distance** (km) - Total ride distance
+6. **Time** (HH:MM:SS) - Ride elapsed time
 
-### Current Metrics Display
+**How it appears on your glasses:**  
+The actual display layout and which metrics you see depends on your **ActiveLook glasses
+configuration**. Configure your preferred display layout using the ActiveLook smartphone app or
+glasses settings.
 
-The app currently displays these 6 metrics on ActiveLook glasses:
+Updates transmitted at **1Hz** (1 update/second) for optimal BLE performance.
 
-1. **Speed** (km/h)
-2. **Heart Rate** (bpm)
-3. **Power** (watts)
-4. **Cadence** (rpm)
-5. **Distance** (km)
-6. **Time** (HH:MM:SS)
+### Additional Metrics Available from Karoo
 
-Updates at **1Hz** (1 update/second) for optimal BLE performance.
+The following metrics are **available from Karoo** but not currently transmitted by K2Look:
+
+**Statistical Metrics:**
+
+- Average Speed, Max Speed
+- Average Heart Rate, Max Heart Rate
+- Average Cadence, Max Cadence
+- Average Power, Max Power
+
+**Advanced Metrics:**
+
+- Heart Rate Zone (current training zone)
+- 3s/10s/30s Smoothed Power (Normalized Power)
+- VAM (Vertical Ascent Meters per hour)
+- Average VAM
+
+> **Future Enhancement:** Support for additional metrics and customizable data transmission may be
+> added in future releases based on community feedback.
 
 ## Architecture
 
@@ -286,7 +250,8 @@ Karoo2 Sensors → KarooSystemService → KarooDataService
 
 ## Contributing
 
-This is a personal development project. If you have suggestions or find issues, feel free to open an
+This is a personal development project.  
+If you have suggestions or find issues, feel free to open an
 issue or discussion.
 
 **Bug Reports:** Please include:
@@ -302,5 +267,5 @@ See [LICENSE](./LICENSE) file for details.
 
 ---
 
-**Made with ❤️ for the cycling community**
+**Made with ❤️ for the K2 community**
 
