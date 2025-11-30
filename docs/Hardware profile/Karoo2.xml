@@ -14,8 +14,8 @@
                 <d:pixel-density>xhdpi</d:pixel-density>
                 <d:screen-ratio>long</d:screen-ratio>
                 <d:dimensions>
-                    <d:x-dimension>800</d:x-dimension>
-                    <d:y-dimension>480</d:y-dimension>
+                    <d:x-dimension>480</d:x-dimension>
+                    <d:y-dimension>800</d:y-dimension>
                 </d:dimensions>
                 <d:xdpi>291.55</d:xdpi>
                 <d:ydpi>291.55</d:ydpi>

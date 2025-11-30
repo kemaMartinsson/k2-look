@@ -4,7 +4,8 @@
 
 This is a **personal project** shared with the community.  
 The software is provided **"as is"** without warranty of any kind.  
-Please use at your own risk.
+Please use at your own risk.  
+This is my very first Android app, so please be patient with bugs and rough edges!
 
 **What this means:**
 
