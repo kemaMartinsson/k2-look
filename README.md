@@ -26,6 +26,9 @@ Real-time data gateway between Hammerhead Karoo2 and (hopefully any) ActiveLook 
 
 ## Project Status
 
+Project is in **active development**.  
+No glasses hardware is currently available for testing, so development is done via code.
+
 ### Transmitted Metrics
 
 K2Look transmits **6 core metrics** from your Karoo 2 to your ActiveLook glasses via Bluetooth:
