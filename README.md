@@ -23,6 +23,49 @@ Function may vary with different devices, but should generally work with any Act
 
 Real-time data gateway between Hammerhead Karoo2 and (hopefully any) ActiveLook glasses, .
 
+## Project Status
+
+### Transmitted Metrics
+
+K2Look transmits **6 core metrics** from your Karoo 2 to your ActiveLook glasses via Bluetooth:
+
+**Real-time Data Stream:**
+
+1. **Speed** (km/h) - Current speed
+2. **Heart Rate** (bpm) - Current heart rate
+3. **Power** (watts) - Current power output
+4. **Cadence** (rpm) - Current pedaling cadence
+5. **Distance** (km) - Total ride distance
+6. **Time** (HH:MM:SS) - Ride elapsed time
+
+**How it appears on your glasses:**  
+The actual display layout and which metrics you see depends on your **ActiveLook glasses
+configuration**. Configure your preferred display layout using the ActiveLook smartphone app or
+glasses settings.
+
+Updates transmitted at **1Hz** (1 update/second) for optimal BLE performance.
+
+### Additional Metrics Available from Karoo
+
+The following metrics are **available from Karoo** but not currently transmitted by K2Look:
+
+**Statistical Metrics:**
+
+- Average Speed, Max Speed
+- Average Heart Rate, Max Heart Rate
+- Average Cadence, Max Cadence
+- Average Power, Max Power
+
+**Advanced Metrics:**
+
+- Heart Rate Zone (current training zone)
+- 3s/10s/30s Smoothed Power (Normalized Power)
+- VAM (Vertical Ascent Meters per hour)
+- Average VAM
+
+> **Future Enhancement:** Support for additional metrics and customizable data transmission may be
+> added in future releases based on community feedback.
+
 ## Project Overview
 
 This Karoo Extension streams cycling metrics (speed, heart rate, power, cadence, distance, time)
@@ -167,7 +210,6 @@ Transfer the APK to your Karoo2 and install it.
 
 - 📘 [Quick Start & Testing Guide](./docs/Quick-Start-Testing-Guide.md) - **Start here for
   deployment!**
-- 📋 [Product Requirements Document](./docs/Karoo2-ActiveLook-PRD.md)
 - 🛠️ [Development Setup Guide](./docs/Karoo2-ActiveLook-Dev-Setup.md)
 
 ## External Resources
@@ -184,49 +226,6 @@ Transfer the APK to your Karoo2 and install it.
 - [ActiveLook API Documentation](https://github.com/ActiveLook/Activelook-API-Documentation)
 - [Development Guide](https://www.activelook.net/news-blog/developing-with-activelook-getting-started)
 - [Demo App](https://github.com/ActiveLook/demo-app)
-
-## Project Status
-
-### Transmitted Metrics
-
-K2Look transmits **6 core metrics** from your Karoo 2 to your ActiveLook glasses via Bluetooth:
-
-**Real-time Data Stream:**
-
-1. **Speed** (km/h) - Current speed
-2. **Heart Rate** (bpm) - Current heart rate
-3. **Power** (watts) - Current power output
-4. **Cadence** (rpm) - Current pedaling cadence
-5. **Distance** (km) - Total ride distance
-6. **Time** (HH:MM:SS) - Ride elapsed time
-
-**How it appears on your glasses:**  
-The actual display layout and which metrics you see depends on your **ActiveLook glasses
-configuration**. Configure your preferred display layout using the ActiveLook smartphone app or
-glasses settings.
-
-Updates transmitted at **1Hz** (1 update/second) for optimal BLE performance.
-
-### Additional Metrics Available from Karoo
-
-The following metrics are **available from Karoo** but not currently transmitted by K2Look:
-
-**Statistical Metrics:**
-
-- Average Speed, Max Speed
-- Average Heart Rate, Max Heart Rate
-- Average Cadence, Max Cadence
-- Average Power, Max Power
-
-**Advanced Metrics:**
-
-- Heart Rate Zone (current training zone)
-- 3s/10s/30s Smoothed Power (Normalized Power)
-- VAM (Vertical Ascent Meters per hour)
-- Average VAM
-
-> **Future Enhancement:** Support for additional metrics and customizable data transmission may be
-> added in future releases based on community feedback.
 
 ## Architecture
 
