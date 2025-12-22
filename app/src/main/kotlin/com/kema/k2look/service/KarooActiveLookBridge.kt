@@ -37,6 +37,8 @@ class KarooActiveLookBridge(context: Context) {
     private val scope = CoroutineScope(Dispatchers.Main + Job())
     private var updateJob: Job? = null
     private var reconnectJob: Job? = null
+    private var scanJob: Job? = null
+    private var scanTimeoutJob: Job? = null
 
     // Bridge state
     private val _bridgeState = MutableStateFlow<BridgeState>(BridgeState.Idle)
@@ -196,11 +198,49 @@ class KarooActiveLookBridge(context: Context) {
 
     /**
      * Start scanning for ActiveLook glasses
+     * When called from UI, will auto-connect to first discovered glasses
      */
     fun startActiveLookScan() {
-        Log.i(TAG, "Starting ActiveLook scan...")
+        // Cancel any previous scan jobs
+        scanJob?.cancel()
+        scanTimeoutJob?.cancel()
+
+        Log.i(TAG, "Starting ActiveLook scan with auto-connect...")
         _bridgeState.value = BridgeState.ActiveLookScanning
         activeLookService.startScanning()
+
+        // Auto-connect to first discovered glasses
+        var glassesFound = false
+        scanJob = scope.launch {
+            activeLookService.discoveredGlasses.collect { glassesList ->
+                if (glassesList.isNotEmpty() && !glassesFound) {
+                    val firstGlasses = glassesList.first()
+                    glassesFound = true
+                    Log.i(TAG, "Auto-connecting to discovered glasses: ${firstGlasses.name}")
+                    activeLookService.stopScanning()
+
+                    // Cancel scan jobs
+                    scanJob?.cancel()
+                    scanTimeoutJob?.cancel()
+
+                    // Connect to the glasses
+                    connectActiveLook(firstGlasses)
+                }
+            }
+        }
+
+        // Timeout after 30 seconds
+        scanTimeoutJob = scope.launch {
+            delay(30000)
+            if (!glassesFound && activeLookService.isScanning.value) {
+                Log.w(TAG, "Scan timeout - no glasses found")
+                activeLookService.stopScanning()
+                scanJob?.cancel()
+                scanTimeoutJob = null
+                scanJob = null
+                updateBridgeState()
+            }
+        }
     }
 
     /**

@@ -149,6 +149,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
+     * Forget saved glasses and disconnect if connected
+     */
+    fun forgetGlasses() {
+        Log.i(TAG, "Forgetting saved glasses")
+
+        // Disconnect if currently connected
+        bridge.disconnectActiveLook()
+
+        // Clear saved glasses address
+        preferencesManager.clearLastConnectedGlasses()
+
+        Log.i(TAG, "Saved glasses cleared")
+    }
+
+    /**
      * Load reconnect timeout from preferences
      */
     private fun loadReconnectTimeout() {
