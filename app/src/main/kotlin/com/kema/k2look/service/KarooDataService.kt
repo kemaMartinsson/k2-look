@@ -3,8 +3,10 @@ package com.kema.k2look.service
 import android.content.Context
 import android.util.Log
 import io.hammerhead.karooext.KarooSystemService
+import io.hammerhead.karooext.models.ActiveRideProfile
 import io.hammerhead.karooext.models.DataType
 import io.hammerhead.karooext.models.OnStreamState
+import io.hammerhead.karooext.models.RideProfile
 import io.hammerhead.karooext.models.RideState
 import io.hammerhead.karooext.models.StreamState
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,6 +36,10 @@ class KarooDataService(context: Context) {
     // Ride state
     private val _rideState = MutableStateFlow<RideState>(RideState.Idle)
     val rideState: StateFlow<RideState> = _rideState.asStateFlow()
+
+    // Active ride profile (profile selected by user on launcher)
+    private val _activeRideProfile = MutableStateFlow<RideProfile?>(null)
+    val activeRideProfile: StateFlow<RideProfile?> = _activeRideProfile.asStateFlow()
 
     // Metric streams
     private val _speedData = MutableStateFlow<StreamState?>(null)
@@ -198,6 +204,23 @@ class KarooDataService(context: Context) {
                 _rideState.value = state
             }
             consumerIds.add(rideStateId)
+
+            // Register ActiveRideProfile consumer (monitors profile selected by user)
+            val profileId = karooSystem.addConsumer(
+                onError = { error ->
+                    Log.e(TAG, "ActiveRideProfile consumer error: $error")
+                },
+                onComplete = {
+                    Log.i(TAG, "ActiveRideProfile consumer completed")
+                }
+            ) { event: ActiveRideProfile ->
+                Log.i(
+                    TAG,
+                    "Active ride profile changed: ${event.profile.name} (${event.profile.id})"
+                )
+                _activeRideProfile.value = event.profile
+            }
+            consumerIds.add(profileId)
 
             // Register Speed stream
             val speedId = karooSystem.addConsumer(

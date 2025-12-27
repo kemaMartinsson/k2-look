@@ -2,18 +2,26 @@ import java.io.ByteArrayOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 
-// Function to get the latest git tag, or fallback to "0.1" if no tags exist
-fun getGitTag(): String {
-    return try {
+// Helper class to access ExecOperations
+abstract class GitHelper @Inject constructor(private val execOps: ExecOperations) {
+    fun execGit(vararg args: String): String {
         val stdout = ByteArrayOutputStream()
-        exec {
-            commandLine("git", "describe", "--tags", "--abbrev=0")
+        execOps.exec {
+            commandLine("git", *args)
             standardOutput = stdout
             isIgnoreExitValue = true
         }
-        val tag = stdout.toString().trim()
+        return stdout.toString().trim()
+    }
+}
+
+// Function to get the latest git tag, or fallback to "0.1" if no tags exist
+fun getGitTag(): String {
+    return try {
+        val gitHelper = project.objects.newInstance(GitHelper::class.java)
+        val tag = gitHelper.execGit("describe", "--tags", "--abbrev=0")
         if (tag.isNotEmpty()) tag else "0.1"
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         "0.1"
     }
 }
@@ -21,15 +29,10 @@ fun getGitTag(): String {
 // Function to get version code from git tag count
 fun getGitVersionCode(): Int {
     return try {
-        val stdout = ByteArrayOutputStream()
-        exec {
-            commandLine("git", "rev-list", "--count", "HEAD")
-            standardOutput = stdout
-            isIgnoreExitValue = true
-        }
-        val count = stdout.toString().trim()
+        val gitHelper = project.objects.newInstance(GitHelper::class.java)
+        val count = gitHelper.execGit("rev-list", "--count", "HEAD")
         if (count.isNotEmpty()) count.toInt() else 1
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         1
     }
 }
@@ -37,14 +40,10 @@ fun getGitVersionCode(): Int {
 // Function to get git tag message (changelog)
 fun getGitTagMessage(): String {
     return try {
+        val gitHelper = project.objects.newInstance(GitHelper::class.java)
+
         // Get the latest tag first
-        var stdout = ByteArrayOutputStream()
-        exec {
-            commandLine("git", "tag", "--sort=-version:refname")
-            standardOutput = stdout
-            isIgnoreExitValue = true
-        }
-        val tags = stdout.toString().trim().split("\n")
+        val tags = gitHelper.execGit("tag", "--sort=-version:refname").split("\n")
         val latestTag = if (tags.isNotEmpty() && tags[0].isNotBlank()) tags[0] else ""
 
         if (latestTag.isEmpty()) {
@@ -52,15 +51,9 @@ fun getGitTagMessage(): String {
         }
 
         // Get the message for that tag
-        stdout = ByteArrayOutputStream()
-        exec {
-            commandLine("git", "tag", "-l", "--format=%(contents)", latestTag)
-            standardOutput = stdout
-            isIgnoreExitValue = true
-        }
-        val message = stdout.toString().trim()
+        val message = gitHelper.execGit("tag", "-l", "--format=%(contents)", latestTag)
         if (message.isNotEmpty()) message else "Release $latestTag"
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         println("Warning: Could not get git tag message")
         "Initial release"
     }
@@ -161,6 +154,9 @@ dependencies {
     implementation(libs.bundles.androidx.lifeycle)
     implementation(libs.androidx.activity.compose)
     implementation(libs.bundles.compose.ui)
+
+    // JSON serialization for profile storage
+    implementation(libs.gson)
 
     // Unit Testing
     testImplementation("junit:junit:4.13.2")

@@ -50,3 +50,4 @@ reference/karoo-ext/.gradle/
 reference/karoo-ext/local.properties
 reference/karoo-ext/**/build/
 
+/build_output.txt
