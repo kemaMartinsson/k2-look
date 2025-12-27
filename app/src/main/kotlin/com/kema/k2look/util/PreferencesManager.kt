@@ -46,6 +46,10 @@ class PreferencesManager(context: Context) {
         prefs.edit { putString(KEY_LAST_GLASSES_ADDRESS, address) }
     }
 
+    fun clearLastConnectedGlasses() {
+        prefs.edit { remove(KEY_LAST_GLASSES_ADDRESS) }
+    }
+
     /**
      * Reconnect timeout in minutes (for auto-reconnect attempts during rides)
      */

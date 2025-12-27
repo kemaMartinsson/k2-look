@@ -37,6 +37,12 @@ class KarooActiveLookBridge(context: Context) {
     private val scope = CoroutineScope(Dispatchers.Main + Job())
     private var updateJob: Job? = null
     private var reconnectJob: Job? = null
+    private var scanJob: Job? = null
+    private var scanTimeoutJob: Job? = null
+    private var statusLogJob: Job? = null
+
+    // Simulator mode (for Debug tab)
+    private var simulatorJob: Job? = null
 
     // Bridge state
     private val _bridgeState = MutableStateFlow<BridgeState>(BridgeState.Idle)
@@ -54,6 +60,10 @@ class KarooActiveLookBridge(context: Context) {
     private var lastConnectedGlassesAddress: String? = null
     private var isInActiveRide = false
     private val reconnectIntervalMs = 15000L // Try reconnect every 15 seconds
+
+    // Add a lightweight heartbeat for idle logging (prevents logcat spam)
+    private var lastNoDataLogTimeMs: Long = 0L
+    private val noDataLogIntervalMs: Long = 30_000L
 
     /**
      * Bridge state enum
@@ -87,37 +97,66 @@ class KarooActiveLookBridge(context: Context) {
      * Initialize both services and auto-connect based on preferences
      */
     fun initialize() {
-        Log.i(TAG, "Initializing KarooActiveLookBridge...")
+        android.util.Log.i(TAG, "🚀 === Initializing KarooActiveLookBridge ===")
 
         // Initialize ActiveLook SDK
         activeLookService.initializeSdk()
 
         // Auto-connect to Karoo System if enabled (default: true)
         if (preferencesManager.isAutoConnectKarooEnabled()) {
-            Log.i(TAG, "Auto-connecting to Karoo System (enabled in preferences)...")
+            android.util.Log.i(TAG, "✅ Auto-connecting to Karoo System (enabled in preferences)...")
             connectKaroo()
         } else {
-            Log.i(TAG, "Auto-connect to Karoo disabled in preferences")
+            android.util.Log.i(TAG, "⏭️ Auto-connect to Karoo disabled in preferences")
         }
 
         // Auto-connect to last paired glasses if enabled
         if (preferencesManager.isAutoConnectActiveLookEnabled()) {
             val lastGlassesAddress = preferencesManager.getLastConnectedGlassesAddress()
             if (lastGlassesAddress != null) {
-                Log.i(
+                android.util.Log.i(
                     TAG,
-                    "Auto-connect to glasses enabled, will attempt connection to: $lastGlassesAddress"
+                    "👓 Auto-connect to glasses enabled, will attempt connection to: $lastGlassesAddress"
                 )
                 // Start scanning to find the previously connected glasses
                 attemptAutoConnectToGlasses(lastGlassesAddress)
             } else {
-                Log.i(TAG, "Auto-connect to glasses enabled, but no previous connection found")
+                android.util.Log.i(
+                    TAG,
+                    "⚠️ Auto-connect to glasses enabled, but no previous connection found"
+                )
             }
         } else {
-            Log.i(TAG, "Auto-connect to glasses disabled in preferences")
+            android.util.Log.i(TAG, "⏭️ Auto-connect to glasses disabled in preferences")
         }
 
-        Log.i(TAG, "✓ Bridge initialized")
+        startPeriodicStatusLogging()
+
+        android.util.Log.i(TAG, "✅ Bridge initialized")
+    }
+
+    private fun startPeriodicStatusLogging() {
+        if (statusLogJob?.isActive == true) return
+
+        statusLogJob = scope.launch {
+            while (true) {
+                delay(15_000)
+
+                val activeLookState = activeLookService.connectionState.value
+                val scanning = activeLookService.isScanning.value
+                val connectedAddr = try {
+                    activeLookService.getConnectedGlasses()?.address
+                } catch (_: Exception) {
+                    null
+                }
+
+                Log.i(
+                    TAG,
+                    "Status: bridge=${_bridgeState.value}, karooConnected=${karooDataService.isConnected}, " +
+                            "activeLookState=$activeLookState, scanning=$scanning, connectedAddr=${connectedAddr ?: "-"}"
+                )
+            }
+        }
     }
 
     /**
@@ -127,9 +166,9 @@ class KarooActiveLookBridge(context: Context) {
         val timeoutMinutes = preferencesManager.getStartupTimeoutMinutes()
         val timeoutMs = timeoutMinutes * 60 * 1000L // Convert to milliseconds
 
-        Log.i(
+        android.util.Log.i(
             TAG,
-            "Scanning for previously connected glasses: $targetAddress (timeout: ${timeoutMinutes}min)"
+            "🔍 Scanning for previously connected glasses: $targetAddress (timeout: ${timeoutMinutes}min)"
         )
 
         // Start scanning
@@ -140,15 +179,31 @@ class KarooActiveLookBridge(context: Context) {
         // Observe discovered glasses and connect when found
         val collectionJob = scope.launch {
             activeLookService.discoveredGlasses.collect { glassesList ->
+                android.util.Log.d(
+                    TAG,
+                    "📋 Discovered glasses list updated: ${glassesList.size} devices"
+                )
+                glassesList.forEach {
+                    android.util.Log.d(TAG, "  - ${it.name} (${it.address})")
+                }
+
                 // Look for the target glasses
                 val targetGlasses = glassesList.find { it.address == targetAddress }
                 if (targetGlasses != null && !glassesFound) {
                     glassesFound = true
-                    Log.i(TAG, "Found previously connected glasses: ${targetGlasses.name}")
+                    android.util.Log.i(
+                        TAG,
+                        "✅ Found previously connected glasses: ${targetGlasses.name}"
+                    )
                     // Stop scanning
                     activeLookService.stopScanning()
                     // Connect to the glasses
                     connectActiveLook(targetGlasses)
+                } else if (glassesList.isNotEmpty() && !glassesFound) {
+                    android.util.Log.w(
+                        TAG,
+                        "⚠️ Found glasses but not matching target address $targetAddress"
+                    )
                 }
             }
         }
@@ -157,13 +212,13 @@ class KarooActiveLookBridge(context: Context) {
         scope.launch {
             delay(timeoutMs)
             if (!glassesFound && activeLookService.isScanning.value) {
-                Log.w(
+                android.util.Log.w(
                     TAG,
-                    "Startup auto-connect timeout (${timeoutMinutes}min): Could not find glasses with address $targetAddress"
+                    "⏱️ Startup auto-connect timeout (${timeoutMinutes}min): Could not find glasses with address $targetAddress"
                 )
-                Log.i(
+                android.util.Log.i(
                     TAG,
-                    "Service will continue running and will attempt reconnect when ride starts"
+                    "🔄 Service will continue running and will attempt reconnect when ride starts"
                 )
                 activeLookService.stopScanning()
                 collectionJob.cancel()
@@ -196,11 +251,49 @@ class KarooActiveLookBridge(context: Context) {
 
     /**
      * Start scanning for ActiveLook glasses
+     * When called from UI, will auto-connect to first discovered glasses
      */
     fun startActiveLookScan() {
-        Log.i(TAG, "Starting ActiveLook scan...")
+        // Cancel any previous scan jobs
+        scanJob?.cancel()
+        scanTimeoutJob?.cancel()
+
+        Log.i(TAG, "Starting ActiveLook scan with auto-connect...")
         _bridgeState.value = BridgeState.ActiveLookScanning
         activeLookService.startScanning()
+
+        // Auto-connect to first discovered glasses
+        var glassesFound = false
+        scanJob = scope.launch {
+            activeLookService.discoveredGlasses.collect { glassesList ->
+                if (glassesList.isNotEmpty() && !glassesFound) {
+                    val firstGlasses = glassesList.first()
+                    glassesFound = true
+                    Log.i(TAG, "Auto-connecting to discovered glasses: ${firstGlasses.name}")
+                    activeLookService.stopScanning()
+
+                    // Cancel scan jobs
+                    scanJob?.cancel()
+                    scanTimeoutJob?.cancel()
+
+                    // Connect to the glasses
+                    connectActiveLook(firstGlasses)
+                }
+            }
+        }
+
+        // Timeout after 30 seconds
+        scanTimeoutJob = scope.launch {
+            delay(30000)
+            if (!glassesFound && activeLookService.isScanning.value) {
+                Log.w(TAG, "Scan timeout - no glasses found")
+                activeLookService.stopScanning()
+                scanJob?.cancel()
+                scanTimeoutJob = null
+                scanJob = null
+                updateBridgeState()
+            }
+        }
     }
 
     /**
@@ -471,7 +564,11 @@ class KarooActiveLookBridge(context: Context) {
     private fun flushToGlasses() {
         // Only update if data has changed
         if (!currentData.isDirty) {
-            Log.v(TAG, "No data changes, skipping update")
+            val now = System.currentTimeMillis()
+            if (now - lastNoDataLogTimeMs >= noDataLogIntervalMs) {
+                Log.v(TAG, "No data changes, skipping update")
+                lastNoDataLogTimeMs = now
+            }
             return
         }
 
@@ -613,101 +710,85 @@ class KarooActiveLookBridge(context: Context) {
     fun getActiveLookService(): ActiveLookService = activeLookService
 
     /**
-     * Start continuous reconnect attempts during active rides
+     * Start a local simulator that periodically pushes sample values to the glasses.
+     * This uses the same flush pipeline as normal streaming.
      */
-    private fun startContinuousReconnect() {
-        // Cancel any existing reconnect job
-        stopContinuousReconnect()
+    fun startSimulator() {
+        Log.i(TAG, "🎮 startSimulator() called")
+        Log.i(TAG, "  simulatorJob?.isActive: ${simulatorJob?.isActive}")
+        Log.i(TAG, "  activeLookService.isConnected: ${activeLookService.isConnected}")
 
-        // Start tracking reconnect time
-        reconnectStartTime = System.currentTimeMillis()
-
-        val timeoutMinutes = preferencesManager.getReconnectTimeoutMinutes()
-        val timeoutMs = timeoutMinutes * 60 * 1000L
-
-        Log.i(TAG, "Starting continuous reconnect monitoring (timeout: ${timeoutMinutes}min)")
-
-        reconnectJob = scope.launch {
-            while (isInActiveRide) {
-                // Check if we've exceeded the timeout
-                val elapsedMs = System.currentTimeMillis() - reconnectStartTime
-                if (elapsedMs > timeoutMs) {
-                    Log.w(
-                        TAG,
-                        "Reconnect timeout reached (${timeoutMinutes}min) - stopping reconnect attempts"
-                    )
-                    break
-                }
-
-                // If glasses are not connected and we have a last known address, try to reconnect
-                if (!activeLookService.isConnected && lastConnectedGlassesAddress != null) {
-                    val remainingMinutes = ((timeoutMs - elapsedMs) / 60000).toInt()
-                    Log.i(
-                        TAG,
-                        "Glasses disconnected - attempting reconnect (${remainingMinutes}min remaining)..."
-                    )
-
-                    // Try to reconnect
-                    tryReconnectToLastGlasses()
-                }
-
-                // Wait before next check
-                delay(reconnectIntervalMs)
-            }
-
-            Log.i(TAG, "Continuous reconnect monitoring stopped")
-        }
-    }
-
-    /**
-     * Stop continuous reconnect attempts
-     */
-    private fun stopContinuousReconnect() {
-        reconnectJob?.cancel()
-        reconnectJob = null
-    }
-
-    /**
-     * Try to reconnect to the last connected glasses
-     */
-    private fun tryReconnectToLastGlasses() {
-        val targetAddress = lastConnectedGlassesAddress ?: return
-
-        // Don't start a new scan if already scanning or connecting
-        if (activeLookService.isScanning.value ||
-            activeLookService.connectionState.value is ActiveLookService.ConnectionState.Connecting
-        ) {
-            Log.d(TAG, "Already scanning/connecting - skipping reconnect attempt")
+        if (simulatorJob?.isActive == true) {
+            Log.d(TAG, "⚠️ Simulator already running")
             return
         }
 
-        Log.i(TAG, "Scanning for glasses: $targetAddress")
-        activeLookService.startScanning()
-
-        var glassesFound = false
-
-        // Observe discovered glasses and connect when found
-        val collectionJob = scope.launch {
-            activeLookService.discoveredGlasses.collect { glassesList ->
-                val targetGlasses = glassesList.find { it.address == targetAddress }
-                if (targetGlasses != null && !glassesFound) {
-                    glassesFound = true
-                    Log.i(TAG, "Found glasses during reconnect attempt: ${targetGlasses.name}")
-                    activeLookService.stopScanning()
-                    activeLookService.connect(targetGlasses)
-                }
-            }
+        if (!activeLookService.isConnected) {
+            Log.w(TAG, "❌ Cannot start simulator: glasses not connected")
+            return
         }
 
-        // Timeout after 10 seconds for this individual reconnect attempt
-        scope.launch {
-            delay(10000)
-            if (!glassesFound && activeLookService.isScanning.value) {
-                Log.d(TAG, "Reconnect scan timeout - will retry later")
-                activeLookService.stopScanning()
-                collectionJob.cancel()
+        Log.i(TAG, "✅ Starting simulator (debug values)")
+        simulatorJob = scope.launch {
+            var counter = 0
+            Log.i(TAG, "🔁 Simulator coroutine loop started")
+            while (true) {
+                counter++
+                Log.d(TAG, "📊 Simulator tick $counter")
+                setSimulatedMetrics(
+                    speed = "${20 + (counter % 20)} km/h",
+                    heartRate = "${140 + (counter % 30)} bpm",
+                    cadence = "${80 + (counter % 20)} rpm",
+                    power = "${200 + (counter % 100)} w",
+                    distance = "${counter / 10}.${counter % 10} km",
+                    time = formatSimulatedTime(counter * 2)
+                )
+                delay(2000)
             }
         }
+        Log.i(TAG, "✅ Simulator job launched successfully")
+    }
+
+    /** Stop the simulator (if running). */
+    fun stopSimulator() {
+        if (simulatorJob?.isActive == true) {
+            Log.i(TAG, "⏹ Stopping simulator")
+        }
+        simulatorJob?.cancel()
+        simulatorJob = null
+    }
+
+    /**
+     * Push a single set of simulated metric strings. This marks the frame dirty and flushes.
+     */
+    fun setSimulatedMetrics(
+        speed: String,
+        heartRate: String,
+        cadence: String,
+        power: String,
+        distance: String,
+        time: String
+    ) {
+        Log.v(TAG, "setSimulatedMetrics: SPD=$speed, HR=$heartRate, PWR=$power")
+        currentData.speed = speed
+        currentData.heartRate = heartRate
+        currentData.cadence = cadence
+        currentData.power = power
+        currentData.distance = distance
+        currentData.time = time
+        currentData.isDirty = true
+
+        Log.v(TAG, "Calling flushToGlasses() from simulator")
+        // Flush immediately (still respects internal throttling), so simulator works even when
+        // Karoo isn't connected and the normal 1Hz streaming job isn't running.
+        flushToGlasses()
+    }
+
+    private fun formatSimulatedTime(seconds: Int): String {
+        val h = seconds / 3600
+        val m = (seconds % 3600) / 60
+        val s = seconds % 60
+        return String.format("%02d:%02d:%02d", h, m, s)
     }
 
     /**
@@ -721,8 +802,48 @@ class KarooActiveLookBridge(context: Context) {
         karooDataService.disconnect()
         activeLookService.cleanup()
         scope.cancel()
+        statusLogJob?.cancel()
+        statusLogJob = null
 
         Log.i(TAG, "✓ Bridge cleanup complete")
+    }
+
+    private fun startContinuousReconnect() {
+        if (reconnectJob?.isActive == true) return
+
+        val address = lastConnectedGlassesAddress
+        if (address == null) {
+            Log.w(TAG, "Continuous reconnect requested but no lastConnectedGlassesAddress set")
+            return
+        }
+
+        reconnectStartTime = System.currentTimeMillis()
+        Log.i(
+            TAG,
+            "🔁 Starting continuous reconnect loop (every ${reconnectIntervalMs / 1000}s) for $address"
+        )
+
+        reconnectJob = scope.launch {
+            while (true) {
+                delay(reconnectIntervalMs)
+
+                if (activeLookService.isConnected) {
+                    Log.d(TAG, "Reconnect loop: glasses already connected")
+                    continue
+                }
+
+                Log.i(TAG, "Reconnect loop: scanning to find $address")
+                attemptAutoConnectToGlasses(address)
+            }
+        }
+    }
+
+    private fun stopContinuousReconnect() {
+        if (reconnectJob?.isActive == true) {
+            Log.i(TAG, "⏹ Stopping continuous reconnect loop")
+        }
+        reconnectJob?.cancel()
+        reconnectJob = null
     }
 
     companion object {

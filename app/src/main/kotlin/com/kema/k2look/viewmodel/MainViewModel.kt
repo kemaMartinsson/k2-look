@@ -67,6 +67,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val avgVam: String = "--",
     )
 
+    private var simulatorJob: kotlinx.coroutines.Job? = null
+
     init {
         Log.i(TAG, "MainViewModel initialized")
         bridge.initialize()
@@ -149,6 +151,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
+     * Forget saved glasses and disconnect if connected
+     */
+    fun forgetGlasses() {
+        Log.i(TAG, "Forgetting saved glasses")
+
+        // Disconnect if currently connected
+        bridge.disconnectActiveLook()
+
+        // Clear saved glasses address
+        preferencesManager.clearLastConnectedGlasses()
+
+        Log.i(TAG, "Saved glasses cleared")
+    }
+
+    /**
      * Load reconnect timeout from preferences
      */
     private fun loadReconnectTimeout() {
@@ -182,6 +199,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             startDebugLogging()
         } else {
             stopDebugLogging()
+
+            // Ensure simulator doesn't keep running if user disables debug mode.
+            stopSimulator()
         }
     }
 
@@ -204,13 +224,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * Start simulator - sends test data to glasses
      */
     fun startSimulator() {
-        Log.i(TAG, "Starting simulator...")
-        // TODO: Implement simulator that sends random/cycling test values
-        viewModelScope.launch {
+        Log.i(TAG, "🎮 START SIMULATOR REQUESTED")
+        Log.i(TAG, "  Debug mode: ${_uiState.value.debugModeEnabled}")
+        Log.i(TAG, "  ActiveLook state: ${_uiState.value.activeLookState}")
+        Log.i(TAG, "  Bridge state: ${_uiState.value.bridgeState}")
+
+        if (!_uiState.value.debugModeEnabled) {
+            Log.w(TAG, "❌ Simulator requires Debug Mode enabled")
+            return
+        }
+
+        // Push values to glasses via the bridge.
+        Log.i(TAG, "📤 Calling bridge.startSimulator()")
+        bridge.startSimulator()
+
+        // Also mirror the same values in the UI for visibility.
+        simulatorJob?.cancel()
+        simulatorJob = viewModelScope.launch {
             var counter = 0
+            Log.i(TAG, "🔁 Simulator UI update loop starting")
             while (_uiState.value.debugModeEnabled) {
                 counter++
-                // Simulate changing values
                 _uiState.value = _uiState.value.copy(
                     speed = "${20 + (counter % 20)} km/h",
                     heartRate = "${140 + (counter % 30)} bpm",
@@ -219,8 +253,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     distance = "${counter / 10}.${counter % 10} km",
                     time = formatSimulatedTime(counter * 2)
                 )
-                kotlinx.coroutines.delay(2000) // Update every 2 seconds
+                if (counter % 5 == 0) {
+                    Log.d(
+                        TAG,
+                        "Simulator tick $counter: SPD=${_uiState.value.speed}, HR=${_uiState.value.heartRate}"
+                    )
+                }
+                kotlinx.coroutines.delay(2000)
             }
+            Log.i(TAG, "⏹ Simulator UI update loop stopped")
         }
     }
 
@@ -229,7 +270,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      */
     fun stopSimulator() {
         Log.i(TAG, "Stopping simulator...")
-        // Simulator will stop when debug mode is disabled or naturally
+        simulatorJob?.cancel()
+        simulatorJob = null
+        bridge.stopSimulator()
     }
 
     /**
