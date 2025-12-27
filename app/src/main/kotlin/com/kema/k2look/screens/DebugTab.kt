@@ -3,11 +3,10 @@ package com.kema.k2look.screens
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -28,9 +27,18 @@ import com.kema.k2look.viewmodel.MainViewModel
 
 @Composable
 fun DebugTab(viewModel: MainViewModel, uiState: MainViewModel.UiState) {
+    // Hoist debugEnabled so it can be used across the whole screen
+    var debugEnabled by remember { mutableStateOf(uiState.debugModeEnabled) }
+
+    // Keep local switch state in sync with ViewModel state (e.g., after process recreation)
+    androidx.compose.runtime.LaunchedEffect(uiState.debugModeEnabled) {
+        debugEnabled = uiState.debugModeEnabled
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(androidx.compose.foundation.rememberScrollState())
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -61,8 +69,6 @@ fun DebugTab(viewModel: MainViewModel, uiState: MainViewModel.UiState) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
-
-                var debugEnabled by remember { mutableStateOf(uiState.debugModeEnabled) }
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -104,7 +110,7 @@ fun DebugTab(viewModel: MainViewModel, uiState: MainViewModel.UiState) {
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
         )
 
-        // Simulator Card
+        // Simulator Card (always show, but functionality depends on Debug Mode)
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -135,7 +141,29 @@ fun DebugTab(viewModel: MainViewModel, uiState: MainViewModel.UiState) {
                 // Simulator controls
                 var simulatorActive by remember { mutableStateOf(false) }
 
-                if (!simulatorActive) {
+                // Reset simulator state when debug mode is disabled
+                androidx.compose.runtime.LaunchedEffect(uiState.debugModeEnabled) {
+                    if (!uiState.debugModeEnabled) {
+                        simulatorActive = false
+                    }
+                }
+
+                if (!uiState.debugModeEnabled) {
+                    // Show disabled state when debug mode is off
+                    Button(
+                        onClick = { },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = false
+                    ) {
+                        Text("Start Simulator")
+                    }
+                    Text(
+                        text = "⚠️ Enable Debug Mode above to use simulator",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                } else if (!simulatorActive) {
                     Button(
                         onClick = {
                             simulatorActive = true
@@ -179,7 +207,6 @@ fun DebugTab(viewModel: MainViewModel, uiState: MainViewModel.UiState) {
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
 
         // Current Values Display
         Card(
@@ -235,4 +262,3 @@ fun DebugValueRow(label: String, value: String) {
         )
     }
 }
-

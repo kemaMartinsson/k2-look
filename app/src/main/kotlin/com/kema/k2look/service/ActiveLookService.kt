@@ -96,47 +96,51 @@ class ActiveLookService(private val context: Context) {
     fun startScanning() {
         val sdkInstance = sdk
         if (sdkInstance == null) {
-            Log.e(TAG, "SDK not initialized. Call initializeSdk() first.")
+            android.util.Log.e(TAG, "❌ SDK not initialized. Call initializeSdk() first.")
             _connectionState.value = ConnectionState.Error("SDK not initialized")
             return
         }
 
         if (_isScanning.value) {
-            Log.w(TAG, "Already scanning")
+            android.util.Log.w(TAG, "⚠️ Already scanning")
             return
         }
 
-        Log.i(TAG, "=== Starting BLE scan for ActiveLook glasses ===")
-        Log.d(TAG, "SDK instance: $sdkInstance")
+        android.util.Log.i(TAG, "🔍 === Starting BLE scan for ActiveLook glasses ===")
+        android.util.Log.d(TAG, "SDK instance: $sdkInstance")
+        android.util.Log.i(TAG, "Current connection state: ${_connectionState.value}")
         _connectionState.value = ConnectionState.Scanning
         _isScanning.value = true
         _discoveredGlasses.value = emptyList()
 
         try {
             sdkInstance.startScan { discoveredGlasses ->
-                Log.i(TAG, "=== DISCOVERED DEVICE ===")
-                Log.i(TAG, "  Name: ${discoveredGlasses.name}")
-                Log.i(TAG, "  Address: ${discoveredGlasses.address}")
-                Log.i(TAG, "  Manufacturer: ${discoveredGlasses.manufacturer}")
-                Log.i(TAG, "  toString(): $discoveredGlasses")
-                Log.i(TAG, "========================")
+                android.util.Log.i(TAG, "👓 === DISCOVERED DEVICE ===")
+                android.util.Log.i(TAG, "  Name: ${discoveredGlasses.name}")
+                android.util.Log.i(TAG, "  Address: ${discoveredGlasses.address}")
+                android.util.Log.i(TAG, "  Manufacturer: ${discoveredGlasses.manufacturer}")
+                android.util.Log.i(TAG, "  toString(): $discoveredGlasses")
+                android.util.Log.i(TAG, "========================")
 
                 // Add to discovered list if not already present
                 val currentList = _discoveredGlasses.value.toMutableList()
                 if (currentList.none { it.address == discoveredGlasses.address }) {
                     currentList.add(discoveredGlasses)
                     _discoveredGlasses.value = currentList
-                    Log.i(TAG, "✓ Added to discovered list: ${discoveredGlasses.name}")
-                    Log.d(TAG, "Total discovered devices: ${currentList.size}")
+                    android.util.Log.i(TAG, "✅ Added to discovered list: ${discoveredGlasses.name}")
+                    android.util.Log.d(TAG, "Total discovered devices: ${currentList.size}")
                 } else {
-                    Log.d(TAG, "Device already in list, skipping: ${discoveredGlasses.name}")
+                    android.util.Log.d(
+                        TAG,
+                        "⏭️ Device already in list, skipping: ${discoveredGlasses.name}"
+                    )
                 }
             }
-            Log.i(TAG, "✓ Scan started successfully, waiting for devices...")
+            android.util.Log.i(TAG, "✅ Scan started successfully, waiting for devices...")
         } catch (e: Exception) {
-            Log.e(TAG, "✗ Error starting scan: ${e.message}", e)
-            Log.e(TAG, "Exception type: ${e.javaClass.name}")
-            Log.e(TAG, "Stack trace:", e)
+            android.util.Log.e(TAG, "❌ Error starting scan: ${e.message}", e)
+            android.util.Log.e(TAG, "Exception type: ${e.javaClass.name}")
+            android.util.Log.e(TAG, "Stack trace:", e)
             _connectionState.value = ConnectionState.Error("Scan failed: ${e.message}")
             _isScanning.value = false
         }
@@ -176,29 +180,29 @@ class ActiveLookService(private val context: Context) {
      * Connect to discovered glasses
      */
     fun connect(glasses: DiscoveredGlasses) {
-        Log.i(TAG, "=== INITIATING CONNECTION ===")
-        Log.i(TAG, "  Target Name: ${glasses.name}")
-        Log.i(TAG, "  Target Address: ${glasses.address}")
-        Log.i(TAG, "  Target Manufacturer: ${glasses.manufacturer}")
-        Log.i(TAG, "  Current State: ${_connectionState.value}")
-        Log.i(TAG, "  Is Scanning: ${_isScanning.value}")
+        android.util.Log.i(TAG, "🔌 === INITIATING CONNECTION ===")
+        android.util.Log.i(TAG, "  Target Name: ${glasses.name}")
+        android.util.Log.i(TAG, "  Target Address: ${glasses.address}")
+        android.util.Log.i(TAG, "  Target Manufacturer: ${glasses.manufacturer}")
+        android.util.Log.i(TAG, "  Current State: ${_connectionState.value}")
+        android.util.Log.i(TAG, "  Is Scanning: ${_isScanning.value}")
 
         // Stop scanning if active
         if (_isScanning.value) {
-            Log.d(TAG, "Stopping scan before connection...")
+            android.util.Log.d(TAG, "Stopping scan before connection...")
             stopScanning()
         }
 
-        Log.d(TAG, "Setting state to Connecting...")
+        android.util.Log.d(TAG, "Setting state to Connecting...")
         _connectionState.value = ConnectionState.Connecting
 
         try {
-            Log.d(TAG, "Calling glasses.connect()...")
+            android.util.Log.d(TAG, "Calling glasses.connect()...")
             glasses.connect(
                 { connectedGlasses ->
-                    Log.i(TAG, "=== CONNECTION SUCCESS ===")
-                    Log.i(TAG, "  Connected Name: ${connectedGlasses.name}")
-                    Log.i(TAG, "  Connected Address: ${connectedGlasses.address}")
+                    android.util.Log.i(TAG, "✅ === CONNECTION SUCCESS ===")
+                    android.util.Log.i(TAG, "  Connected Name: ${connectedGlasses.name}")
+                    android.util.Log.i(TAG, "  Connected Address: ${connectedGlasses.address}")
                     Log.i(TAG, "  Manufacturer: ${connectedGlasses.manufacturer}")
                     Log.i(TAG, "=========================")
 
