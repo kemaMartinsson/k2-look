@@ -79,11 +79,16 @@ fun MainScreen(
             Tab(
                 selected = selectedTabIndex == 1,
                 onClick = { selectedTabIndex = 1 },
-                text = { Text("Debug") }
+                text = { Text("Builder") }
             )
             Tab(
                 selected = selectedTabIndex == 2,
                 onClick = { selectedTabIndex = 2 },
+                text = { Text("Debug") }
+            )
+            Tab(
+                selected = selectedTabIndex == 3,
+                onClick = { selectedTabIndex = 3 },
                 text = { Text("About") }
             )
         }
@@ -91,8 +96,9 @@ fun MainScreen(
         // Content based on selected tab
         when (selectedTabIndex) {
             0 -> StatusTab(viewModel, uiState)
-            1 -> DebugTab(viewModel, uiState)
-            2 -> AboutTab()
+            1 -> DataFieldBuilderTab()
+            2 -> DebugTab(viewModel, uiState)
+            3 -> AboutTab()
         }
     }
 }
