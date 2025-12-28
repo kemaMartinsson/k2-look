@@ -32,6 +32,7 @@ class KarooActiveLookBridge(context: Context) {
 
     private val karooDataService = KarooDataService(context)
     private val activeLookService = ActiveLookService(context)
+    private val layoutService = ActiveLookLayoutService(activeLookService)
     private val preferencesManager = PreferencesManager(context)
 
     private val scope = CoroutineScope(Dispatchers.Main + Job())
@@ -53,6 +54,9 @@ class KarooActiveLookBridge(context: Context) {
 
     // Active DataField profile for dynamic layouts
     private var activeProfile: com.kema.k2look.model.DataFieldProfile? = null
+
+    // Phase 4.2: Use efficient layout system (layoutSave/layoutDisplay)
+    private var usePhase42 = true // Can be toggled for testing/fallback
 
     // Update throttling
     private var lastUpdateTime = 0L
@@ -103,12 +107,38 @@ class KarooActiveLookBridge(context: Context) {
         activeProfile = profile
         Log.i(TAG, "📋 Active profile set: ${profile.name} (${profile.screens.size} screens)")
 
+        // Phase 4.2: Save layouts to glasses for efficient updates
+        if (usePhase42 && activeLookService.isConnected) {
+            scope.launch {
+                val success = layoutService.saveProfileLayouts(profile)
+                if (success) {
+                    Log.i(TAG, "✅ Phase 4.2: Layouts saved to glasses memory")
+                } else {
+                    Log.w(TAG, "⚠️ Phase 4.2: Failed to save layouts, falling back to Phase 4.1")
+                    usePhase42 = false
+                }
+            }
+        }
+
         // If streaming, force immediate update with new layout
         if (_bridgeState.value == BridgeState.Streaming) {
             currentData.isDirty = true
             flushToGlasses()
         }
     }
+
+    /**
+     * Toggle Phase 4.2 mode (for testing/debugging)
+     */
+    fun setUsePhase42(enabled: Boolean) {
+        usePhase42 = enabled
+        Log.i(TAG, "Phase 4.2 mode: ${if (enabled) "ENABLED" else "DISABLED"}")
+    }
+
+    /**
+     * Check if Phase 4.2 is active
+     */
+    fun isPhase42Enabled(): Boolean = usePhase42
 
     /**
      * Initialize both services and auto-connect based on preferences
@@ -625,8 +655,36 @@ class KarooActiveLookBridge(context: Context) {
     private fun flushWithProfile(profile: com.kema.k2look.model.DataFieldProfile) {
         val screen = profile.screens.first() // TODO: Support multiple screens
 
-        Log.v(TAG, "Flushing with profile: ${profile.name}, screen: ${screen.id}, fields: ${screen.dataFields.size}")
+        Log.v(
+            TAG,
+            "Flushing with profile: ${profile.name}, screen: ${screen.id}, fields: ${screen.dataFields.size}, Phase4.2: $usePhase42"
+        )
 
+        if (usePhase42 && layoutService.isProfileSaved(profile.id)) {
+            // Phase 4.2: Use efficient layoutDisplay (3 commands, 80% less traffic!)
+            flushWithPhase42(screen)
+        } else {
+            // Phase 4.1: Use displayField (12 commands, works but less efficient)
+            flushWithPhase41(screen)
+        }
+    }
+
+    /**
+     * Phase 4.2: Efficient updates using layoutDisplay
+     * Only sends values - layouts already saved in glasses
+     */
+    private fun flushWithPhase42(screen: com.kema.k2look.model.LayoutScreen) {
+        screen.dataFields.forEach { field ->
+            val value = getMetricValue(field.dataField)
+            layoutService.displayFieldValue(field.position, value)
+        }
+    }
+
+    /**
+     * Phase 4.1: Full rendering using displayField
+     * Sends all positioning/icons/labels every update
+     */
+    private fun flushWithPhase41(screen: com.kema.k2look.model.LayoutScreen) {
         screen.dataFields.forEach { field ->
             val sectionY = when (field.position) {
                 com.kema.k2look.model.Position.TOP -> 0
@@ -662,55 +720,55 @@ class KarooActiveLookBridge(context: Context) {
      * Legacy hardcoded layout (fallback when no profile is active)
      */
     private fun flushToGlassesLegacy() {
-            // Display layout (4 metrics in 2x2 grid with margins)
-            // Using 30px horizontal margins and 25px vertical margins
-            // ActiveLook display is typically 304x256 pixels
-            val leftX = 30
-            val rightX = 160
-            val topY = 30
-            val midY = 100
-            val bottomY = 170
+        // Display layout (4 metrics in 2x2 grid with margins)
+        // Using 30px horizontal margins and 25px vertical margins
+        // ActiveLook display is typically 304x256 pixels
+        val leftX = 30
+        val rightX = 160
+        val topY = 30
+        val midY = 100
+        val bottomY = 170
 
-            val glasses = activeLookService.getConnectedGlasses()
-            if (glasses == null) {
-                Log.w(TAG, "No glasses connected during flush")
-                return
-            }
+        val glasses = activeLookService.getConnectedGlasses()
+        if (glasses == null) {
+            Log.w(TAG, "No glasses connected during flush")
+            return
+        }
 
-            val rotation = Rotation.TOP_LR
-            val labelFont: Byte = 1 // Small font for labels
-            val valueFont: Byte = 3 // Large font for values
-            val color: Byte = 15 // White
+        val rotation = Rotation.TOP_LR
+        val labelFont: Byte = 1 // Small font for labels
+        val valueFont: Byte = 3 // Large font for values
+        val color: Byte = 15 // White
 
-            // Top-left: Speed
-            glasses.txt(Point(leftX, topY), rotation, labelFont, color, "SPD")
-            glasses.txt(Point(leftX, topY + 15), rotation, valueFont, color, currentData.speed)
+        // Top-left: Speed
+        glasses.txt(Point(leftX, topY), rotation, labelFont, color, "SPD")
+        glasses.txt(Point(leftX, topY + 15), rotation, valueFont, color, currentData.speed)
 
-            // Top-right: Heart Rate
-            glasses.txt(Point(rightX, topY), rotation, labelFont, color, "HR")
-            glasses.txt(Point(rightX, topY + 15), rotation, valueFont, color, currentData.heartRate)
+        // Top-right: Heart Rate
+        glasses.txt(Point(rightX, topY), rotation, labelFont, color, "HR")
+        glasses.txt(Point(rightX, topY + 15), rotation, valueFont, color, currentData.heartRate)
 
-            // Mid-left: Power
-            glasses.txt(Point(leftX, midY), rotation, labelFont, color, "PWR")
-            glasses.txt(Point(leftX, midY + 15), rotation, valueFont, color, currentData.power)
+        // Mid-left: Power
+        glasses.txt(Point(leftX, midY), rotation, labelFont, color, "PWR")
+        glasses.txt(Point(leftX, midY + 15), rotation, valueFont, color, currentData.power)
 
-            // Mid-right: Cadence
-            glasses.txt(Point(rightX, midY), rotation, labelFont, color, "CAD")
-            glasses.txt(Point(rightX, midY + 15), rotation, valueFont, color, currentData.cadence)
+        // Mid-right: Cadence
+        glasses.txt(Point(rightX, midY), rotation, labelFont, color, "CAD")
+        glasses.txt(Point(rightX, midY + 15), rotation, valueFont, color, currentData.cadence)
 
-            // Bottom-left: Distance
-            glasses.txt(Point(leftX, bottomY), rotation, labelFont, color, "DIST")
-            glasses.txt(
-                Point(leftX, bottomY + 15),
-                rotation,
-                valueFont,
-                color,
-                currentData.distance
-            )
+        // Bottom-left: Distance
+        glasses.txt(Point(leftX, bottomY), rotation, labelFont, color, "DIST")
+        glasses.txt(
+            Point(leftX, bottomY + 15),
+            rotation,
+            valueFont,
+            color,
+            currentData.distance
+        )
 
-            // Bottom-right: Time
-            glasses.txt(Point(rightX, bottomY), rotation, labelFont, color, "TIME")
-            glasses.txt(Point(rightX, bottomY + 15), rotation, valueFont, color, currentData.time)
+        // Bottom-right: Time
+        glasses.txt(Point(rightX, bottomY), rotation, labelFont, color, "TIME")
+        glasses.txt(Point(rightX, bottomY + 15), rotation, valueFont, color, currentData.time)
     }
 
     /**
@@ -778,6 +836,11 @@ class KarooActiveLookBridge(context: Context) {
      * Get ActiveLookService for direct access if needed
      */
     fun getActiveLookService(): ActiveLookService = activeLookService
+
+    /**
+     * Get ActiveLookLayoutService for Phase 4.2 layout management
+     */
+    fun getLayoutService(): ActiveLookLayoutService = layoutService
 
     /**
      * Start a local simulator that periodically pushes sample values to the glasses.

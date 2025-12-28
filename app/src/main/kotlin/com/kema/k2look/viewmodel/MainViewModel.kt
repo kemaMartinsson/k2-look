@@ -34,6 +34,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      */
     fun getBridge(): KarooActiveLookBridge = bridge
 
+    /**
+     * Get the layout service for Phase 4.2 operations
+     */
+    fun getLayoutService() = bridge.getLayoutService()
+
     // UI State
     private val _uiState = MutableStateFlow(UiState())
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()

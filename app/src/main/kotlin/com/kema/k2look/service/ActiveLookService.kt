@@ -414,6 +414,44 @@ class ActiveLookService(private val context: Context) {
         }
     }
 
+
+    /**
+     * Display a value using a pre-saved layout (Phase 4.2)
+     * Much more efficient than txt() - only sends the value!
+     */
+    fun layoutDisplay(layoutId: Byte, value: String) {
+        val glasses = connectedGlasses
+        if (glasses == null) {
+            Log.w(TAG, "Cannot display layout: No glasses connected")
+            return
+        }
+
+        try {
+            glasses.layoutDisplay(layoutId, value)
+            Log.v(TAG, "Layout $layoutId displayed: '$value'")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error displaying layout $layoutId: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Delete a layout from glasses memory (Phase 4.2)
+     */
+    fun layoutDelete(layoutId: Byte) {
+        val glasses = connectedGlasses
+        if (glasses == null) {
+            Log.w(TAG, "Cannot delete layout: No glasses connected")
+            return
+        }
+
+        try {
+            glasses.layoutDelete(layoutId)
+            Log.d(TAG, "Layout $layoutId deleted")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error deleting layout $layoutId: ${e.message}", e)
+        }
+    }
+
     /**
      * Check if connected to glasses
      */
