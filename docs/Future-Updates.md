@@ -383,75 +383,109 @@ Profile Mapping:
 ## 4. Advanced Metric Support
 
 **Status**: Future Enhancement  
-**Priority**: Low  
-**Complexity**: Medium  
-**Benefit**: More data available
+**Priority**: Medium  
+**Complexity**: Low-Medium  
+**Benefit**: More cycling data available
 
-### Additional Metrics to Support
+### Heart Rate Zones
 
-**Elevation Metrics:**
+✅ **IMPLEMENTED** - HR Zones are now available in Phase 5!
 
-- Altitude (current)
-- Total Ascent (cumulative)
-- Total Descent (cumulative)
-- Gradient (current %)
-- VAM (Vertical Ascent Meters per hour)
+Karoo provides HR zone data (Z1-Z5) directly through the data streams. The zone is calculated by
+Karoo based on the user's configured HR zones in their profile.
 
-**Energy Metrics:**
+**Usage:**
 
-- Calories burned
-- TSS (Training Stress Score)
-- IF (Intensity Factor)
-- NP (Normalized Power)
+- Select "HR Zone" metric in Builder tab
+- Displays as "Z1", "Z2", "Z3", "Z4", or "Z5"
+- Updates in real-time based on current heart rate
 
-**Advanced Power Metrics:**
+### VAM (Vertical Ascent Meters)
 
-- Power 10s / 30s smoothed (already supported!)
-- Left/Right balance
-- Torque effectiveness
-- FTP percentage
+✅ **AVAILABLE IN KAROO** - Ready to implement!
 
-**Running Dynamics:**
+Karoo provides VAM data streams:
 
-- Vertical oscillation
-- Ground contact time
-- Cadence (running)
-- Stride length
+- Current VAM (vertical speed in m/h)
+- Average VAM
 
-### Implementation
+**Implementation:**
+
+```kotlin
+// Already defined in DataFieldRegistry.kt
+DataField(24, "VAM", "m/h", CLIMBING, ...)
+
+// Connect data stream in KarooActiveLookBridge
+scope.launch {
+    karooDataService.vamData.collect { streamState ->
+        currentData.vam = formatStreamData(streamState, "m/h")
+        currentData.isDirty = true
+    }
+}
+```
+
+**When Is This Useful?**
+
+- ⛰️ Climbing performance tracking
+- 🏔️ Mountain rides
+- 📊 Comparing climbing efforts
+
+### Additional Power Smoothing
+
+⚡ **AVAILABLE IN KAROO** - 10s and 30s smoothing ready to implement!
+
+Currently implemented:
+
+- ✅ Power 3s (smoothed)
+
+Available from Karoo:
+
+- 📊 Power 10s (smoothed)
+- 📊 Power 30s (smoothed)
+
+**Implementation:**
 
 ```kotlin
 // Add to DataFieldRegistry.kt
-DataField(
-    25, "Altitude", "m", ELEVATION, KarooStreamType.ALTITUDE,
-    icon28 = 2, icon40 = 34
-),
-DataField(
-    26, "Gradient", "%", ELEVATION, KarooStreamType.GRADIENT,
-    icon28 = 29, icon40 = 61
-),
-DataField(
-    27, "VAM", "m/h", ELEVATION, KarooStreamType.VAM,
-    icon28 = 30, icon40 = 62
-)
+DataField(11, "Power 10s", "w", POWER, ...),
+DataField(12, "Power 30s", "w", POWER, ...),
 
-// Add to KarooActiveLookBridge.getMetricValue()
-27 -> formatVamData(vamData)
+// Connect streams (already exist in KarooDataService)
+currentData.power10s = formatStreamData(smoothed10sPowerData, "w")
+currentData.power30s = formatStreamData(smoothed30sPowerData, "w")
 ```
 
-### When Is This Useful?
+### NOT Available from Karoo
 
-**NOT needed for:**
+The following metrics are **NOT provided by Karoo data streams** and would require custom
+implementation:
 
-- ✅ Basic cycling metrics sufficient
-- ✅ Glasses screen real-estate limited
+**Elevation Data:**
 
-**Useful for:**
+- ❌ Altitude (current)
+- ❌ Total Ascent (cumulative)
+- ❌ Total Descent (cumulative)
+- ❌ Gradient (current %)
 
-- ⛰️ Climbing enthusiasts
-- 📊 Data-driven training
-- 🏃 Running support
-- 🔬 Advanced analytics
+**Energy:**
+
+- ❌ Calories burned
+- ❌ TSS (Training Stress Score)
+- ❌ IF (Intensity Factor)
+- ❌ NP (Normalized Power)
+
+**Advanced Power:**
+
+- ❌ Left/Right balance
+- ❌ Torque effectiveness
+- ❌ FTP percentage
+
+**Note:** These would require:
+
+- Custom calculation from raw data
+- Local storage/tracking
+- Significant development effort
+- May not be worth complexity vs benefit
 
 ---
 

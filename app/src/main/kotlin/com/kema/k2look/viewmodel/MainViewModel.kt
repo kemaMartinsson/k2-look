@@ -39,6 +39,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      */
     fun getLayoutService() = bridge.getLayoutService()
 
+    /**
+     * Find a profile by name (for auto-switching based on Karoo profile)
+     * This will be called by the bridge, which gets the callback from LayoutBuilderViewModel
+     */
+    fun getProfileByName(name: String): com.kema.k2look.model.DataFieldProfile? {
+        // This is a placeholder - actual lookup happens in LayoutBuilderViewModel
+        // The bridge will get the callback directly from LayoutBuilderViewModel
+        return null
+    }
+
     // UI State
     private val _uiState = MutableStateFlow(UiState())
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()

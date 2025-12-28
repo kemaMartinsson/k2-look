@@ -45,6 +45,27 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
         this.bridge = bridge
         Log.i(TAG, "Bridge set, auto-applying active profile if available")
 
+        // Register profile lookup callback for auto-switching on ride start
+        bridge.setProfileLookup { karooProfileName ->
+            // Find K2Look profile with matching name (case-insensitive)
+            val matchingProfile = _uiState.value.profiles.find { profile ->
+                profile.name.equals(karooProfileName, ignoreCase = true)
+            }
+
+            if (matchingProfile != null) {
+                Log.i(
+                    TAG,
+                    "Found matching K2Look profile '${matchingProfile.name}' for Karoo profile '$karooProfileName'"
+                )
+                // Update UI state to reflect the auto-selected profile
+                _uiState.value = _uiState.value.copy(activeProfile = matchingProfile)
+            } else {
+                Log.d(TAG, "No K2Look profile matches Karoo profile '$karooProfileName'")
+            }
+
+            matchingProfile
+        }
+
         // Auto-apply current active profile if one is selected
         _uiState.value.activeProfile?.let { profile ->
             applyProfileToGlasses(profile)

@@ -3,6 +3,7 @@ package com.kema.k2look.data
 import com.kema.k2look.model.DataField
 import com.kema.k2look.model.DataFieldCategory
 import com.kema.k2look.model.DataFieldCategory.CADENCE
+import com.kema.k2look.model.DataFieldCategory.CLIMBING
 import com.kema.k2look.model.DataFieldCategory.GENERAL
 import com.kema.k2look.model.DataFieldCategory.HEART_RATE
 import com.kema.k2look.model.DataFieldCategory.POWER
@@ -166,6 +167,26 @@ object DataFieldRegistry {
             karooStreamType = DataType.Type.AVERAGE_CADENCE,
             icon28 = 5,
             icon40 = 37
+        ),
+
+        // Climbing
+        DataField(
+            id = 24,
+            name = "VAM",
+            unit = "m/h",
+            category = CLIMBING,
+            karooStreamType = DataType.Type.VERTICAL_SPEED,
+            icon28 = 30,
+            icon40 = 62
+        ),
+        DataField(
+            id = 25,
+            name = "Avg VAM",
+            unit = "m/h",
+            category = CLIMBING,
+            karooStreamType = DataType.Type.AVERAGE_VERTICAL_SPEED,
+            icon28 = 29,
+            icon40 = 61
         )
     )
 

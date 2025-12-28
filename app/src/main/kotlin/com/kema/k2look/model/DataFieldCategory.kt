@@ -9,6 +9,7 @@ enum class DataFieldCategory {
     POWER,
     SPEED_PACE,
     CADENCE,
+    CLIMBING,
     RUNNING_DYNAMICS,
     ELEVATION,
     ENERGY

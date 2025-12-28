@@ -67,6 +67,15 @@ jobs:
             echo EOF
           } >> $GITHUB_OUTPUT
 
+      - name: Read DataField Builder Guide
+        id: builder_guide
+        run: |
+          {
+            echo 'BUILDER_GUIDE<<EOF'
+            cat docs/DataFieldBuilder.md
+            echo EOF
+          } >> $GITHUB_OUTPUT
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
@@ -86,6 +95,17 @@ jobs:
             <summary><b>Click here for complete installation guide</b></summary>
             
             ${{ steps.installation.outputs.INSTALL_GUIDE }}
+            
+            </details>
+            
+            ---
+            
+            ## 🎨 DataField Builder Guide
+            
+            <details>
+            <summary><b>Click here to learn how to customize your display</b></summary>
+            
+            ${{ steps.builder_guide.outputs.BUILDER_GUIDE }}
             
             </details>
             
