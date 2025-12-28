@@ -33,6 +33,7 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
         val showProfileManagement: Boolean = false
     )
 
+
     init {
         Log.i(TAG, "LayoutBuilderViewModel initialized")
         loadProfiles()
