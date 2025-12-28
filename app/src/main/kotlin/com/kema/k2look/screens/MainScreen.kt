@@ -96,7 +96,7 @@ fun MainScreen(
         // Content based on selected tab
         when (selectedTabIndex) {
             0 -> StatusTab(viewModel, uiState)
-            1 -> DataFieldBuilderTab()
+            1 -> DataFieldBuilderTab(mainViewModel = viewModel)
             2 -> DebugTab(viewModel, uiState)
             3 -> AboutTab()
         }

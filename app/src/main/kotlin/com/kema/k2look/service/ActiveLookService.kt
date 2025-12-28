@@ -322,6 +322,99 @@ class ActiveLookService(private val context: Context) {
     }
 
     /**
+     * Display a configured field with label, icon, and value at calculated position
+     * Uses LayoutBuilder positioning constants for consistency
+     */
+    fun displayField(
+        field: com.kema.k2look.model.LayoutDataField,
+        value: String,
+        sectionY: Int
+    ) {
+        val glasses = connectedGlasses
+        if (glasses == null) {
+            Log.w(TAG, "Cannot display field: No glasses connected")
+            return
+        }
+
+        try {
+            val layoutBuilder = com.kema.k2look.layout.LayoutBuilder
+
+            // Calculate label X position based on icon display
+            var labelX = if (field.showIcon && field.dataField.icon28 != null) {
+                layoutBuilder.ICON_LEFT_MARGIN + field.iconSize.pixels + layoutBuilder.ICON_LABEL_SPACING
+            } else {
+                layoutBuilder.MARGIN_X + 5
+            }
+
+            // Display icon if enabled
+            if (field.showIcon) {
+                val iconId = when (field.iconSize) {
+                    com.kema.k2look.model.IconSize.SMALL -> field.dataField.icon28
+                    com.kema.k2look.model.IconSize.LARGE -> field.dataField.icon40
+                }
+
+                if (iconId != null) {
+                    val iconX = layoutBuilder.ICON_LEFT_MARGIN
+                    val iconY =
+                        sectionY + (layoutBuilder.SECTION_HEIGHT - field.iconSize.pixels) / 2
+                    glasses.imgDisplay(iconId.toByte(), iconX.toShort(), iconY.toShort())
+                    Log.v(TAG, "  Icon $iconId at ($iconX, $iconY)")
+                }
+            }
+
+            // Display label if enabled
+            if (field.showLabel) {
+                val labelText = buildLabelText(field)
+                val labelY = sectionY + layoutBuilder.LABEL_OFFSET_Y
+                glasses.txt(
+                    Point(labelX, labelY),
+                    Rotation.TOP_LR,
+                    1, // Small font for labels
+                    15, // White color
+                    labelText
+                )
+                Log.v(TAG, "  Label '$labelText' at ($labelX, $labelY)")
+            }
+
+            // Display value (centered)
+            val valueX = layoutBuilder.DISPLAY_WIDTH / 2
+            val valueY = sectionY + layoutBuilder.VALUE_OFFSET_Y
+            glasses.txt(
+                Point(valueX, valueY),
+                Rotation.TOP_LR,
+                field.fontSize.fontId.toByte(),
+                15, // White color
+                value
+            )
+            Log.v(TAG, "  Value '$value' at ($valueX, $valueY) font=${field.fontSize}")
+
+            // Draw separator line (except for bottom section)
+            if (sectionY < layoutBuilder.SECTION_HEIGHT * 2) {
+                val lineY = sectionY + layoutBuilder.SECTION_HEIGHT - 1
+                glasses.line(
+                    Point(layoutBuilder.MARGIN_X, lineY),
+                    Point(layoutBuilder.DISPLAY_WIDTH - layoutBuilder.MARGIN_X, lineY)
+                )
+            }
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error displaying field ${field.dataField.name}: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Build label text with optional unit
+     */
+    private fun buildLabelText(field: com.kema.k2look.model.LayoutDataField): String {
+        val name = field.dataField.name.uppercase()
+        return if (field.showUnit && field.dataField.unit.isNotEmpty()) {
+            "$name (${field.dataField.unit})"
+        } else {
+            name
+        }
+    }
+
+    /**
      * Check if connected to glasses
      */
     val isConnected: Boolean

@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 class LayoutBuilderViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = ProfileRepository(application)
+    private var bridge: com.kema.k2look.service.KarooActiveLookBridge? = null
 
     // UI State
     private val _uiState = MutableStateFlow(UiState())
@@ -35,6 +36,19 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
     init {
         Log.i(TAG, "LayoutBuilderViewModel initialized")
         loadProfiles()
+    }
+
+    /**
+     * Set the bridge instance for applying profiles to glasses
+     */
+    fun setBridge(bridge: com.kema.k2look.service.KarooActiveLookBridge) {
+        this.bridge = bridge
+        Log.i(TAG, "Bridge set, auto-applying active profile if available")
+
+        // Auto-apply current active profile if one is selected
+        _uiState.value.activeProfile?.let { profile ->
+            applyProfileToGlasses(profile)
+        }
     }
 
     /**
@@ -85,8 +99,49 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
         if (profile != null) {
             _uiState.value = _uiState.value.copy(activeProfile = profile)
             Log.i(TAG, "Selected profile: ${profile.name}")
+
+            // Apply to glasses if available
+            applyProfileToGlasses(profile)
         } else {
             Log.w(TAG, "Profile not found: $profileId")
+        }
+    }
+
+    /**
+     * Apply the active profile to glasses for display
+     */
+    fun applyProfileToGlasses(profile: com.kema.k2look.model.DataFieldProfile? = null) {
+        val targetProfile = profile ?: _uiState.value.activeProfile
+
+        if (targetProfile == null) {
+            Log.w(TAG, "No profile to apply to glasses")
+            return
+        }
+
+        try {
+            Log.i(TAG, "Applying profile '${targetProfile.name}' to glasses")
+            Log.i(TAG, "  - ${targetProfile.screens.size} screen(s)")
+            targetProfile.screens.firstOrNull()?.let { screen ->
+                Log.i(TAG, "  - Screen 1: ${screen.dataFields.size} field(s)")
+                screen.dataFields.forEach { field ->
+                    Log.i(TAG, "    - ${field.position}: ${field.dataField.name}")
+                }
+            }
+
+            // Apply to bridge if available
+            val bridgeInstance = bridge
+            if (bridgeInstance != null) {
+                bridgeInstance.setActiveProfile(targetProfile)
+                Log.i(TAG, "✅ Profile applied to bridge successfully")
+            } else {
+                Log.w(TAG, "⚠️ Bridge not available, profile not applied to glasses")
+            }
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error applying profile to glasses", e)
+            _uiState.value = _uiState.value.copy(
+                error = "Failed to apply profile: ${e.message}"
+            )
         }
     }
 

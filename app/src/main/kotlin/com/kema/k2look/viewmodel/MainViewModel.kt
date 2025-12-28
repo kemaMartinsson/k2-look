@@ -29,6 +29,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Public access to preferences for UI
     val preferencesManager = PreferencesManager(application)
 
+    /**
+     * Get the bridge for use by other components (e.g., LayoutBuilderViewModel)
+     */
+    fun getBridge(): KarooActiveLookBridge = bridge
+
     // UI State
     private val _uiState = MutableStateFlow(UiState())
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()

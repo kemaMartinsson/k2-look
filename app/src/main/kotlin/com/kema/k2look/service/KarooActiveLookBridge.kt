@@ -51,6 +51,9 @@ class KarooActiveLookBridge(context: Context) {
     // Accumulated data for hold/flush pattern
     private val currentData = CurrentData()
 
+    // Active DataField profile for dynamic layouts
+    private var activeProfile: com.kema.k2look.model.DataFieldProfile? = null
+
     // Update throttling
     private var lastUpdateTime = 0L
     private val updateIntervalMs = 1000L // 1 second
@@ -92,6 +95,20 @@ class KarooActiveLookBridge(context: Context) {
         var rideState: RideState = RideState.Idle,
         var isDirty: Boolean = false // Track if data has changed since last flush
     )
+
+    /**
+     * Set the active DataField profile for display layout
+     */
+    fun setActiveProfile(profile: com.kema.k2look.model.DataFieldProfile) {
+        activeProfile = profile
+        Log.i(TAG, "📋 Active profile set: ${profile.name} (${profile.screens.size} screens)")
+
+        // If streaming, force immediate update with new layout
+        if (_bridgeState.value == BridgeState.Streaming) {
+            currentData.isDirty = true
+            flushToGlasses()
+        }
+    }
 
     /**
      * Initialize both services and auto-connect based on preferences
@@ -583,6 +600,68 @@ class KarooActiveLookBridge(context: Context) {
             // Clear display
             activeLookService.clearDisplay()
 
+            // Use profile-based layout if available, otherwise fallback to legacy
+            val profile = activeProfile
+            if (profile != null && profile.screens.isNotEmpty()) {
+                flushWithProfile(profile)
+            } else {
+                Log.v(TAG, "No active profile, using legacy hardcoded layout")
+                flushToGlassesLegacy()
+            }
+
+            // Mark data as flushed
+            currentData.isDirty = false
+            lastUpdateTime = currentTime
+
+            Log.d(TAG, "✓ Data flushed to glasses")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error flushing data to glasses: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Flush data using configured DataField profile
+     */
+    private fun flushWithProfile(profile: com.kema.k2look.model.DataFieldProfile) {
+        val screen = profile.screens.first() // TODO: Support multiple screens
+
+        Log.v(TAG, "Flushing with profile: ${profile.name}, screen: ${screen.id}, fields: ${screen.dataFields.size}")
+
+        screen.dataFields.forEach { field ->
+            val sectionY = when (field.position) {
+                com.kema.k2look.model.Position.TOP -> 0
+                com.kema.k2look.model.Position.MIDDLE -> com.kema.k2look.layout.LayoutBuilder.SECTION_HEIGHT
+                com.kema.k2look.model.Position.BOTTOM -> com.kema.k2look.layout.LayoutBuilder.SECTION_HEIGHT * 2
+            }
+
+            val value = getMetricValue(field.dataField)
+            activeLookService.displayField(field, value, sectionY)
+        }
+    }
+
+    /**
+     * Get the current value for a specific metric
+     */
+    private fun getMetricValue(dataField: com.kema.k2look.model.DataField): String {
+        return when (dataField.id) {
+            1 -> currentData.time           // Elapsed Time
+            2 -> currentData.distance       // Distance
+            4 -> currentData.heartRate      // Heart Rate
+            7 -> currentData.power          // Power
+            12 -> currentData.speed         // Speed
+            18 -> currentData.cadence       // Cadence
+            // Add more mappings as needed
+            else -> {
+                Log.w(TAG, "Unknown metric ID: ${dataField.id} (${dataField.name})")
+                "N/A"
+            }
+        }
+    }
+
+    /**
+     * Legacy hardcoded layout (fallback when no profile is active)
+     */
+    private fun flushToGlassesLegacy() {
             // Display layout (4 metrics in 2x2 grid with margins)
             // Using 30px horizontal margins and 25px vertical margins
             // ActiveLook display is typically 304x256 pixels
@@ -632,15 +711,6 @@ class KarooActiveLookBridge(context: Context) {
             // Bottom-right: Time
             glasses.txt(Point(rightX, bottomY), rotation, labelFont, color, "TIME")
             glasses.txt(Point(rightX, bottomY + 15), rotation, valueFont, color, currentData.time)
-
-            // Mark data as flushed
-            currentData.isDirty = false
-            lastUpdateTime = currentTime
-
-            Log.d(TAG, "✓ Data flushed to glasses")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error flushing data to glasses: ${e.message}", e)
-        }
     }
 
     /**

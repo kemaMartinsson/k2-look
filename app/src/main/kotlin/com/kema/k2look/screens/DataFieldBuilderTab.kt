@@ -42,12 +42,21 @@ import com.kema.k2look.viewmodel.LayoutBuilderViewModel
 @Composable
 fun DataFieldBuilderTab(
     modifier: Modifier = Modifier,
+    mainViewModel: com.kema.k2look.viewmodel.MainViewModel? = null,
     viewModel: LayoutBuilderViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showFieldConfig by remember { mutableStateOf(false) }
     var editingField by remember { mutableStateOf<LayoutDataField?>(null) }
     var justAddedField by remember { mutableStateOf<Pair<Int, com.kema.k2look.model.Position>?>(null) }
+
+    // Set bridge when mainViewModel is available
+    androidx.compose.runtime.LaunchedEffect(mainViewModel) {
+        mainViewModel?.let { vm ->
+            viewModel.setBridge(vm.getBridge())
+            android.util.Log.d("DataFieldBuilderTab", "Bridge set in LayoutBuilderViewModel")
+        }
+    }
 
     // Auto-open config dialog when a field is added
     androidx.compose.runtime.LaunchedEffect(uiState.activeProfile?.screens) {
