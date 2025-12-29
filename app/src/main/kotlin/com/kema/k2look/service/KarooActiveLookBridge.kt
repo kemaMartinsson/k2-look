@@ -887,7 +887,8 @@ class KarooActiveLookBridge(context: Context) {
     private fun flushWithEfficientMode(screen: com.kema.k2look.model.LayoutScreen) {
         screen.dataFields.forEach { field ->
             val value = getMetricValue(field.dataField)
-            layoutService.displayFieldValue(field.position, value)
+            // Use zoneId for layout identification
+            layoutService.displayFieldValue(field.zoneId, value)
         }
     }
 
@@ -896,15 +897,18 @@ class KarooActiveLookBridge(context: Context) {
      * Sends all positioning/icons/labels every update
      */
     private fun flushWithBasicMode(screen: com.kema.k2look.model.LayoutScreen) {
+        val template = screen.getTemplate()
+
         screen.dataFields.forEach { field ->
-            val sectionY = when (field.position) {
-                com.kema.k2look.model.Position.TOP -> 0
-                com.kema.k2look.model.Position.MIDDLE -> com.kema.k2look.layout.LayoutBuilder.SECTION_HEIGHT
-                com.kema.k2look.model.Position.BOTTOM -> com.kema.k2look.layout.LayoutBuilder.SECTION_HEIGHT * 2
+            // Get zone for this field
+            val zone = template.zones.find { it.id == field.zoneId }
+            if (zone == null) {
+                Log.w(TAG, "Zone ${field.zoneId} not found in template ${template.id}")
+                return@forEach
             }
 
             val value = getMetricValue(field.dataField)
-            activeLookService.displayField(field, value, sectionY)
+            activeLookService.displayField(field, value, zone.y)
         }
     }
 

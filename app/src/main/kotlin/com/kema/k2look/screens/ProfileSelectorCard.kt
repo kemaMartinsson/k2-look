@@ -4,7 +4,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -52,7 +51,7 @@ fun ProfileSelectorCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(horizontal = 12.dp, vertical = 8.dp) // Reduced from 16.dp all around
         ) {
 
             // Profile selector row
@@ -66,13 +65,13 @@ fun ProfileSelectorCard(
                     modifier = Modifier
                         .weight(1f)
                         .clickable { expanded = true }
-                        .padding(vertical = 8.dp),
+                        .padding(vertical = 4.dp), // Reduced from 8.dp
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "Active Profile",
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                         )
                         Text(
@@ -137,22 +136,22 @@ fun ProfileSelectorCard(
                 }
             }
 
-            // Profile info
+            // Profile info - displayed inline with minimal spacing
             if (activeProfile != null) {
-                Spacer(modifier = Modifier.padding(vertical = 4.dp))
+                // Removed Spacer - info directly follows profile selector
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
                         text = "${activeProfile.screens.size} screen(s)",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        style = MaterialTheme.typography.labelSmall, // Changed from bodySmall
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) // More subtle
                     )
                     if (activeProfile.isReadOnly) {
                         Text(
                             text = "Read-only",
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.labelSmall, // Changed from bodySmall
                             color = MaterialTheme.colorScheme.secondary
                         )
                     }

@@ -1,6 +1,5 @@
 package com.kema.k2look.screens
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,12 +8,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -30,7 +27,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.kema.k2look.model.FontSize
 import com.kema.k2look.model.IconSize
 import com.kema.k2look.model.LayoutDataField
 
@@ -44,7 +40,6 @@ fun FieldConfigurationDialog(
     onSave: (LayoutDataField) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var fontSize by remember { mutableStateOf(field.fontSize) }
     var showLabel by remember { mutableStateOf(field.showLabel) }
     var showUnit by remember { mutableStateOf(field.showUnit) }
     var showIcon by remember { mutableStateOf(field.showIcon) }
@@ -92,45 +87,12 @@ fun FieldConfigurationDialog(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Font Size Section
+                    // Info: Font size determined by zone
                     Text(
-                        text = "Font Size",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        text = "ℹ️ Font size is automatically set based on the zone position",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                     )
-                    Column(
-                        modifier = Modifier
-                            .selectableGroup()
-                            .padding(start = 4.dp)
-                    ) {
-                        FontSize.entries.forEach { size ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { fontSize = size }
-                                    .padding(vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = fontSize == size,
-                                    onClick = { fontSize = size }
-                                )
-                                Column(
-                                    modifier = Modifier.padding(start = 8.dp)
-                                ) {
-                                    Text(
-                                        text = size.name,
-                                        style = MaterialTheme.typography.bodyLarge
-                                    )
-                                    Text(
-                                        text = "${size.height}px (Font ${size.fontId})",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                    )
-                                }
-                            }
-                        }
-                    }
 
                     HorizontalDivider()
 
@@ -275,7 +237,6 @@ fun FieldConfigurationDialog(
                     Button(
                         onClick = {
                             val updatedField = field.copy(
-                                fontSize = fontSize,
                                 showLabel = showLabel,
                                 showUnit = showUnit,
                                 showIcon = showIcon,

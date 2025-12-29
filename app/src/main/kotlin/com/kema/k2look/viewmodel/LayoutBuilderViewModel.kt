@@ -146,7 +146,7 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
             targetProfile.screens.firstOrNull()?.let { screen ->
                 Log.i(TAG, "  - Screen 1: ${screen.dataFields.size} field(s)")
                 screen.dataFields.forEach { field ->
-                    Log.i(TAG, "    - ${field.position}: ${field.dataField.name}")
+                    Log.i(TAG, "    - Zone ${field.zoneId}: ${field.dataField.name}")
                 }
             }
 
@@ -347,11 +347,11 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
     }
 
     /**
-     * Add a datafield to the active profile's current screen
+     * Add a datafield to a specific zone in the active profile's current screen
      */
     fun addFieldToScreen(
         screenId: Int,
-        position: com.kema.k2look.model.Position,
+        zoneId: String,
         dataField: com.kema.k2look.model.DataField
     ) {
         val profile = _uiState.value.activeProfile ?: return
@@ -363,23 +363,30 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
 
         val updatedScreens = profile.screens.map { screen ->
             if (screen.id == screenId) {
-                // Check if position is already occupied
-                if (screen.dataFields.any { it.position == position }) {
-                    Log.w(TAG, "Position $position is already occupied")
+                val template = screen.getTemplate()
+
+                // Check if zone is valid for this template
+                if (template.zones.none { it.id == zoneId }) {
+                    Log.w(TAG, "Zone $zoneId is not valid for template ${template.id}")
+                    return@map screen
+                }
+
+                // Check if zone is already occupied
+                if (screen.dataFields.any { it.zoneId == zoneId }) {
+                    Log.w(TAG, "Zone $zoneId is already occupied")
                     return@map screen
                 }
 
                 // Check if max fields reached
-                if (screen.dataFields.size >= 3) {
-                    Log.w(TAG, "Screen already has 3 fields")
+                if (screen.dataFields.size >= template.maxFields) {
+                    Log.w(TAG, "Screen already has ${template.maxFields} fields")
                     return@map screen
                 }
 
                 // Add new field
                 val newField = com.kema.k2look.model.LayoutDataField(
                     dataField = dataField,
-                    position = position,
-                    fontSize = com.kema.k2look.model.FontSize.MEDIUM,  // Default to MEDIUM
+                    zoneId = zoneId,
                     showLabel = true,
                     showUnit = true,
                     showIcon = dataField.icon28 != null || dataField.icon40 != null,
@@ -398,7 +405,7 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
         )
 
         updateProfile(updatedProfile)
-        Log.i(TAG, "Added field ${dataField.name} to screen $screenId at $position")
+        Log.i(TAG, "Added field ${dataField.name} to screen $screenId in zone $zoneId")
     }
 
     /**
@@ -415,7 +422,7 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
         val updatedScreens = profile.screens.map { screen ->
             if (screen.id == screenId) {
                 val updatedFields = screen.dataFields.map { field ->
-                    if (field.position == updatedField.position) {
+                    if (field.zoneId == updatedField.zoneId) {
                         updatedField
                     } else {
                         field
@@ -433,13 +440,13 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
         )
 
         updateProfile(updatedProfile)
-        Log.i(TAG, "Updated field at position ${updatedField.position} in screen $screenId")
+        Log.i(TAG, "Updated field in zone ${updatedField.zoneId} in screen $screenId")
     }
 
     /**
      * Remove a datafield from the active profile
      */
-    fun removeField(screenId: Int, position: com.kema.k2look.model.Position) {
+    fun removeField(screenId: Int, zoneId: String) {
         val profile = _uiState.value.activeProfile ?: return
 
         if (profile.isReadOnly) {
@@ -449,7 +456,7 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
 
         val updatedScreens = profile.screens.map { screen ->
             if (screen.id == screenId) {
-                screen.copy(dataFields = screen.dataFields.filter { it.position != position })
+                screen.copy(dataFields = screen.dataFields.filter { it.zoneId != zoneId })
             } else {
                 screen
             }
@@ -461,7 +468,7 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
         )
 
         updateProfile(updatedProfile)
-        Log.i(TAG, "Removed field at position $position from screen $screenId")
+        Log.i(TAG, "Removed field at zone $zoneId from screen $screenId")
     }
 
     /**
@@ -593,6 +600,70 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
      */
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
+    }
+
+    /**
+     * Change the layout template for a screen
+     */
+    fun changeScreenTemplate(screenId: Int, newTemplateId: String) {
+        val profile = _uiState.value.activeProfile ?: return
+
+        if (profile.isReadOnly) {
+            _uiState.value = _uiState.value.copy(error = "Cannot modify read-only profile")
+            return
+        }
+
+        val screen = profile.screens.find { it.id == screenId } ?: return
+        val newTemplate = com.kema.k2look.layout.LayoutTemplateRegistry.getTemplate(newTemplateId)
+
+        // Preserve as many existing fields as possible
+        val preservedFields = screen.dataFields.take(newTemplate.maxFields)
+
+        // Map existing fields to new zones by index
+        val mappedFields = preservedFields.mapIndexed { index, field ->
+            val newZone = newTemplate.zones.getOrNull(index)
+            if (newZone != null) {
+                field.copy(zoneId = newZone.id)
+            } else {
+                field // Should never happen due to take()
+            }
+        }
+
+        val updatedScreen = screen.copy(
+            templateId = newTemplateId,
+            dataFields = mappedFields
+        )
+
+        val updatedProfile = profile.copy(
+            screens = profile.screens.map { if (it.id == screenId) updatedScreen else it },
+            modifiedAt = System.currentTimeMillis()
+        )
+
+        updateProfile(updatedProfile)
+        applyProfileToGlasses(updatedProfile)
+
+        Log.i(
+            TAG,
+            "Changed screen $screenId template to $newTemplateId, preserved ${mappedFields.size} fields"
+        )
+    }
+
+    /**
+     * Assign a metric to a specific zone (zone-based API)
+     */
+    fun assignMetricToZone(
+        screenId: Int,
+        zoneId: String,
+        dataField: com.kema.k2look.model.DataField
+    ) {
+        addFieldToScreen(screenId, zoneId, dataField)
+    }
+
+    /**
+     * Remove metric from zone (zone-based API)
+     */
+    fun removeMetricFromZone(screenId: Int, zoneId: String) {
+        removeField(screenId, zoneId)
     }
 
     companion object {

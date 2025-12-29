@@ -10,14 +10,19 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -37,35 +42,50 @@ import androidx.compose.ui.unit.dp
 import com.kema.k2look.model.DataField
 import com.kema.k2look.model.LayoutDataField
 import com.kema.k2look.model.LayoutScreen
-import com.kema.k2look.model.Position
 
 /**
- * Screen editor for configuring datafields in a single layout screen
+ * Zone-based screen editor for configuring datafields using layout templates
  */
 @Composable
-fun ScreenEditor(
+fun ZoneBasedScreenEditor(
     screen: LayoutScreen,
-    onFieldAdd: (Position, DataField) -> Unit,
+    onTemplateChange: (String) -> Unit,
+    onFieldAdd: (String, DataField) -> Unit,
     onFieldEdit: (LayoutDataField) -> Unit,
-    onFieldRemove: (Position) -> Unit,
+    onFieldRemove: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var showTemplateSelector by remember { mutableStateOf(false) }
     var showMetricSelector by remember { mutableStateOf(false) }
-    var selectedPosition by remember { mutableStateOf<Position?>(null) }
+    var selectedZoneId by remember { mutableStateOf<String?>(null) }
 
-    if (showMetricSelector && selectedPosition != null) {
+    val template = screen.getTemplate()
+
+    // Template selector dialog
+    if (showTemplateSelector) {
+        LayoutTemplateSelectorDialog(
+            currentTemplateId = screen.templateId ?: "3D_FULL",
+            onTemplateSelected = { newTemplate ->
+                onTemplateChange(newTemplate.id)
+                showTemplateSelector = false
+            },
+            onDismiss = { showTemplateSelector = false }
+        )
+    }
+
+    // Metric selector dialog
+    if (showMetricSelector && selectedZoneId != null) {
         MetricSelectorDialog(
             onDismiss = {
                 showMetricSelector = false
-                selectedPosition = null
+                selectedZoneId = null
             },
             onSelect = { dataField ->
-                onFieldAdd(selectedPosition!!, dataField)
+                onFieldAdd(selectedZoneId!!, dataField)
                 showMetricSelector = false
-                selectedPosition = null
+                selectedZoneId = null
             }
         )
-        return
     }
 
     Card(
@@ -78,8 +98,10 @@ fun ScreenEditor(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .heightIn(max = 600.dp) // Limit height to enable scrolling
+                .verticalScroll(rememberScrollState())
+                .padding(12.dp), // Reduced from 16.dp
+            verticalArrangement = Arrangement.spacedBy(8.dp) // Reduced from 12.dp
         ) {
             // Screen header
             Row(
@@ -93,27 +115,38 @@ fun ScreenEditor(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "${screen.dataFields.size}/3 fields",
+                    text = "${screen.dataFields.size}/${template.maxFields} fields",
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (screen.dataFields.size == 3)
+                    color = if (screen.dataFields.size == template.maxFields)
                         MaterialTheme.colorScheme.primary
                     else
                         MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )
             }
 
-            // DataField slots
-            Position.entries.forEach { position ->
-                val field = screen.dataFields.find { it.position == position }
-                DataFieldSlot(
-                    position = position,
+            // Layout template selector button
+            Button(
+                onClick = { showTemplateSelector = true },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Settings, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Layout: ${template.name}")
+            }
+
+            // Reduced spacer - no need for extra spacing
+            // Zone-based datafield slots
+            template.zones.forEach { zone ->
+                val field = screen.dataFields.find { it.zoneId == zone.id }
+                ZoneDataFieldSlot(
+                    zone = zone,
                     field = field,
                     onAdd = {
-                        selectedPosition = position
+                        selectedZoneId = zone.id
                         showMetricSelector = true
                     },
                     onEdit = { onFieldEdit(it) },
-                    onRemove = { onFieldRemove(position) }
+                    onRemove = { onFieldRemove(zone.id) }
                 )
             }
         }
@@ -121,11 +154,11 @@ fun ScreenEditor(
 }
 
 /**
- * Individual datafield slot (TOP/MIDDLE/BOTTOM)
+ * Individual datafield slot for a specific zone
  */
 @Composable
-fun DataFieldSlot(
-    position: Position,
+fun ZoneDataFieldSlot(
+    zone: com.kema.k2look.model.LayoutZone,
     field: LayoutDataField?,
     onAdd: () -> Unit,
     onEdit: (LayoutDataField) -> Unit,
@@ -165,7 +198,7 @@ fun DataFieldSlot(
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(
-                        text = position.name,
+                        text = zone.displayName,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                     )
@@ -180,7 +213,7 @@ fun DataFieldSlot(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
-                            text = field.fontSize.name,
+                            text = "Font: ${zone.fontSize.name}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                         )
@@ -234,12 +267,12 @@ fun DataFieldSlot(
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     Text(
-                        text = position.name,
+                        text = zone.displayName,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                     )
                     Text(
-                        text = "Tap to add field",
+                        text = "Tap to add field • ${zone.fontSize.name} font",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                     )

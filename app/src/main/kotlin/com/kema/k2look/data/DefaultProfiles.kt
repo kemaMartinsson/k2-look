@@ -1,11 +1,9 @@
 package com.kema.k2look.data
 
 import com.kema.k2look.model.DataFieldProfile
-import com.kema.k2look.model.FontSize
 import com.kema.k2look.model.IconSize
 import com.kema.k2look.model.LayoutDataField
 import com.kema.k2look.model.LayoutScreen
-import com.kema.k2look.model.Position
 
 /**
  * Factory for creating default and template profiles
@@ -28,25 +26,23 @@ object DefaultProfiles {
                 LayoutScreen(
                     id = 1,
                     name = "Main",
+                    templateId = "3D_FULL", // Three rows layout
                     dataFields = listOf(
                         LayoutDataField(
                             dataField = DataFieldRegistry.getById(12)!!, // Speed
-                            position = Position.TOP,
-                            fontSize = FontSize.LARGE,
+                            zoneId = "3D_FULL_H", // Top
                             showIcon = true,
                             iconSize = IconSize.LARGE
                         ),
                         LayoutDataField(
                             dataField = DataFieldRegistry.getById(2)!!, // Distance
-                            position = Position.MIDDLE,
-                            fontSize = FontSize.LARGE,
+                            zoneId = "3D_FULL_M", // Middle
                             showIcon = true,
                             iconSize = IconSize.LARGE
                         ),
                         LayoutDataField(
                             dataField = DataFieldRegistry.getById(1)!!, // Elapsed Time
-                            position = Position.BOTTOM,
-                            fontSize = FontSize.LARGE,
+                            zoneId = "3D_FULL_L", // Bottom
                             showIcon = true,
                             iconSize = IconSize.LARGE
                         )
@@ -69,23 +65,21 @@ object DefaultProfiles {
                 LayoutScreen(
                     id = 1,
                     name = "Primary",
+                    templateId = "3D_FULL", // Three rows layout
                     dataFields = listOf(
                         LayoutDataField(
                             dataField = DataFieldRegistry.getById(12)!!, // Speed
-                            position = Position.TOP,
-                            fontSize = FontSize.LARGE,
+                            zoneId = "3D_FULL_H", // Top
                             showIcon = true
                         ),
                         LayoutDataField(
                             dataField = DataFieldRegistry.getById(7)!!, // Power
-                            position = Position.MIDDLE,
-                            fontSize = FontSize.LARGE,
+                            zoneId = "3D_FULL_M", // Middle
                             showIcon = true
                         ),
                         LayoutDataField(
                             dataField = DataFieldRegistry.getById(4)!!, // Heart Rate
-                            position = Position.BOTTOM,
-                            fontSize = FontSize.MEDIUM,
+                            zoneId = "3D_FULL_L", // Bottom
                             showIcon = true
                         )
                     )
@@ -107,23 +101,21 @@ object DefaultProfiles {
                 LayoutScreen(
                     id = 1,
                     name = "Primary",
+                    templateId = "3D_FULL", // Three rows layout
                     dataFields = listOf(
                         LayoutDataField(
                             dataField = DataFieldRegistry.getById(12)!!, // Speed
-                            position = Position.TOP,
-                            fontSize = FontSize.LARGE,
+                            zoneId = "3D_FULL_H", // Top
                             showIcon = true
                         ),
                         LayoutDataField(
                             dataField = DataFieldRegistry.getById(4)!!, // Heart Rate
-                            position = Position.MIDDLE,
-                            fontSize = FontSize.LARGE,
+                            zoneId = "3D_FULL_M", // Middle
                             showIcon = true
                         ),
                         LayoutDataField(
                             dataField = DataFieldRegistry.getById(2)!!, // Distance
-                            position = Position.BOTTOM,
-                            fontSize = FontSize.MEDIUM,
+                            zoneId = "3D_FULL_L", // Bottom
                             showIcon = true
                         )
                     )

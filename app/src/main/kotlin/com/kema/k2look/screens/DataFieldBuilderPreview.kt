@@ -4,11 +4,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import com.kema.k2look.data.DataFieldRegistry
 import com.kema.k2look.model.DataFieldProfile
-import com.kema.k2look.model.FontSize
 import com.kema.k2look.model.IconSize
 import com.kema.k2look.model.LayoutDataField
 import com.kema.k2look.model.LayoutScreen
-import com.kema.k2look.model.Position
 
 /**
  * Preview helpers for DataField Builder components
@@ -16,15 +14,15 @@ import com.kema.k2look.model.Position
 
 @Preview(showBackground = true, widthDp = 400, heightDp = 800)
 @Composable
-fun PreviewScreenEditor() {
+fun PreviewZoneBasedScreenEditor() {
     val sampleScreen = LayoutScreen(
         id = 1,
         name = "Main Screen",
+        templateId = "3D_FULL", // Three rows layout
         dataFields = listOf(
             LayoutDataField(
                 dataField = DataFieldRegistry.getById(12)!!, // Speed
-                position = Position.TOP,
-                fontSize = FontSize.LARGE,
+                zoneId = "3D_FULL_H", // Top zone
                 showLabel = true,
                 showUnit = true,
                 showIcon = true,
@@ -32,8 +30,7 @@ fun PreviewScreenEditor() {
             ),
             LayoutDataField(
                 dataField = DataFieldRegistry.getById(7)!!, // Power
-                position = Position.MIDDLE,
-                fontSize = FontSize.LARGE,
+                zoneId = "3D_FULL_M", // Middle zone
                 showLabel = true,
                 showUnit = true,
                 showIcon = true,
@@ -42,8 +39,9 @@ fun PreviewScreenEditor() {
         )
     )
 
-    ScreenEditor(
+    ZoneBasedScreenEditor(
         screen = sampleScreen,
+        onTemplateChange = { },
         onFieldAdd = { _, _ -> },
         onFieldEdit = { },
         onFieldRemove = { }
@@ -52,9 +50,12 @@ fun PreviewScreenEditor() {
 
 @Preview(showBackground = true, widthDp = 400, heightDp = 200)
 @Composable
-fun PreviewDataFieldSlotEmpty() {
-    DataFieldSlot(
-        position = Position.TOP,
+fun PreviewZoneDataFieldSlotEmpty() {
+    val template = com.kema.k2look.layout.LayoutTemplateRegistry.getTemplate("3D_FULL")
+    val zone = template.zones.first()
+
+    ZoneDataFieldSlot(
+        zone = zone,
         field = null,
         onAdd = { },
         onEdit = { },
@@ -64,13 +65,15 @@ fun PreviewDataFieldSlotEmpty() {
 
 @Preview(showBackground = true, widthDp = 400, heightDp = 200)
 @Composable
-fun PreviewDataFieldSlotFilled() {
-    DataFieldSlot(
-        position = Position.MIDDLE,
+fun PreviewZoneDataFieldSlotFilled() {
+    val template = com.kema.k2look.layout.LayoutTemplateRegistry.getTemplate("3D_FULL")
+    val zone = template.zones[1] // Middle zone
+
+    ZoneDataFieldSlot(
+        zone = zone,
         field = LayoutDataField(
             dataField = DataFieldRegistry.getById(4)!!, // Heart Rate
-            position = Position.MIDDLE,
-            fontSize = FontSize.MEDIUM,
+            zoneId = zone.id,
             showLabel = true,
             showUnit = true,
             showIcon = true,
@@ -95,6 +98,7 @@ fun PreviewProfileSelectorCard() {
                 LayoutScreen(
                     id = 1,
                     name = "Main",
+                    templateId = "3D_FULL",
                     dataFields = listOf()
                 )
             )
@@ -108,6 +112,7 @@ fun PreviewProfileSelectorCard() {
                 LayoutScreen(
                     id = 1,
                     name = "Main",
+                    templateId = "3D_FULL",
                     dataFields = listOf()
                 )
             )
@@ -119,6 +124,16 @@ fun PreviewProfileSelectorCard() {
         activeProfile = profiles[1],
         onProfileSelected = { },
         onManageProfiles = { }
+    )
+}
+
+@Preview(showBackground = true, widthDp = 400, heightDp = 600)
+@Composable
+fun PreviewLayoutTemplateSelector() {
+    LayoutTemplateSelectorDialog(
+        currentTemplateId = "3D_FULL",
+        onTemplateSelected = { },
+        onDismiss = { }
     )
 }
 

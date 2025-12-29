@@ -79,7 +79,7 @@ fun MainScreen(
             Tab(
                 selected = selectedTabIndex == 1,
                 onClick = { selectedTabIndex = 1 },
-                text = { Text("Builder") }
+                text = { Text("Datafields") }
             )
             Tab(
                 selected = selectedTabIndex == 2,

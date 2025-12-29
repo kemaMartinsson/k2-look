@@ -5,7 +5,6 @@ import com.kema.k2look.layout.ActiveLookLayout
 import com.kema.k2look.layout.ActiveLookLayoutEncoder
 import com.kema.k2look.layout.LayoutBuilder
 import com.kema.k2look.model.DataFieldProfile
-import com.kema.k2look.model.Position
 import kotlinx.coroutines.delay
 
 /**
@@ -35,16 +34,30 @@ class ActiveLookLayoutService(
 
         // Layout ID allocation
         // 0-9: Reserved by ActiveLook
-        // 10-99: Custom layouts
-        const val LAYOUT_ID_TOP = 10
-        const val LAYOUT_ID_MIDDLE = 11
-        const val LAYOUT_ID_BOTTOM = 12
+        // 10-99: Custom layouts (zone-based)
+        const val LAYOUT_ID_BASE = 10
 
         // Configuration name prefix
         const val CFG_PREFIX = "K2LOOK_"
 
         // Delay between layout save commands (to avoid overwhelming glasses)
         const val COMMAND_DELAY_MS = 100L
+
+        /**
+         * Map zone ID to layout ID
+         * Each zone gets a unique layout ID starting from LAYOUT_ID_BASE
+         */
+        private val zoneToLayoutId = mutableMapOf<String, Int>()
+        private var nextLayoutId = LAYOUT_ID_BASE
+
+        fun getLayoutIdForZone(zoneId: String): Int {
+            return zoneToLayoutId.getOrPut(zoneId) {
+                val id = nextLayoutId
+                nextLayoutId++
+                Log.d(TAG, "Assigned layout ID $id to zone $zoneId")
+                id
+            }
+        }
     }
 
     /**
@@ -72,37 +85,31 @@ class ActiveLookLayoutService(
                 return false
             }
 
-            // Save each position's layout
+            // Build and save layouts for each field in the screen
+            val screenLayouts = layoutBuilder.buildScreenLayouts(LAYOUT_ID_BASE, screen)
             var savedCount = 0
 
-            // TOP position
-            val topLayout = layoutBuilder.buildLayout(LAYOUT_ID_TOP, screen, Position.TOP)
-            if (saveLayout(glasses, topLayout)) {
-                savedCount++
-                delay(COMMAND_DELAY_MS)
+            screenLayouts.forEach { (zoneId, layout) ->
+                val layoutId = getLayoutIdForZone(zoneId)
+                val layoutWithCorrectId = layout.copy(layoutId = layoutId)
+
+                if (saveLayout(glasses, layoutWithCorrectId)) {
+                    savedCount++
+                    delay(COMMAND_DELAY_MS)
+                }
             }
 
-            // MIDDLE position
-            val middleLayout = layoutBuilder.buildLayout(LAYOUT_ID_MIDDLE, screen, Position.MIDDLE)
-            if (saveLayout(glasses, middleLayout)) {
-                savedCount++
-                delay(COMMAND_DELAY_MS)
-            }
-
-            // BOTTOM position
-            val bottomLayout = layoutBuilder.buildLayout(LAYOUT_ID_BOTTOM, screen, Position.BOTTOM)
-            if (saveLayout(glasses, bottomLayout)) {
-                savedCount++
-                delay(COMMAND_DELAY_MS)
-            }
-
-            if (savedCount == 3) {
+            val expectedCount = screen.dataFields.size
+            if (savedCount == expectedCount) {
                 savedProfileId = profile.id
                 savedScreenId = screen.id
-                Log.i(TAG, "✅ Successfully saved all 3 layouts for profile '${profile.name}'")
+                Log.i(
+                    TAG,
+                    "✅ Successfully saved all $savedCount layouts for profile '${profile.name}'"
+                )
                 return true
             } else {
-                Log.w(TAG, "⚠️ Only saved $savedCount/3 layouts")
+                Log.w(TAG, "⚠️ Only saved $savedCount/$expectedCount layouts")
                 return false
             }
 
@@ -206,24 +213,19 @@ class ActiveLookLayoutService(
      * Display a field value using pre-saved layout
      * This is called at 1Hz during rides - much more efficient than Phase 4.1
      */
-    fun displayFieldValue(position: Position, value: String) {
+    fun displayFieldValue(zoneId: String, value: String) {
         if (!activeLookService.isConnected) {
             Log.v(TAG, "Cannot display: No glasses connected")
             return
         }
 
         val glasses = activeLookService.getConnectedGlasses() ?: return
-
-        val layoutId = when (position) {
-            Position.TOP -> LAYOUT_ID_TOP
-            Position.MIDDLE -> LAYOUT_ID_MIDDLE
-            Position.BOTTOM -> LAYOUT_ID_BOTTOM
-        }
+        val layoutId = getLayoutIdForZone(zoneId)
 
         try {
             // Single command updates the entire field display!
             glasses.layoutDisplay(layoutId.toByte(), value)
-            Log.v(TAG, "Layout $layoutId: '$value'")
+            Log.v(TAG, "Layout $layoutId (zone $zoneId): '$value'")
         } catch (e: Exception) {
             Log.e(TAG, "Error displaying layout $layoutId: ${e.message}", e)
         }
@@ -243,14 +245,20 @@ class ActiveLookLayoutService(
         try {
             Log.i(TAG, "Clearing layouts...")
 
-            // Delete our custom layouts
-            glasses.layoutDelete(LAYOUT_ID_TOP.toByte())
-            delay(COMMAND_DELAY_MS)
+            // Delete all our custom zone-based layouts
+            zoneToLayoutId.values.forEach { layoutId ->
+                try {
+                    glasses.layoutDelete(layoutId.toByte())
+                    delay(COMMAND_DELAY_MS)
+                    Log.d(TAG, "Deleted layout $layoutId")
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to delete layout $layoutId: ${e.message}")
+                }
+            }
 
-            glasses.layoutDelete(LAYOUT_ID_MIDDLE.toByte())
-            delay(COMMAND_DELAY_MS)
-
-            glasses.layoutDelete(LAYOUT_ID_BOTTOM.toByte())
+            // Clear our zone mapping
+            zoneToLayoutId.clear()
+            nextLayoutId = LAYOUT_ID_BASE
 
             savedProfileId = null
             savedScreenId = null

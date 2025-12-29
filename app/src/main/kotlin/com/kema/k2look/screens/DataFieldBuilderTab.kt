@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -48,7 +49,7 @@ fun DataFieldBuilderTab(
     val uiState by viewModel.uiState.collectAsState()
     var showFieldConfig by remember { mutableStateOf(false) }
     var editingField by remember { mutableStateOf<LayoutDataField?>(null) }
-    var justAddedField by remember { mutableStateOf<Pair<Int, com.kema.k2look.model.Position>?>(null) }
+    var justAddedZone by remember { mutableStateOf<Pair<Int, String>?>(null) }
 
     // Set bridge when mainViewModel is available
     androidx.compose.runtime.LaunchedEffect(mainViewModel) {
@@ -60,13 +61,13 @@ fun DataFieldBuilderTab(
 
     // Auto-open config dialog when a field is added
     androidx.compose.runtime.LaunchedEffect(uiState.activeProfile?.screens) {
-        justAddedField?.let { (screenId, position) ->
+        justAddedZone?.let { (screenId, zoneId) ->
             val screen = uiState.activeProfile?.screens?.find { it.id == screenId }
-            val field = screen?.dataFields?.find { it.position == position }
+            val field = screen?.dataFields?.find { it.zoneId == zoneId }
             if (field != null) {
                 editingField = field
                 showFieldConfig = true
-                justAddedField = null
+                justAddedZone = null
             }
         }
     }
@@ -112,7 +113,7 @@ fun DataFieldBuilderTab(
             .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(4.dp) // Further reduced from 8.dp
     ) {
         // Profile Selector
         ProfileSelectorCard(
@@ -234,26 +235,28 @@ fun DataFieldBuilderTab(
                         }
                     }
                 }
-
-                Spacer(modifier = Modifier.padding(vertical = 8.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
                 // Screen Editor - use the same validSelectedScreen calculated above
                 val currentScreen = profile.screens.find { it.id == validSelectedScreen }
                 if (currentScreen != null) {
-                    ScreenEditor(
+                    ZoneBasedScreenEditor(
                         screen = currentScreen,
-                        onFieldAdd = { position, dataField ->
-                            // Add the field to the screen
-                            viewModel.addFieldToScreen(validSelectedScreen, position, dataField)
+                        onTemplateChange = { newTemplateId ->
+                            viewModel.changeScreenTemplate(validSelectedScreen, newTemplateId)
+                        },
+                        onFieldAdd = { zoneId, dataField ->
+                            // Add the field to the zone
+                            viewModel.assignMetricToZone(validSelectedScreen, zoneId, dataField)
                             // Mark that we just added a field so LaunchedEffect can open config dialog
-                            justAddedField = Pair(validSelectedScreen, position)
+                            justAddedZone = Pair(validSelectedScreen, zoneId)
                         },
                         onFieldEdit = { field ->
                             editingField = field
                             showFieldConfig = true
                         },
-                        onFieldRemove = { position ->
-                            viewModel.removeField(validSelectedScreen, position)
+                        onFieldRemove = { zoneId ->
+                            viewModel.removeMetricFromZone(validSelectedScreen, zoneId)
                         }
                     )
                 } else {
@@ -268,6 +271,18 @@ fun DataFieldBuilderTab(
             }
 
             Spacer(modifier = Modifier.padding(vertical = 16.dp))
+
+            // Read-only indicator - moved above buttons for better visibility
+            if (profile.isReadOnly) {
+                Text(
+                    text = "⚠️ This is a read-only profile. Duplicate it to make changes.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
 
             // Action buttons
             Row(
@@ -288,17 +303,6 @@ fun DataFieldBuilderTab(
                 ) {
                     Text("Build & Send")
                 }
-            }
-
-            // Read-only indicator
-            if (profile.isReadOnly) {
-                Text(
-                    text = "⚠️ This is a read-only profile. Duplicate it to make changes.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center
-                )
             }
         }
 

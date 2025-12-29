@@ -96,51 +96,51 @@ class ActiveLookService(private val context: Context) {
     fun startScanning() {
         val sdkInstance = sdk
         if (sdkInstance == null) {
-            android.util.Log.e(TAG, "❌ SDK not initialized. Call initializeSdk() first.")
+            Log.e(TAG, "❌ SDK not initialized. Call initializeSdk() first.")
             _connectionState.value = ConnectionState.Error("SDK not initialized")
             return
         }
 
         if (_isScanning.value) {
-            android.util.Log.w(TAG, "⚠️ Already scanning")
+            Log.w(TAG, "⚠️ Already scanning")
             return
         }
 
-        android.util.Log.i(TAG, "🔍 === Starting BLE scan for ActiveLook glasses ===")
-        android.util.Log.d(TAG, "SDK instance: $sdkInstance")
-        android.util.Log.i(TAG, "Current connection state: ${_connectionState.value}")
+        Log.i(TAG, "🔍 === Starting BLE scan for ActiveLook glasses ===")
+        Log.d(TAG, "SDK instance: $sdkInstance")
+        Log.i(TAG, "Current connection state: ${_connectionState.value}")
         _connectionState.value = ConnectionState.Scanning
         _isScanning.value = true
         _discoveredGlasses.value = emptyList()
 
         try {
             sdkInstance.startScan { discoveredGlasses ->
-                android.util.Log.i(TAG, "👓 === DISCOVERED DEVICE ===")
-                android.util.Log.i(TAG, "  Name: ${discoveredGlasses.name}")
-                android.util.Log.i(TAG, "  Address: ${discoveredGlasses.address}")
-                android.util.Log.i(TAG, "  Manufacturer: ${discoveredGlasses.manufacturer}")
-                android.util.Log.i(TAG, "  toString(): $discoveredGlasses")
-                android.util.Log.i(TAG, "========================")
+                Log.i(TAG, "👓 === DISCOVERED DEVICE ===")
+                Log.i(TAG, "  Name: ${discoveredGlasses.name}")
+                Log.i(TAG, "  Address: ${discoveredGlasses.address}")
+                Log.i(TAG, "  Manufacturer: ${discoveredGlasses.manufacturer}")
+                Log.i(TAG, "  toString(): $discoveredGlasses")
+                Log.i(TAG, "========================")
 
                 // Add to discovered list if not already present
                 val currentList = _discoveredGlasses.value.toMutableList()
                 if (currentList.none { it.address == discoveredGlasses.address }) {
                     currentList.add(discoveredGlasses)
                     _discoveredGlasses.value = currentList
-                    android.util.Log.i(TAG, "✅ Added to discovered list: ${discoveredGlasses.name}")
-                    android.util.Log.d(TAG, "Total discovered devices: ${currentList.size}")
+                    Log.i(TAG, "✅ Added to discovered list: ${discoveredGlasses.name}")
+                    Log.d(TAG, "Total discovered devices: ${currentList.size}")
                 } else {
-                    android.util.Log.d(
+                    Log.d(
                         TAG,
                         "⏭️ Device already in list, skipping: ${discoveredGlasses.name}"
                     )
                 }
             }
-            android.util.Log.i(TAG, "✅ Scan started successfully, waiting for devices...")
+            Log.i(TAG, "✅ Scan started successfully, waiting for devices...")
         } catch (e: Exception) {
-            android.util.Log.e(TAG, "❌ Error starting scan: ${e.message}", e)
-            android.util.Log.e(TAG, "Exception type: ${e.javaClass.name}")
-            android.util.Log.e(TAG, "Stack trace:", e)
+            Log.e(TAG, "❌ Error starting scan: ${e.message}", e)
+            Log.e(TAG, "Exception type: ${e.javaClass.name}")
+            Log.e(TAG, "Stack trace:", e)
             _connectionState.value = ConnectionState.Error("Scan failed: ${e.message}")
             _isScanning.value = false
         }
@@ -180,29 +180,29 @@ class ActiveLookService(private val context: Context) {
      * Connect to discovered glasses
      */
     fun connect(glasses: DiscoveredGlasses) {
-        android.util.Log.i(TAG, "🔌 === INITIATING CONNECTION ===")
-        android.util.Log.i(TAG, "  Target Name: ${glasses.name}")
-        android.util.Log.i(TAG, "  Target Address: ${glasses.address}")
-        android.util.Log.i(TAG, "  Target Manufacturer: ${glasses.manufacturer}")
-        android.util.Log.i(TAG, "  Current State: ${_connectionState.value}")
-        android.util.Log.i(TAG, "  Is Scanning: ${_isScanning.value}")
+        Log.i(TAG, "🔌 === INITIATING CONNECTION ===")
+        Log.i(TAG, "  Target Name: ${glasses.name}")
+        Log.i(TAG, "  Target Address: ${glasses.address}")
+        Log.i(TAG, "  Target Manufacturer: ${glasses.manufacturer}")
+        Log.i(TAG, "  Current State: ${_connectionState.value}")
+        Log.i(TAG, "  Is Scanning: ${_isScanning.value}")
 
         // Stop scanning if active
         if (_isScanning.value) {
-            android.util.Log.d(TAG, "Stopping scan before connection...")
+            Log.d(TAG, "Stopping scan before connection...")
             stopScanning()
         }
 
-        android.util.Log.d(TAG, "Setting state to Connecting...")
+        Log.d(TAG, "Setting state to Connecting...")
         _connectionState.value = ConnectionState.Connecting
 
         try {
-            android.util.Log.d(TAG, "Calling glasses.connect()...")
+            Log.d(TAG, "Calling glasses.connect()...")
             glasses.connect(
                 { connectedGlasses ->
-                    android.util.Log.i(TAG, "✅ === CONNECTION SUCCESS ===")
-                    android.util.Log.i(TAG, "  Connected Name: ${connectedGlasses.name}")
-                    android.util.Log.i(TAG, "  Connected Address: ${connectedGlasses.address}")
+                    Log.i(TAG, "✅ === CONNECTION SUCCESS ===")
+                    Log.i(TAG, "  Connected Name: ${connectedGlasses.name}")
+                    Log.i(TAG, "  Connected Address: ${connectedGlasses.address}")
                     Log.i(TAG, "  Manufacturer: ${connectedGlasses.manufacturer}")
                     Log.i(TAG, "=========================")
 
@@ -323,7 +323,7 @@ class ActiveLookService(private val context: Context) {
 
     /**
      * Display a configured field with label, icon, and value at calculated position
-     * Uses LayoutBuilder positioning constants for consistency
+     * Uses zone-based positioning
      */
     fun displayField(
         field: com.kema.k2look.model.LayoutDataField,
@@ -337,13 +337,20 @@ class ActiveLookService(private val context: Context) {
         }
 
         try {
-            val layoutBuilder = com.kema.k2look.layout.LayoutBuilder
+            // Constants for this method (localized from removed LayoutBuilder constants)
+            val MARGIN_X = 10
+            val ICON_LEFT_MARGIN = 10
+            val ICON_LABEL_SPACING = 10
+            val LABEL_OFFSET_Y = 15
+            val VALUE_OFFSET_Y = 45
+            val DISPLAY_WIDTH = 304
+            val SECTION_HEIGHT = 85
 
             // Calculate label X position based on icon display
             var labelX = if (field.showIcon && field.dataField.icon28 != null) {
-                layoutBuilder.ICON_LEFT_MARGIN + field.iconSize.pixels + layoutBuilder.ICON_LABEL_SPACING
+                ICON_LEFT_MARGIN + field.iconSize.pixels + ICON_LABEL_SPACING
             } else {
-                layoutBuilder.MARGIN_X + 5
+                MARGIN_X + 5
             }
 
             // Display icon if enabled
@@ -354,9 +361,8 @@ class ActiveLookService(private val context: Context) {
                 }
 
                 if (iconId != null) {
-                    val iconX = layoutBuilder.ICON_LEFT_MARGIN
-                    val iconY =
-                        sectionY + (layoutBuilder.SECTION_HEIGHT - field.iconSize.pixels) / 2
+                    val iconX = ICON_LEFT_MARGIN
+                    val iconY = sectionY + (SECTION_HEIGHT - field.iconSize.pixels) / 2
                     glasses.imgDisplay(iconId.toByte(), iconX.toShort(), iconY.toShort())
                     Log.v(TAG, "  Icon $iconId at ($iconX, $iconY)")
                 }
@@ -365,7 +371,7 @@ class ActiveLookService(private val context: Context) {
             // Display label if enabled
             if (field.showLabel) {
                 val labelText = buildLabelText(field)
-                val labelY = sectionY + layoutBuilder.LABEL_OFFSET_Y
+                val labelY = sectionY + LABEL_OFFSET_Y
                 glasses.txt(
                     Point(labelX, labelY),
                     Rotation.TOP_LR,
@@ -376,24 +382,26 @@ class ActiveLookService(private val context: Context) {
                 Log.v(TAG, "  Label '$labelText' at ($labelX, $labelY)")
             }
 
-            // Display value (centered)
-            val valueX = layoutBuilder.DISPLAY_WIDTH / 2
-            val valueY = sectionY + layoutBuilder.VALUE_OFFSET_Y
+            // Display value (centered) - font determined by zone in layout builder
+            val valueX = DISPLAY_WIDTH / 2
+            val valueY = sectionY + VALUE_OFFSET_Y
+            // Use medium font as default (font is now determined by zone in efficient mode)
+            val fontId = 2 // Medium font
             glasses.txt(
                 Point(valueX, valueY),
                 Rotation.TOP_LR,
-                field.fontSize.fontId.toByte(),
+                fontId.toByte(),
                 15, // White color
                 value
             )
-            Log.v(TAG, "  Value '$value' at ($valueX, $valueY) font=${field.fontSize}")
+            Log.v(TAG, "  Value '$value' at ($valueX, $valueY) font=$fontId")
 
             // Draw separator line (except for bottom section)
-            if (sectionY < layoutBuilder.SECTION_HEIGHT * 2) {
-                val lineY = sectionY + layoutBuilder.SECTION_HEIGHT - 1
+            if (sectionY < SECTION_HEIGHT * 2) {
+                val lineY = sectionY + SECTION_HEIGHT - 1
                 glasses.line(
-                    Point(layoutBuilder.MARGIN_X, lineY),
-                    Point(layoutBuilder.DISPLAY_WIDTH - layoutBuilder.MARGIN_X, lineY)
+                    Point(MARGIN_X, lineY),
+                    Point(DISPLAY_WIDTH - MARGIN_X, lineY)
                 )
             }
 
