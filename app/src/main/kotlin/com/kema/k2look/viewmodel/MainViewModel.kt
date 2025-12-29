@@ -29,6 +29,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Public access to preferences for UI
     val preferencesManager = PreferencesManager(application)
 
+    // Reference to LayoutBuilderViewModel for gesture actions
+    private var layoutBuilderViewModel: LayoutBuilderViewModel? = null
+
+    /**
+     * Set the LayoutBuilderViewModel instance for gesture screen cycling
+     */
+    fun setLayoutBuilderViewModel(viewModel: LayoutBuilderViewModel) {
+        this.layoutBuilderViewModel = viewModel
+        Log.i(TAG, "LayoutBuilderViewModel reference set for gesture actions")
+    }
+
     /**
      * Get the bridge for use by other components (e.g., LayoutBuilderViewModel)
      */
@@ -85,9 +96,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val power30s: String = "--",
         val vam: String = "--",
         val avgVam: String = "--",
+        // Gesture/Touch events
+        val gestureEventCount: Int = 0,
+        val touchEventCount: Int = 0,
+        val gestureAction: com.kema.k2look.model.GestureAction = com.kema.k2look.model.GestureAction.CYCLE_SCREENS,
+        val touchAction: com.kema.k2look.model.TouchAction = com.kema.k2look.model.TouchAction.SHOW_HIDE_DISPLAY,
     )
 
     private var simulatorJob: kotlinx.coroutines.Job? = null
+
+    private val gesturePreferences = com.kema.k2look.data.GesturePreferencesRepository(application)
 
     init {
         Log.i(TAG, "MainViewModel initialized")
@@ -97,6 +115,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         observeBridgeState()
         observeUserProfile()
         loadReconnectTimeout()
+        observeGestureEvents()
+        observeGesturePreferences()
     }
 
     /**
@@ -192,6 +212,189 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val timeout = preferencesManager.getReconnectTimeoutMinutes()
         _uiState.value = _uiState.value.copy(reconnectTimeoutMinutes = timeout)
         Log.d(TAG, "Loaded reconnect timeout: ${timeout}min")
+    }
+
+    /**
+     * Observe gesture/touch events from ActiveLook service
+     */
+    private fun observeGestureEvents() {
+        viewModelScope.launch {
+            activeLookService.gestureEvents.collect { count ->
+                Log.i(TAG, "🖐️ Gesture event #$count received")
+                _uiState.value = _uiState.value.copy(gestureEventCount = count)
+
+                // Execute the configured gesture action
+                executeGestureAction(_uiState.value.gestureAction)
+            }
+        }
+
+        viewModelScope.launch {
+            activeLookService.touchEvents.collect { count ->
+                Log.i(TAG, "👆 Touch event #$count received")
+                _uiState.value = _uiState.value.copy(touchEventCount = count)
+
+                // Execute the configured touch action
+                executeTouchAction(_uiState.value.touchAction)
+            }
+        }
+    }
+
+    /**
+     * Observe gesture/touch action preferences
+     */
+    private fun observeGesturePreferences() {
+        viewModelScope.launch {
+            gesturePreferences.gestureAction.collect { action ->
+                Log.d(TAG, "Gesture action preference changed: ${action.displayName}")
+                _uiState.value = _uiState.value.copy(gestureAction = action)
+            }
+        }
+        viewModelScope.launch {
+            gesturePreferences.touchAction.collect { action ->
+                Log.d(TAG, "Touch action preference changed: ${action.displayName}")
+                _uiState.value = _uiState.value.copy(touchAction = action)
+            }
+        }
+    }
+
+    /**
+     * Execute the configured gesture action
+     */
+    private fun executeGestureAction(action: com.kema.k2look.model.GestureAction) {
+        Log.i(TAG, "🖐️ Executing gesture action: ${action.displayName}")
+
+        when (action) {
+            com.kema.k2look.model.GestureAction.CYCLE_SCREENS -> {
+                cycleToNextScreen()
+            }
+
+            com.kema.k2look.model.GestureAction.ADJUST_BRIGHTNESS -> {
+                adjustBrightness()
+            }
+
+            com.kema.k2look.model.GestureAction.TOGGLE_DISPLAY -> {
+                toggleDisplay()
+            }
+        }
+    }
+
+    /**
+     * Execute the configured touch action
+     */
+    private fun executeTouchAction(action: com.kema.k2look.model.TouchAction) {
+        Log.i(TAG, "👆 Executing touch action: ${action.displayName}")
+
+        when (action) {
+            com.kema.k2look.model.TouchAction.SHOW_HIDE_DISPLAY -> {
+                toggleDisplay()
+            }
+
+            com.kema.k2look.model.TouchAction.CYCLE_SCREENS -> {
+                cycleToNextScreen()
+            }
+
+            com.kema.k2look.model.TouchAction.ADJUST_BRIGHTNESS -> {
+                adjustBrightness()
+            }
+        }
+    }
+
+    // Current brightness level (0-15)
+    private var currentBrightness = 8 // Default mid-level
+
+    // Display power state
+    private var displayPowerOn = true
+
+    /**
+     * Cycle to the next screen in the current profile
+     */
+    private fun cycleToNextScreen() {
+        val layoutViewModel = layoutBuilderViewModel
+        if (layoutViewModel == null) {
+            Log.w(TAG, "Cannot cycle screens - LayoutBuilderViewModel not set")
+            return
+        }
+
+        val success = layoutViewModel.cycleToNextScreen()
+        if (!success) {
+            Log.d(TAG, "Screen cycling not performed (single screen or no profile)")
+        }
+    }
+
+    /**
+     * Cycle to the next profile (REMOVED - not useful during rides)
+     */
+    private fun cycleToNextProfile() {
+        // Removed - cycling K2Look profiles during a ride doesn't make sense
+        Log.d(TAG, "Profile cycling removed - not needed during rides")
+    }
+
+    /**
+     * Adjust brightness (cycle through levels: 8 -> 12 -> 15 -> 4 -> 8)
+     * Using common brightness levels for cycling
+     */
+    private fun adjustBrightness() {
+        viewModelScope.launch {
+            try {
+                // Cycle through useful brightness levels
+                currentBrightness = when (currentBrightness) {
+                    in 0..7 -> 8    // Low -> Medium
+                    8 -> 12          // Medium -> High
+                    in 9..12 -> 15   // High -> Max
+                    in 13..15 -> 4   // Max -> Low
+                    else -> 8        // Default to medium
+                }
+
+                Log.i(TAG, "✓ Adjusting brightness to level $currentBrightness (0=min, 15=max)")
+
+                // Send luma command to glasses (command 0x10)
+                val activeLookService = bridge.getActiveLookService()
+                activeLookService.setLuminance(currentBrightness)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to adjust brightness: ${e.message}", e)
+            }
+        }
+    }
+
+    /**
+     * Toggle display on/off
+     */
+    private fun toggleDisplay() {
+        viewModelScope.launch {
+            try {
+                displayPowerOn = !displayPowerOn
+
+                Log.i(TAG, "✓ Toggling display ${if (displayPowerOn) "ON" else "OFF"}")
+
+                // Send display power command to glasses (command 0x00)
+                val activeLookService = bridge.getActiveLookService()
+                activeLookService.setDisplayPower(displayPowerOn)
+
+                if (displayPowerOn) {
+                    // TODO: Redraw current layout when turning back on
+                    // Will need bridge method to refresh display
+                    Log.d(TAG, "Display turned on - layout refresh needed")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to toggle display: ${e.message}", e)
+            }
+        }
+    }
+
+    /**
+     * Set gesture action preference
+     */
+    fun setGestureAction(action: com.kema.k2look.model.GestureAction) {
+        Log.i(TAG, "Setting gesture action to: ${action.displayName}")
+        gesturePreferences.setGestureAction(action)
+    }
+
+    /**
+     * Set touch action preference
+     */
+    fun setTouchAction(action: com.kema.k2look.model.TouchAction) {
+        Log.i(TAG, "Setting touch action to: ${action.displayName}")
+        gesturePreferences.setTouchAction(action)
     }
 
     /**

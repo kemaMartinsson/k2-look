@@ -40,6 +40,13 @@ class ActiveLookService(private val context: Context) {
     private val _isScanning = MutableStateFlow(false)
     val isScanning: StateFlow<Boolean> = _isScanning.asStateFlow()
 
+    // Gesture/Touch events
+    private val _gestureEvents = MutableStateFlow(0) // Counter for gesture events
+    val gestureEvents: StateFlow<Int> = _gestureEvents.asStateFlow()
+
+    private val _touchEvents = MutableStateFlow(0) // Counter for touch events
+    val touchEvents: StateFlow<Int> = _touchEvents.asStateFlow()
+
     /**
      * Connection state enum
      */
@@ -209,6 +216,12 @@ class ActiveLookService(private val context: Context) {
 
                     this.connectedGlasses = connectedGlasses
                     _connectionState.value = ConnectionState.Connected(connectedGlasses)
+
+                    // Subscribe to sensor interface notifications (gesture & touch events)
+                    setupGestureAndTouchListeners(connectedGlasses)
+
+                    // Enable gesture sensor on glasses
+                    enableGestureSensor(true)
 
                     Log.i(TAG, "✓ Connection established successfully")
                 },
@@ -782,6 +795,94 @@ class ActiveLookService(private val context: Context) {
             } catch (_: Exception) {
             }
             false
+        }
+    }
+
+    /**
+     * Setup listeners for gesture and touch events from glasses
+     */
+    private fun setupGestureAndTouchListeners(glasses: Glasses) {
+        try {
+            Log.i(TAG, "Setting up gesture and touch event listeners...")
+
+            glasses.subscribeToSensorInterfaceNotifications {
+                // This callback is triggered for both gesture AND touch events
+                handleSensorEvent()
+            }
+
+            Log.i(TAG, "✓ Gesture/Touch event listeners enabled")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to setup gesture/touch listeners: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Handle sensor interface events (gesture or touch)
+     */
+    private fun handleSensorEvent() {
+        Log.i(TAG, "🖐️ Sensor event detected (gesture or touch)")
+        _gestureEvents.value += 1
+        Log.d(TAG, "Total sensor events: ${_gestureEvents.value}")
+    }
+
+    /**
+     * Enable or disable the gesture sensor on the glasses
+     */
+    fun enableGestureSensor(enable: Boolean) {
+        val glasses = connectedGlasses
+        if (glasses == null) {
+            Log.w(TAG, "Cannot enable gesture sensor - no glasses connected")
+            return
+        }
+
+        try {
+            Log.i(TAG, "Enabling gesture sensor: $enable")
+            // The ActiveLook SDK should handle gesture sensor enabling through sensor commands
+            // For now, the gesture notifications will be received once subscribed
+            Log.i(TAG, "✓ Gesture sensor subscription active")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to enable gesture sensor: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Set display luminance (brightness)
+     * @param level Brightness level (0-15, where 0 is dimmest and 15 is brightest)
+     */
+    fun setLuminance(level: Int) {
+        val glasses = connectedGlasses
+        if (glasses == null) {
+            Log.w(TAG, "Cannot set luminance - no glasses connected")
+            return
+        }
+
+        try {
+            val clampedLevel = level.coerceIn(0, 15)
+            Log.i(TAG, "Setting luminance to level $clampedLevel")
+            glasses.luma(clampedLevel.toByte())
+            Log.i(TAG, "✓ Luminance set to $clampedLevel")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to set luminance: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Set display power on or off
+     * @param enable True to turn display on, false to turn it off
+     */
+    fun setDisplayPower(enable: Boolean) {
+        val glasses = connectedGlasses
+        if (glasses == null) {
+            Log.w(TAG, "Cannot set display power - no glasses connected")
+            return
+        }
+
+        try {
+            Log.i(TAG, "Setting display power: ${if (enable) "ON" else "OFF"}")
+            glasses.power(enable)
+            Log.i(TAG, "✓ Display power ${if (enable) "enabled" else "disabled"}")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to set display power: ${e.message}", e)
         }
     }
 

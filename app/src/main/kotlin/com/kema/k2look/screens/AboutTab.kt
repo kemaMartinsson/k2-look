@@ -11,16 +11,22 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,9 +45,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.kema.k2look.BuildConfig
 import com.kema.k2look.R
-import com.kema.k2look.update.*
+import com.kema.k2look.update.AppUpdate
+import com.kema.k2look.update.NoUpdateDialog
+import com.kema.k2look.update.UpdateChecker
+import com.kema.k2look.update.UpdateDialog
+import com.kema.k2look.update.UpdateDownloader
 import com.kema.k2look.util.PreferencesManager
 import kotlinx.coroutines.launch
 
@@ -111,8 +123,12 @@ fun parseSimpleMarkdown(text: String): AnnotatedString {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AboutTab() {
+fun AboutTab(
+    viewModel: com.kema.k2look.viewmodel.MainViewModel,
+    uiState: com.kema.k2look.viewmodel.MainViewModel.UiState
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val prefsManager = remember { PreferencesManager(context) }
@@ -124,6 +140,7 @@ fun AboutTab() {
     var showNoUpdateDialog by remember { mutableStateOf(false) }
     var isDownloading by remember { mutableStateOf(false) }
     var autoCheckEnabled by remember { mutableStateOf(prefsManager.isAutoCheckUpdatesEnabled()) }
+    var showDebugDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -176,6 +193,15 @@ fun AboutTab() {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+
+                // Debug button
+                Spacer(modifier = Modifier.height(12.dp))
+                Button(
+                    onClick = { showDebugDialog = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Debug & Simulator")
+                }
             }
         }
 
@@ -407,6 +433,41 @@ fun AboutTab() {
             currentVersion = BuildConfig.VERSION_NAME,
             onDismiss = { showNoUpdateDialog = false }
         )
+    }
+
+    // Debug Dialog
+    if (showDebugDialog) {
+        Dialog(
+            onDismissRequest = { showDebugDialog = false },
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false,
+                dismissOnBackPress = true,
+                dismissOnClickOutside = false
+            )
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background
+            ) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    // Dialog Header
+                    TopAppBar(
+                        title = { Text("Debug & Simulator") },
+                        navigationIcon = {
+                            IconButton(onClick = { showDebugDialog = false }) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Close"
+                                )
+                            }
+                        }
+                    )
+
+                    // Debug Tab Content
+                    DebugTab(viewModel, uiState)
+                }
+            }
+        }
     }
 }
 

@@ -31,6 +31,36 @@ Engo 2 has been used to test core functionality.
 
 ### Key Features
 
+#### 🖐️ **Hands-Free Gesture & Touch Control**
+
+Control your display without touching your Karoo during rides - perfect for safety and convenience!
+
+**✨ Gesture Actions (Wave Hand):**
+
+- 🔄 **Cycle Screens** - Switch between your configured screens (Default)
+- 🔆 **Adjust Brightness** - Cycle through brightness levels (4→8→12→15)
+- 📺 **Toggle Display** - Turn display on/off to save battery
+
+**👆 Touch Actions (Tap Button):**
+
+- 📺 **Show/Hide Display** - Quick display toggle (Default)
+- 🔄 **Cycle Screens** - Switch between screens
+- 🔆 **Adjust Brightness** - Adjust brightness levels
+
+**How It Works:**
+
+- **Hand Gesture**: Wave your hand near the glasses sensor
+- **Touch Button**: Short tap (<3s) on the capacitive button
+- **Configure**: Select your preferred actions in the Gestures tab
+- **During Ride**: Keep your hands on the handlebars, control display with gestures!
+
+**Perfect For:**
+
+- 🏋️ **Interval Training** - Switch between "Steady", "Intervals", and "Recovery" screens
+- 🌄 **Multi-Terrain** - Change from "Road" to "Climb" to "Recovery" views
+- ☀️ **Changing Light** - Adjust brightness when entering tunnels or bright sun
+- 🔋 **Battery Saving** - Turn off display on long flat sections
+
 #### 🎨 **Built-in DataField Builder**
 
 K2Look includes a powerful **DataField Builder** that lets you create custom display layouts
@@ -80,6 +110,7 @@ All metrics update at **1Hz** (1 update/second) for optimal BLE performance and 
 This Karoo Extension provides a **complete data visualization solution** for ActiveLook smart
 glasses, featuring:
 
+- **Hands-Free Gesture & Touch Control** - Wave hand or tap button to control display during rides
 - **Built-in DataField Builder** - Create custom layouts directly on your Karoo 2
 - **23 real-time metrics** - All cycling data you need (HR, Power, Speed, Cadence, VAM, and more)
 - **4 visualization styles** - Text, Gauge, Bar, and Zoned Bar
@@ -88,7 +119,7 @@ glasses, featuring:
 - **Training zone support** - HR zones (Z1-Z5) and Power zones (Z1-Z7 based on FTP)
 
 **No smartphone app required!** Configure everything directly on your Karoo 2 using the intuitive
-DataField Builder interface.
+DataField Builder interface. Control your display with hand gestures for safer, hands-free riding!
 
 > **See [DataField Builder Guide](./docs/DataFieldBuilder.md)** for complete documentation on
 > creating custom layouts, choosing visualization styles, and configuring training zones.
@@ -221,15 +252,20 @@ Transfer the APK to your Karoo2 and install it.
     - Select metrics to display
     - Choose visualization styles (Text, Gauge, Bar, Zoned Bar)
     - Pick a layout template (1-6 fields)
+3. **Go to "Gestures" tab** to configure hands-free control:
+    - Select hand gesture action (default: Cycle Screens)
+    - Select touch button action (default: Show/Hide Display)
+    - Settings save automatically
 4. **Go to "Status" tab** to connect to your glasses:
     - Turn on your ActiveLook glasses
     - Tap **"Scan for Glasses"**
     - Select your glasses from the list
     - Wait for "Connected" status
 5. **Start a ride** - Your custom layout appears on your glasses automatically!
+6. **During ride** - Wave hand or tap button to control display without touching Karoo!
 
 > **💡 Pro Tip:** Create multiple profiles with different names matching your Karoo ride profiles for
-> automatic switching!
+> automatic switching! Use gestures to switch between screens hands-free.
 
 ## Documentation
 
@@ -247,6 +283,8 @@ Transfer the APK to your Karoo2 and install it.
 - 🏋️ [Training Zones](./docs/DataFieldBuilder.md#-zoned-bar) - HR and Power zone configuration
 - 🔄 [Automatic Profile Switching](./docs/DataFieldBuilder.md#profile-organization) - Match Karoo
   profiles
+- 🎮 [Gesture Actions](./docs/Gesture-Implementation-Complete.md#-implemented-actions) - Screen
+  cycling, brightness, display toggle
 
 ## External Resources
 

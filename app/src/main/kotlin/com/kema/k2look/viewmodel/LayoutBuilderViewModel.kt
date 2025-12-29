@@ -701,6 +701,51 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
         removeField(screenId, zoneId)
     }
 
+    /**
+     * Cycle to the next screen in the active profile
+     * Used by gesture/touch actions for hands-free screen switching
+     * @return true if screen was cycled, false if there's only one screen or no active profile
+     */
+    fun cycleToNextScreen(): Boolean {
+        val currentProfile = _uiState.value.activeProfile
+        if (currentProfile == null) {
+            Log.w(TAG, "Cannot cycle screens - no active profile")
+            return false
+        }
+
+        val screens = currentProfile.screens
+        if (screens.isEmpty()) {
+            Log.w(TAG, "Cannot cycle screens - no screens in profile")
+            return false
+        }
+
+        if (screens.size == 1) {
+            Log.d(TAG, "Only one screen in profile - nothing to cycle")
+            return false
+        }
+
+        // Find current screen index
+        val currentScreenId = _uiState.value.selectedScreen
+        val currentIndex = screens.indexOfFirst { it.id == currentScreenId }
+
+        // Calculate next screen index (wrap around)
+        val nextIndex = (currentIndex + 1) % screens.size
+        val nextScreen = screens[nextIndex]
+
+        Log.i(
+            TAG,
+            "✓ Cycling from screen ${currentIndex + 1} to screen ${nextIndex + 1}: ${nextScreen.name}"
+        )
+
+        // Update selected screen
+        selectScreen(nextScreen.id)
+
+        // Apply the new screen layout to glasses
+        applyProfileToGlasses(currentProfile)
+
+        return true
+    }
+
     companion object {
         private const val TAG = "LayoutBuilderViewModel"
     }

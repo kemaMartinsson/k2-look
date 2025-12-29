@@ -84,7 +84,7 @@ fun MainScreen(
             Tab(
                 selected = selectedTabIndex == 2,
                 onClick = { selectedTabIndex = 2 },
-                text = { Text("Debug") }
+                text = { Text("Gestures") }
             )
             Tab(
                 selected = selectedTabIndex == 3,
@@ -97,8 +97,8 @@ fun MainScreen(
         when (selectedTabIndex) {
             0 -> StatusTab(viewModel, uiState)
             1 -> DataFieldBuilderTab(mainViewModel = viewModel)
-            2 -> DebugTab(viewModel, uiState)
-            3 -> AboutTab()
+            2 -> GesturesTab(viewModel, uiState)
+            3 -> AboutTab(viewModel, uiState)
         }
     }
 }

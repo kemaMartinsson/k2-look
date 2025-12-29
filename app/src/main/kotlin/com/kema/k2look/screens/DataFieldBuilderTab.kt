@@ -55,7 +55,9 @@ fun DataFieldBuilderTab(
     androidx.compose.runtime.LaunchedEffect(mainViewModel) {
         mainViewModel?.let { vm ->
             viewModel.setBridge(vm.getBridge())
-            android.util.Log.d("DataFieldBuilderTab", "Bridge set in LayoutBuilderViewModel")
+            // Also set the LayoutBuilderViewModel reference in MainViewModel for gesture actions
+            vm.setLayoutBuilderViewModel(viewModel)
+            android.util.Log.d("DataFieldBuilderTab", "Bridge and LayoutBuilder references set")
         }
     }
 
