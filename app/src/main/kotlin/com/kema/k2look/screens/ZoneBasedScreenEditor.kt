@@ -212,17 +212,50 @@ fun ZoneDataFieldSlot(
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(
-                            text = "Font: ${zone.fontSize.name}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                        )
-                        if (field.showIcon) {
-                            Text(
-                                text = "• Icon: ${field.iconSize.name}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                            )
+                        // Show visualization type for GAUGE/BAR/ZONED_BAR, or font/icon for TEXT
+                        when (field.visualizationType
+                            ?: com.kema.k2look.model.VisualizationType.TEXT) {
+                            com.kema.k2look.model.VisualizationType.GAUGE -> {
+                                Text(
+                                    text = "⊙ Gauge",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            com.kema.k2look.model.VisualizationType.BAR -> {
+                                Text(
+                                    text = "▬ Bar",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            com.kema.k2look.model.VisualizationType.ZONED_BAR -> {
+                                Text(
+                                    text = "▦ Zoned Bar",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            com.kema.k2look.model.VisualizationType.TEXT -> {
+                                Text(
+                                    text = "Font: ${zone.fontSize.name}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                )
+                                if (field.showIcon) {
+                                    Text(
+                                        text = "• Icon: ${field.iconSize.name}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                    )
+                                }
+                            }
                         }
                     }
                 }

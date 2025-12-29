@@ -212,44 +212,36 @@ private fun VisualizationTypeCard(
 
 /**
  * Check if gauge visualization is available for this data field
+ * Now supports ALL numeric metrics with generic templates
  */
 private fun isGaugeAvailable(dataField: DataField): Boolean {
-    // Gauges work best with numeric metrics that have a meaningful range
     return when (dataField.id) {
-        4 -> true   // Heart Rate
-        5 -> false  // Max Heart Rate (not useful as gauge)
-        6 -> false  // Avg Heart Rate (not useful as gauge)
-        7 -> true   // Power
-        8 -> true   // Cadence
-        12 -> true  // Speed
-        else -> false
+        1 -> false   // Elapsed Time - constantly increasing, not suitable
+        else -> true // All other numeric metrics can use gauge
     }
 }
 
 /**
  * Check if simple bar visualization is available for this data field
+ * Now supports ALL numeric metrics with generic templates
  */
 private fun isBarAvailable(dataField: DataField): Boolean {
-    // Bars work for most numeric metrics
     return when (dataField.id) {
-        4 -> true   // Heart Rate
-        7 -> true   // Power
-        8 -> true   // Cadence
-        12 -> true  // Speed
-        13 -> false // Max Speed (not useful as bar)
-        14 -> false // Avg Speed (not useful as bar)
-        else -> false
+        1 -> false   // Elapsed Time - constantly increasing, not suitable
+        else -> true // All other numeric metrics can use bar
     }
 }
 
 /**
  * Check if zoned bar visualization is available for this data field
+ * Only metrics with pre-defined zones
  */
 private fun isZonedBarAvailable(dataField: DataField): Boolean {
-    // Zoned bars are specifically for metrics with zones
     return when (dataField.id) {
-        4 -> true   // Heart Rate (has Z1-Z5)
-        7 -> false  // Power (could have power zones, but not implemented yet)
+        4 -> true   // Heart Rate (has HR zones Z1-Z5)
+        47 -> true  // HR Zone (already categorical)
+        48 -> true  // Power Zone (has power zones based on FTP)
+        // Future: More zoned metrics could be added
         else -> false
     }
 }

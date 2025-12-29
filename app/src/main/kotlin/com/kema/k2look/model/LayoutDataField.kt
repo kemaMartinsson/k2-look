@@ -17,7 +17,7 @@ package com.kema.k2look.model
 data class LayoutDataField(
     val dataField: DataField,
     val zoneId: String,
-    val visualizationType: VisualizationType = VisualizationType.TEXT,
+    val visualizationType: VisualizationType? = VisualizationType.TEXT,
     val showLabel: Boolean = true,
     val showUnit: Boolean = true,
     val showIcon: Boolean = true,

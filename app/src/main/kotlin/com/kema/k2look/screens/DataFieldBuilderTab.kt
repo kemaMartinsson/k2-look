@@ -77,8 +77,8 @@ fun DataFieldBuilderTab(
         ProfileManagementScreen(
             profiles = uiState.profiles,
             onBack = { viewModel.setShowProfileManagement(false) },
-            onCreateProfile = { name, template ->
-                viewModel.createProfile(name, template)
+            onCreateProfile = { name ->
+                viewModel.createProfile(name)
             },
             onDeleteProfile = { profileId ->
                 viewModel.deleteProfile(profileId)
@@ -92,6 +92,11 @@ fun DataFieldBuilderTab(
 
     // Show field configuration dialog if requested
     if (showFieldConfig && editingField != null) {
+        // Find which screen this field belongs to
+        val fieldScreen = uiState.activeProfile?.screens?.find { screen ->
+            screen.dataFields.any { it.zoneId == editingField!!.zoneId }
+        }
+
         FieldConfigurationDialog(
             field = editingField!!,
             onDismiss = {
@@ -99,7 +104,13 @@ fun DataFieldBuilderTab(
                 editingField = null
             },
             onSave = { updatedField ->
-                viewModel.updateField(uiState.selectedScreen, updatedField)
+                // Use the screen where the field actually exists, not the currently selected tab!
+                val screenIdToUpdate = fieldScreen?.id ?: uiState.selectedScreen
+                android.util.Log.i(
+                    "DataFieldBuilder",
+                    "Saving field to screen $screenIdToUpdate (currently viewing ${uiState.selectedScreen})"
+                )
+                viewModel.updateField(screenIdToUpdate, updatedField)
                 showFieldConfig = false
                 editingField = null
             }

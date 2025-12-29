@@ -120,6 +120,51 @@ object DefaultVisualizations {
     }
 
     /**
+     * Power Zone Bar - Horizontal bar with 7 power zones
+     *
+     * Visual: Horizontal bar showing all power zones based on FTP
+     * Current power position highlighted
+     *
+     * Power zones based on typical FTP percentage ranges:
+     * Z1: 0-140W (0-55% FTP)    - Active Recovery
+     * Z2: 140-190W (55-75% FTP) - Endurance
+     * Z3: 190-220W (75-90% FTP) - Tempo
+     * Z4: 220-260W (90-105% FTP)- Lactate Threshold
+     * Z5: 260-300W (105-120% FTP)- VO2 Max
+     * Z6: 300-360W (120-150% FTP)- Anaerobic Capacity
+     * Z7: 360-400W (150%+ FTP)  - Neuromuscular Power
+     *
+     * Note: These zones assume FTP ≈ 250W. Karoo automatically adjusts based on user's actual FTP.
+     */
+    fun createPowerZoneBar(): ZonedProgressBar {
+        val bar = ProgressBar(
+            id = 2,
+            x = 30,
+            y = 110,
+            width = 244,
+            height = 25,
+            orientation = Orientation.HORIZONTAL,
+            minValue = 0f,
+            maxValue = 400f,     // Max power range
+            showBorder = true,
+            dataField = DataFieldRegistry.getById(7)!! // Power
+        )
+
+        return ZonedProgressBar(
+            bar = bar,
+            zones = listOf(
+                ZonedProgressBar.Zone("Z1", 0f, 140f, 2),     // Recovery - lightest
+                ZonedProgressBar.Zone("Z2", 140f, 190f, 4),   // Endurance - light
+                ZonedProgressBar.Zone("Z3", 190f, 220f, 6),   // Tempo - light-mid
+                ZonedProgressBar.Zone("Z4", 220f, 260f, 8),   // Threshold - mid
+                ZonedProgressBar.Zone("Z5", 260f, 300f, 10),  // VO2 Max - mid-bright
+                ZonedProgressBar.Zone("Z6", 300f, 360f, 12),  // Anaerobic - bright
+                ZonedProgressBar.Zone("Z7", 360f, 400f, 14)   // Neuromuscular - brightest
+            )
+        )
+    }
+
+    /**
      * Power Bar - Simple horizontal bar for power percentage
      *
      * Visual: Clean horizontal bar showing power as percentage of FTP

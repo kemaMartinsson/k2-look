@@ -110,6 +110,13 @@ object DataFieldRegistry {
             icon28 = 20,
             icon40 = 52
         ),
+        DataField(
+            id = 48,
+            name = "Power Zone",
+            unit = "Z",
+            category = POWER,
+            karooStreamType = DataType.Type.POWER_ZONE
+        ),
 
         // Speed
         DataField(

@@ -23,7 +23,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -47,7 +46,7 @@ import com.kema.k2look.model.DataFieldProfile
 fun ProfileManagementScreen(
     profiles: List<DataFieldProfile>,
     onBack: () -> Unit,
-    onCreateProfile: (name: String, template: String?) -> Unit,
+    onCreateProfile: (name: String) -> Unit,
     onDeleteProfile: (String) -> Unit,
     onDuplicateProfile: (String, String) -> Unit,
     modifier: Modifier = Modifier
@@ -147,8 +146,8 @@ fun ProfileManagementScreen(
     if (showCreateDialog) {
         CreateProfileDialog(
             onDismiss = { showCreateDialog = false },
-            onCreate = { name, template ->
-                onCreateProfile(name, template)
+            onCreate = { name ->
+                onCreateProfile(name)
                 showCreateDialog = false
             }
         )
@@ -261,10 +260,9 @@ private fun ProfileCard(
 @Composable
 private fun CreateProfileDialog(
     onDismiss: () -> Unit,
-    onCreate: (name: String, template: String?) -> Unit
+    onCreate: (name: String) -> Unit
 ) {
     var profileName by remember { mutableStateOf("") }
-    var selectedTemplate by remember { mutableStateOf<String?>(null) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -275,44 +273,22 @@ private fun CreateProfileDialog(
                     value = profileName,
                     onValueChange = { profileName = it },
                     label = { Text("Profile Name") },
-                    placeholder = { Text("e.g., Road Bike") },
+                    placeholder = { Text("e.g., Training, Race, Recovery") },
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Spacer(modifier = Modifier.padding(vertical = 12.dp))
+                Spacer(modifier = Modifier.padding(vertical = 8.dp))
 
                 Text(
-                    text = "Start from template:",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Spacer(modifier = Modifier.padding(vertical = 4.dp))
-
-                // Template options
-                TemplateOption(
-                    label = "Blank (Default metrics)",
-                    description = "Speed, Distance, Time",
-                    selected = selectedTemplate == null,
-                    onClick = { selectedTemplate = null }
-                )
-                TemplateOption(
-                    label = "Road Bike (with Power)",
-                    description = "Speed, Power, Heart Rate",
-                    selected = selectedTemplate == "template_road",
-                    onClick = { selectedTemplate = "template_road" }
-                )
-                TemplateOption(
-                    label = "Gravel Bike (no Power)",
-                    description = "Speed, Heart Rate, Distance",
-                    selected = selectedTemplate == "template_gravel",
-                    onClick = { selectedTemplate = "template_gravel" }
+                    text = "Starts with default metrics (Speed, Distance, Time). Customize after creation!",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )
             }
         },
         confirmButton = {
             Button(
-                onClick = { onCreate(profileName, selectedTemplate) },
+                onClick = { onCreate(profileName) },
                 enabled = profileName.isNotBlank()
             ) {
                 Text("Create")
@@ -326,37 +302,6 @@ private fun CreateProfileDialog(
     )
 }
 
-@Composable
-private fun TemplateOption(
-    label: String,
-    description: String,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        RadioButton(
-            selected = selected,
-            onClick = onClick
-        )
-        Column(modifier = Modifier.padding(start = 8.dp)) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
-            )
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-            )
-        }
-    }
-}
 
 @Composable
 private fun DuplicateProfileDialog(

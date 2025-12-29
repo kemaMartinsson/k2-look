@@ -5,6 +5,7 @@ import android.graphics.Point
 import android.util.Log
 import com.activelook.activelooksdk.DiscoveredGlasses
 import com.activelook.activelooksdk.types.Rotation
+import com.kema.k2look.model.VisualizationType
 import com.kema.k2look.util.PreferencesManager
 import io.hammerhead.karooext.models.RideState
 import io.hammerhead.karooext.models.StreamState
@@ -913,7 +914,7 @@ class KarooActiveLookBridge(context: Context) {
         screen.dataFields.forEach { field ->
             val value = getMetricValue(field.dataField)
 
-            when (field.visualizationType) {
+            when (field.visualizationType ?: VisualizationType.TEXT) {
                 com.kema.k2look.model.VisualizationType.TEXT -> {
                     // Get zone for text display
                     val zone = template.zones.find { it.id == field.zoneId }
@@ -1275,7 +1276,7 @@ class KarooActiveLookBridge(context: Context) {
 
         profile.screens.forEach { screen ->
             screen.dataFields.forEach { field ->
-                when (field.visualizationType) {
+                when (field.visualizationType ?: VisualizationType.TEXT) {
                     com.kema.k2look.model.VisualizationType.GAUGE -> {
                         field.gauge?.let { gauge ->
                             val success = activeLookService.saveGauge(gauge)
@@ -1300,7 +1301,7 @@ class KarooActiveLookBridge(context: Context) {
      * Update visualization (gauge or bar) with current metric value
      */
     private fun updateVisualization(field: com.kema.k2look.model.LayoutDataField, value: String) {
-        when (field.visualizationType) {
+        when (field.visualizationType ?: VisualizationType.TEXT) {
             com.kema.k2look.model.VisualizationType.GAUGE -> {
                 updateGauge(field, value)
             }

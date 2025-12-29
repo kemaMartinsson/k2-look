@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.kema.k2look.data.DefaultProfiles
 import com.kema.k2look.data.ProfileRepository
 import com.kema.k2look.model.DataFieldProfile
+import com.kema.k2look.model.VisualizationType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -170,16 +171,12 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
     /**
      * Create a new profile
      * @param name Profile name
-     * @param template Optional template ID ("default", "template_road", "template_gravel")
      */
-    fun createProfile(name: String, template: String? = null) {
+    fun createProfile(name: String) {
         viewModelScope.launch {
             try {
-                val baseProfile = when (template) {
-                    "template_road" -> DefaultProfiles.getRoadBikeTemplate()
-                    "template_gravel" -> DefaultProfiles.getGravelBikeTemplate()
-                    else -> DefaultProfiles.getDefaultProfile()
-                }
+                // All new profiles start from the default template
+                val baseProfile = DefaultProfiles.getDefaultProfile()
 
                 val newProfile = baseProfile.copy(
                     id = java.util.UUID.randomUUID().toString(), // Generate new unique ID
@@ -419,10 +416,42 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
             return
         }
 
+        Log.i(TAG, "🔄 updateField called: screenId=$screenId, zoneId=${updatedField.zoneId}")
+
+        // Debug: Show all screens and their fields
+        profile.screens.forEach { screen ->
+            Log.i(TAG, "  📄 Screen ${screen.id} has ${screen.dataFields.size} fields:")
+            screen.dataFields.forEach { field ->
+                Log.i(TAG, "    - Zone ${field.zoneId}: ${field.dataField.name}")
+            }
+        }
+
+        val targetScreen = profile.screens.find { it.id == screenId }
+        if (targetScreen == null) {
+            Log.e(TAG, "  ❌ ERROR: Screen $screenId not found!")
+            return
+        }
+
+        val oldField = targetScreen.dataFields.find { it.zoneId == updatedField.zoneId }
+        Log.i(TAG, "  OLD field name: ${oldField?.dataField?.name ?: "NOT FOUND"}")
+        Log.i(TAG, "  NEW field name: ${updatedField.dataField.name}")
+
+        if (oldField == null) {
+            Log.w(
+                TAG,
+                "  ⚠️ WARNING: No existing field in zone ${updatedField.zoneId} on screen $screenId"
+            )
+            Log.w(
+                TAG,
+                "  This might be a screen mismatch issue - the field may be on a different screen"
+            )
+        }
+
         val updatedScreens = profile.screens.map { screen ->
             if (screen.id == screenId) {
                 val updatedFields = screen.dataFields.map { field ->
                     if (field.zoneId == updatedField.zoneId) {
+                        Log.i(TAG, "  ✅ Found matching zone ${field.zoneId}, updating field")
                         updatedField
                     } else {
                         field
@@ -439,8 +468,9 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
             modifiedAt = System.currentTimeMillis()
         )
 
+        Log.i(TAG, "  📝 Calling updateProfile to save changes")
         updateProfile(updatedProfile)
-        Log.i(TAG, "Updated field in zone ${updatedField.zoneId} in screen $screenId")
+        Log.i(TAG, "✅ Updated field in zone ${updatedField.zoneId} in screen $screenId")
     }
 
     /**
@@ -623,7 +653,12 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
         val mappedFields = preservedFields.mapIndexed { index, field ->
             val newZone = newTemplate.zones.getOrNull(index)
             if (newZone != null) {
-                field.copy(zoneId = newZone.id)
+                // Ensure visualizationType is not null (for backward compatibility with old profiles)
+                val safeVisualizationType = field.visualizationType ?: VisualizationType.TEXT
+                field.copy(
+                    zoneId = newZone.id,
+                    visualizationType = safeVisualizationType
+                )
             } else {
                 field // Should never happen due to take()
             }

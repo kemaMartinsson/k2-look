@@ -11,7 +11,7 @@ how they're displayed.
 
 ## 📊 Available Metrics
 
-K2Look supports **22 real-time metrics** from your Karoo 2:
+K2Look supports **23 real-time metrics** from your Karoo 2:
 
 ### General (2 metrics)
 
@@ -25,12 +25,13 @@ K2Look supports **22 real-time metrics** from your Karoo 2:
 - **Avg Heart Rate** - Average HR this ride (bpm)
 - **HR Zone** - Current training zone (Z1-Z5)
 
-### Power (4 metrics)
+### Power (5 metrics)
 
 - **Power** - Current power output (watts)
 - **Max Power** - Maximum power this ride (watts)
 - **Avg Power** - Average power this ride (watts)
 - **Power 3s** - 3-second smoothed power (watts)
+- **Power Zone** - Current power zone (Z1-Z7 based on FTP)
 
 ### Speed (3 metrics)
 
@@ -49,6 +50,8 @@ K2Look supports **22 real-time metrics** from your Karoo 2:
 - **VAM** - Vertical Ascent Meters per hour (m/h)
 - **Avg VAM** - Average VAM this ride (m/h)
 
+**Total: 23 metrics** - All update in real-time at 1 update per second during your ride.
+
 **Total: 22 metrics** - All update in real-time at 1 update per second during your ride.
 
 **Note:** Units (metric/imperial) automatically match your Karoo profile settings.
@@ -66,7 +69,7 @@ K2Look supports **22 real-time metrics** from your Karoo 2:
 
 1. Tap the **⚙️ (gear)** icon next to "Active Profile"
 2. Select **"Create New Profile"**
-3. Enter a profile name (e.g., "XC Ride", "Gravel Bike", "XC Bike")
+3. Enter a profile name (e.g., "Training", "Race", "Recovery")
 4. Tap **"Create"**
 
 **💡 Tip:** Use the same name as your Karoo ride profile for automatic switching!
@@ -145,11 +148,136 @@ Each zone automatically optimizes:
 
 After adding a metric, tap the **✏️ (edit)** icon to configure:
 
-### Configuring Metric Display
+#### 1. Select Metric
 
-After adding a metric, tap the **✏️ (edit)** icon to configure:
+Tap the metric card to change which data field is displayed. Choose from any of the 22 available
+metrics.
 
-#### 1. Display Options
+#### 2. Choose Visualization Style
+
+K2Look supports **4 visualization styles** for displaying metrics:
+
+##### 📝 **Text** (Default)
+
+Traditional text display with optional label, unit, and icon.
+
+**Supported Metrics:** ✅ ALL 22 metrics
+
+**Display Options:**
+
+- **Show Label** - Display field name above value (e.g., "Heart Rate")
+- **Show Unit** - Display unit next to value (e.g., "145 bpm")
+- **Show Icon** - Display ActiveLook icon (28×28px or 40×40px)
+- **Large Icon** - Use 40×40px icon instead of 28×28px
+
+**Font Size:** Automatically optimized based on zone size (Small/Medium/Large)
+
+**Best For:** Maximum information density, traditional display
+
+---
+
+##### ⊙ **Gauge**
+
+Circular progress gauge showing current value as a percentage of max range.
+
+**Supported Metrics:**
+
+- ✅ Heart Rate (40-200 bpm range)
+- ✅ Power (0-400W range)
+- ✅ Power 3s (0-400W range)
+- ✅ Cadence (0-120 rpm range)
+- ✅ Speed (0-60 km/h range)
+- ✅ VAM (0-2000 m/h range)
+- ✅ Max Heart Rate
+- ✅ Avg Heart Rate
+- ✅ Max Power
+- ✅ Avg Power
+- ✅ Max Speed
+- ✅ Avg Speed
+- ✅ Max Cadence
+- ✅ Avg Cadence
+- ✅ Avg VAM
+- ✅ Distance (generic 0-100 range)
+- ❌ Elapsed Time (not suitable)
+
+**Visual Style:**
+
+- Circular arc gauge (70px outer radius, 55px inner radius = 15px thick arc)
+- **Arc span**: ~270° (3/4 circle) - from 3 o'clock to 12 o'clock position
+- Fills clockwise as value increases
+- Shows current numeric value in center
+
+**Technical Details:**
+
+- Uses ActiveLook's 16-portion circle system (each portion = 22.5°)
+- Default: portions 3-14 (11 portions = 247.5° ≈ 270°)
+
+**Best For:** Quick visual feedback, monitoring intensity zones
+
+---
+
+##### ▬ **Bar**
+
+Horizontal or vertical progress bar showing current value as percentage of max range.
+
+**Supported Metrics:** Same as Gauge (all except Elapsed Time)
+
+**Visual Style:**
+
+- Horizontal bar (244px × 20px)
+- Fills left-to-right as value increases
+- Optional border for clarity
+
+**Best For:** Linear progress visualization, compact display
+
+---
+
+##### ▦ **Zoned Bar**
+
+Multi-zone progress bar with color coding for training zones.
+
+**Supported Metrics:**
+
+- ✅ **Heart Rate** - 5 HR zones (Z1-Z5) based on Karoo HR zone settings
+- ✅ **HR Zone** - Displays current HR zone
+- ✅ **Power** - 7 power zones (Z1-Z7) based on FTP (Functional Threshold Power)
+- ✅ **Power Zone** - Displays current power zone
+- ❌ All other metrics (no zone definitions)
+
+**Visual Style:**
+
+- Multi-segment bar with zone boundaries
+- Color changes based on current zone
+- Shows both numeric value and zone indicator
+
+**HR Zones (5 zones):**
+
+- Z1: Recovery (50-60% max HR)
+- Z2: Endurance (60-70% max HR)
+- Z3: Tempo (70-80% max HR)
+- Z4: Threshold (80-90% max HR)
+- Z5: Maximum (90-100% max HR)
+
+**Power Zones (7 zones based on FTP):**
+
+- Z1: Active Recovery (0-55% FTP)
+- Z2: Endurance (55-75% FTP)
+- Z3: Tempo (75-90% FTP)
+- Z4: Lactate Threshold (90-105% FTP)
+- Z5: VO2 Max (105-120% FTP)
+- Z6: Anaerobic Capacity (120-150% FTP)
+- Z7: Neuromuscular Power (150%+ FTP)
+
+**Note:** Zone boundaries are automatically adjusted based on your Karoo profile settings (Max HR
+and FTP).
+
+**Best For:** Training zone monitoring, structured workouts, FTP-based training plans
+
+---
+
+#### 3. Display Options (TEXT Style Only)
+
+When using **Text** visualization, customize the display:
 
 **Show Label**
 
@@ -160,33 +288,6 @@ After adding a metric, tap the **✏️ (edit)** icon to configure:
 
 - ☑️ Display unit next to value (e.g., "145 bpm")
 - ☐ Hide unit (value only)
-
-#### 2. Icon Options
-
-**Show Icon**
-
-- ☑️ Display ActiveLook icon (28×28px) ✅ **Default**
-- ☐ No icon
-
-**Large Icon** (when icon enabled)
-
-- ☐ Small icon (28×28px) ✅ **Default**
-- ☑️ Large icon (40×40px) - More prominent
-
-**Note:** Font size is **automatically optimized** based on the zone size. No manual selection
-needed!
-
-**Show Label**
-
-- ☑️ Display field name above value (e.g., "Heart Rate")
-- ☐ Hide label (value only)
-
-**Show Unit**
-
-- ☑️ Display unit next to value (e.g., "145 bpm")
-- ☐ Hide unit (value only)
-
-#### 4. Icon Options
 
 **Show Icon**
 
@@ -202,39 +303,59 @@ needed!
 
 **Using "Three Rows" Template:**
 
-**Top Zone - Speed:**
+**Top Zone - Speed (Text Style):**
 
 ```
 Metric: Speed
+Visualization: 📝 Text
 Show Label: ✅
 Show Unit: ✅
 Show Icon: ✅
 Large Icon: ☐
-Font: MEDIUM (automatic)
+Font: LARGE (automatic)
 ```
 
-**Middle Zone - Heart Rate:**
+**Middle Zone - Heart Rate (Gauge Style):**
 
 ```
 Metric: Heart Rate
-Show Label: ✅
-Show Unit: ✅
-Show Icon: ✅
-Large Icon: ☐
-Font: MEDIUM (automatic)
+Visualization: ⊙ Gauge
+Range: 40-200 bpm
+Display: Circular gauge with numeric value in center
+Font: N/A (gauge auto-displays value)
+```
+
+**Bottom Zone - Power (Bar Style):**
+
+```
+Metric: Power
+Visualization: ▬ Bar
+Range: 0-400W
+Display: Horizontal progress bar
+Font: N/A (bar auto-displays value)
 ```
 
 **Display Result on Glasses:**
 
 ```
-🚴 Speed
+🚴 Speed              (Text with icon)
    32.5 km/h
 
-❤️ Heart Rate
-   145 bpm
+   ⊙                 (Gauge showing 145 bpm)
+   145               (72% fill - in target zone)
+   
+▬▬▬▬▬▬▬▬▬ 245       (Bar showing 245W, 61% fill)
+```
 
-⚡ Power
-   245 W
+**Alternative: Using Zoned Bar for Heart Rate:**
+
+```
+Middle Zone:
+Metric: Heart Rate
+Visualization: ▦ Zoned Bar
+Zones: Z1-Z5 (based on Karoo HR zones)
+Display: Multi-segment bar with zone colors
+Current: Z3 (Tempo zone, 145 bpm)
 ```
 
 ---
@@ -522,23 +643,58 @@ Font sizes are **automatically optimized** based on your template:
 - **Small zones** get compact fonts to fit all information
 - **No manual adjustment needed** - it just works! ✅
 
+### Visualization Style Selection
+
+Choose the right visualization style for each metric:
+
+**📝 Use TEXT when:**
+
+- ✅ You want maximum information (label + value + unit + icon)
+- ✅ Displaying time, distance, or non-range metrics
+- ✅ You prefer traditional numeric display
+- ✅ Multiple metrics in small zones (compact)
+
+**⊙ Use GAUGE when:**
+
+- ✅ Monitoring intensity (Heart Rate, Power)
+- ✅ You want quick visual feedback without reading numbers
+- ✅ Staying in target zones is important
+- ✅ Single focus metric (larger zones work best)
+
+**▬ Use BAR when:**
+
+- ✅ Linear progress visualization is intuitive for the metric
+- ✅ Compact display needed (bars use less space than gauges)
+- ✅ Multiple bars stacked to compare metrics
+
+**▦ Use ZONED BAR when:**
+
+- ✅ Training in specific HR zones (Z1-Z5)
+- ✅ Following structured workout plans
+- ✅ Zone boundaries are more important than exact values
+
+**💡 Pro Tip:** Mix styles! Use Gauge for Heart Rate (zone awareness), Text for Speed (precision),
+and Bar for Power (progress).
+
 ### Icon Usage
 
 - **Icons improve recognition** at a glance
 - **Small icons (28×28)** - Good for all metrics ✅
 - **Large icons (40×40)** - Use for main focus metric
+- **Note:** Icons only available with TEXT visualization
 
 ### Label & Unit Display
 
 - **Show both** - Best clarity for beginners ✅
 - **Hide labels** - More space for larger values
 - **Hide units** - When metric is obvious (bpm for HR)
+- **Note:** Labels/units only configurable with TEXT visualization
 
 ### Profile Organization
 
 - **Match Karoo names** for automatic switching
-- **Create bike-specific profiles** (Road, MTB, Gravel)
-- **Create activity profiles** (Training, Race, Recovery)
+- **Create profiles for different needs** (Training, Race, Recovery, Long Ride)
+- **Easy to reconfigure** - Takes just seconds to change metrics and layouts
 - **Test with simulation mode** before real rides
 
 ---
@@ -595,10 +751,10 @@ Font sizes are **automatically optimized** based on your template:
     - Browse templates (scroll to see all 6)
     - Select **"Three Rows"** (or your preferred template)
 
-3. **Configure zones:**
-    - **Top zone:** Tap → Select "Speed"
-    - **Middle zone:** Tap → Select "Heart Rate"
-    - **Bottom zone:** Tap → Select "Power"
+3. **Configure zones with different visualization styles:**
+    - **Top zone:** Tap → Select "Speed" → Visualization: **📝 Text** (traditional)
+    - **Middle zone:** Tap → Select "Heart Rate" → Visualization: **⊙ Gauge** (visual feedback)
+    - **Bottom zone:** Tap → Select "Power" → Visualization: **▬ Bar** (progress)
 
 4. **Connect glasses:**
     - Status tab → "Scan for Glasses" → Select your glasses
@@ -606,13 +762,55 @@ Font sizes are **automatically optimized** based on your template:
 5. **Test with simulation:**
     - Debug tab → Enable "Simulation Mode"
     - Check glasses display
+    - See gauges and bars animate with simulated data
 
 6. **Go ride!**
     - Start a ride in Karoo
     - Your custom layout appears on glasses
     - Focus on the road, not your Karoo screen
 
-**💡 Pro Tip:** Try different templates to find what works best for your riding style!
+**💡 Pro Tip:** Try mixing visualization styles - use Gauge for metrics you want to monitor by feel,
+Text for metrics you want precise values!
+
+---
+
+## 📊 Visualization Style Quick Reference
+
+| Style         | Symbol | Best For             | Metrics Supported                      | Key Features                            |
+|---------------|--------|----------------------|----------------------------------------|-----------------------------------------|
+| **Text**      | 📝     | All-purpose display  | ✅ All 23 metrics                       | Label, unit, icon, precise values       |
+| **Gauge**     | ⊙      | Intensity monitoring | ✅ 21 metrics (all except Elapsed Time) | Circular arc, visual zones, at-a-glance |
+| **Bar**       | ▬      | Progress tracking    | ✅ 21 metrics (all except Elapsed Time) | Linear fill, compact, stackable         |
+| **Zoned Bar** | ▦      | Training zones       | ✅ HR & Power zones (4 metrics)         | Color-coded zones, workout guidance     |
+
+### Metric Support Matrix
+
+| Metric         | TEXT | GAUGE | BAR | ZONED BAR |
+|----------------|------|-------|-----|-----------|
+| Elapsed Time   | ✅    | ❌     | ❌   | ❌         |
+| Distance       | ✅    | ✅     | ✅   | ❌         |
+| Heart Rate     | ✅    | ✅     | ✅   | ✅         |
+| Max Heart Rate | ✅    | ✅     | ✅   | ❌         |
+| Avg Heart Rate | ✅    | ✅     | ✅   | ❌         |
+| HR Zone        | ✅    | ❌     | ❌   | ✅         |
+| Power          | ✅    | ✅     | ✅   | ✅         |
+| Max Power      | ✅    | ✅     | ✅   | ❌         |
+| Avg Power      | ✅    | ✅     | ✅   | ❌         |
+| Power 3s       | ✅    | ✅     | ✅   | ❌         |
+| Power Zone     | ✅    | ❌     | ❌   | ✅         |
+| Speed          | ✅    | ✅     | ✅   | ❌         |
+| Max Speed      | ✅    | ✅     | ✅   | ❌         |
+| Avg Speed      | ✅    | ✅     | ✅   | ❌         |
+| Cadence        | ✅    | ✅     | ✅   | ❌         |
+| Max Cadence    | ✅    | ✅     | ✅   | ❌         |
+| Avg Cadence    | ✅    | ✅     | ✅   | ❌         |
+| VAM            | ✅    | ✅     | ✅   | ❌         |
+| Avg VAM        | ✅    | ✅     | ✅   | ❌         |
+
+**Legend:**
+
+- ✅ Fully supported
+- ❌ Not available
 
 ---
 

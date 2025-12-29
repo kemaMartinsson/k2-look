@@ -27,57 +27,71 @@ Real-time data gateway between Hammerhead Karoo2 and (hopefully any) ActiveLook 
 ## Project Status
 
 Project is in **active development**.  
-No glasses hardware is currently available for testing, so development is done via code.
+Engo 2 has been used to test core functionality.
 
-### Transmitted Metrics
+### Key Features
 
-K2Look transmits **6 core metrics** from your Karoo 2 to your ActiveLook glasses via Bluetooth:
+#### 🎨 **Built-in DataField Builder**
 
-**Real-time Data Stream:**
+K2Look includes a powerful **DataField Builder** that lets you create custom display layouts
+directly on your Karoo 2 - no smartphone app needed!
 
-1. **Speed** (km/h) - Current speed
-2. **Heart Rate** (bpm) - Current heart rate
-3. **Power** (watts) - Current power output
-4. **Cadence** (rpm) - Current pedaling cadence
-5. **Distance** (km) - Total ride distance
-6. **Time** (HH:MM:SS) - Ride elapsed time
+**✨ What You Can Do:**
 
-**How it appears on your glasses:**  
-The actual display layout and which metrics you see depends on your **ActiveLook glasses
-configuration**. Configure your preferred display layout using the ActiveLook smartphone app or
-glasses settings.
+- ✅ Choose from **6 professional layout templates** (1-6 data fields)
+- ✅ Select from **23 real-time metrics** from your Karoo 2
+- ✅ Use **4 visualization styles**: Text, Gauge, Bar, and Zoned Bar
+- ✅ Create **multiple profiles** for different bikes or activities
+- ✅ **Automatic profile switching** based on Karoo ride profile name
+- ✅ Configure everything **without glasses connected** - edit anytime, anywhere
 
-Updates transmitted at **1Hz** (1 update/second) for optimal BLE performance.
+**📊 Supported Metrics (23 total):**
 
-### Additional Metrics Available from Karoo
+- **General**: Elapsed Time, Distance
+- **Heart Rate**: HR, Max HR, Avg HR, HR Zone
+- **Power**: Power, Max Power, Avg Power, Power 3s, Power Zone
+- **Speed**: Speed, Max Speed, Avg Speed
+- **Cadence**: Cadence, Max Cadence, Avg Cadence
+- **Climbing**: VAM, Avg VAM
 
-The following metrics are **available from Karoo** but not currently transmitted by K2Look:
+**🎨 Visualization Styles:**
 
-**Statistical Metrics:**
+1. **📝 Text** - Traditional display with label, unit, and icon (all 23 metrics)
+2. **⊙ Gauge** - Circular progress gauge ~270° arc (21 metrics)
+3. **▬ Bar** - Horizontal progress bar (21 metrics)
+4. **▦ Zoned Bar** - Multi-zone training bars with color coding
+    - Heart Rate: 5 zones (Z1-Z5)
+    - Power: 7 zones (Z1-Z7) based on FTP
 
-- Average Speed, Max Speed
-- Average Heart Rate, Max Heart Rate
-- Average Cadence, Max Cadence
-- Average Power, Max Power
+**📐 Layout Templates:**
 
-**Advanced Metrics:**
+- Single Data (1 field) - Focus on one metric
+- Two Data (2 fields) - Two equally important metrics
+- Triangle Layout (3 fields) - One top + two bottom
+- Three Rows (3 fields) - Balanced view ✅ Default
+- Four Data (4 fields) - Multiple key metrics
+- Six Data (6 fields) - Maximum data density
 
-- Heart Rate Zone (current training zone)
-- 3s/10s/30s Smoothed Power (Normalized Power)
-- VAM (Vertical Ascent Meters per hour)
-- Average VAM
-
-> **Future Enhancement:** Support for additional metrics and customizable data transmission may be
-> added in future releases based on community feedback.
+**🔄 Real-time Updates:**
+All metrics update at **1Hz** (1 update/second) for optimal BLE performance and battery life.
 
 ## Project Overview
 
-This Karoo Extension streams cycling metrics (speed, heart rate, power, cadence, distance, time)
-from the Karoo2 to ActiveLook smart glasses via Bluetooth Low Energy, providing hands-free ride data
-visualization.
+This Karoo Extension provides a **complete data visualization solution** for ActiveLook smart
+glasses, featuring:
 
-Currently, displays are selected in ActiveLook app.  
-Depending on needs, K2Look configuration options may be added in future releases.
+- **Built-in DataField Builder** - Create custom layouts directly on your Karoo 2
+- **23 real-time metrics** - All cycling data you need (HR, Power, Speed, Cadence, VAM, and more)
+- **4 visualization styles** - Text, Gauge, Bar, and Zoned Bar
+- **6 professional templates** - From minimal (1 field) to data-dense (6 fields)
+- **Automatic profile switching** - Match your Karoo ride profiles
+- **Training zone support** - HR zones (Z1-Z5) and Power zones (Z1-Z7 based on FTP)
+
+**No smartphone app required!** Configure everything directly on your Karoo 2 using the intuitive
+DataField Builder interface.
+
+> **See [DataField Builder Guide](./docs/DataFieldBuilder.md)** for complete documentation on
+> creating custom layouts, choosing visualization styles, and configuring training zones.
 
 ## Repository Structure
 
@@ -201,12 +215,21 @@ Transfer the APK to your Karoo2 and install it.
 ### 3. First Run
 
 1. Launch "K2Look" on your Karoo2
-2. Grant Bluetooth and Location permissions
-3. Tap **"Connect"** to connect to Karoo System
-4. Turn on your ActiveLook glasses
-5. Tap **"Connect glasses"** to scan for glasses
-6. Select your glasses from the list
-7. Start a ride - data will stream to your glasses automatically!
+2. Grant Bluetooth and Location permissions when prompted
+3. **Go to "Datafields" tab** to configure your display:
+    - Create a profile or use the Default profile
+    - Select metrics to display
+    - Choose visualization styles (Text, Gauge, Bar, Zoned Bar)
+    - Pick a layout template (1-6 fields)
+4. **Go to "Status" tab** to connect to your glasses:
+    - Turn on your ActiveLook glasses
+    - Tap **"Scan for Glasses"**
+    - Select your glasses from the list
+    - Wait for "Connected" status
+5. **Start a ride** - Your custom layout appears on your glasses automatically!
+
+> **💡 Pro Tip:** Create multiple profiles with different names matching your Karoo ride profiles for
+> automatic switching!
 
 ## Documentation
 
@@ -214,7 +237,16 @@ Transfer the APK to your Karoo2 and install it.
 
 - 📘 [Quick Start & Testing Guide](./docs/Quick-Start-Testing-Guide.md) - **Start here for
   deployment!**
+- 🎨 [DataField Builder Guide](./docs/DataFieldBuilder.md) - **Complete guide to creating custom
+  layouts**
 - 🛠️ [Development Setup Guide](./docs/Karoo2-ActiveLook-Dev-Setup.md)
+
+### Advanced Topics
+
+- 📊 [Gauge & Bar Visualizations](./docs/Gauge_Bar.png) - Visual reference for gauges and bars
+- 🏋️ [Training Zones](./docs/DataFieldBuilder.md#-zoned-bar) - HR and Power zone configuration
+- 🔄 [Automatic Profile Switching](./docs/DataFieldBuilder.md#profile-organization) - Match Karoo
+  profiles
 
 ## External Resources
 
@@ -234,21 +266,28 @@ Transfer the APK to your Karoo2 and install it.
 ## Architecture
 
 ```
+User Configuration (DataField Builder)
+        ↓
+DataFieldProfile → LayoutBuilderViewModel
+        ↓
 Karoo2 Sensors → KarooSystemService → KarooDataService
                                             ↓
                                   KarooActiveLookBridge
-                                     (transformation)
+                                     (transformation + layout engine)
                                             ↓
                               ActiveLookService → Glasses Display
+                              (Text/Gauge/Bar/Zoned Bar rendering)
 ```
 
 **Key Components:**
 
-- **KarooDataService** - Consumes Karoo data streams
-- **ActiveLookService** - Manages BLE connection and display
-- **KarooActiveLookBridge** - Coordinates both services, transforms data
+- **LayoutBuilderViewModel** - Profile and layout management
+- **DataFieldProfile** - User-defined metrics and visualization configurations
+- **KarooDataService** - Consumes Karoo data streams (23 metrics)
+- **ActiveLookService** - Manages BLE connection and display rendering
+- **KarooActiveLookBridge** - Coordinates both services, transforms data, applies layouts
 - **MainViewModel** - UI state management
-- **MainScreen** - Jetpack Compose UI
+- **MainScreen** - Jetpack Compose UI with 4 tabs (Status, Datafields, Debug, About)
 
 ## Contributing
 

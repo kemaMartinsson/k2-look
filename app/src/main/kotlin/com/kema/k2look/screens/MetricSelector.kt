@@ -38,6 +38,67 @@ import com.kema.k2look.model.DataField
 import com.kema.k2look.model.DataFieldCategory
 
 /**
+ * Metric selector button that opens the selection dialog
+ */
+@Composable
+fun MetricSelector(
+    selectedDataField: DataField,
+    onDataFieldSelected: (DataField) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var showDialog by remember { mutableStateOf(false) }
+
+    // Display selected metric as a card
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable { showDialog = true },
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = selectedDataField.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Unit: ${selectedDataField.unit}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                )
+            }
+            Icon(
+                imageVector = Icons.Default.KeyboardArrowDown,
+                contentDescription = "Change metric",
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        }
+    }
+
+    // Show dialog when requested
+    if (showDialog) {
+        MetricSelectorDialog(
+            onDismiss = { showDialog = false },
+            onSelect = { field ->
+                onDataFieldSelected(field)
+                showDialog = false
+            }
+        )
+    }
+}
+
+/**
  * Dialog for selecting a metric from categorized list
  */
 @Composable
