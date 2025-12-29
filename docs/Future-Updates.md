@@ -152,7 +152,316 @@ User can adjust config and click Preview again
 
 ---
 
-## 2. Persistent Layout Storage (cfgWrite/cfgSet)
+## 2. Gauges and Progress Bars - Visual Metric Display
+
+**Status**: Analyzed & Planned  
+**Priority**: Medium-High  
+**Complexity**: Medium  
+**Benefit**: Professional visual feedback, reduced cognitive load
+
+### What It Does
+
+Adds **visual representations** of metrics using circular gauges (arc progress) and rectangular
+progress bars instead of just text numbers.
+
+### Reference
+
+See `docs/Gauge_Bar.png` for visual reference showing:
+
+- Circular gauge for power/HR zones
+- Horizontal bar for HR zone visualization
+- Combined gauge + text displays
+
+### ActiveLook API Support
+
+✅ **Fully Supported!**
+
+**Gauges**: Native API support via gauge commands
+
+```
+0x70 - gaugeDisplay: Display value (0-100%)
+0x71 - gaugeSave: Save gauge parameters
+0x72 - gaugeDelete: Delete gauge(s)
+```
+
+**Bars**: Implemented using rectangle commands
+
+```
+0x33 - rect: Draw empty rectangle
+0x34 - rectf: Draw filled rectangle
+0x30 - color: Set grey level
+```
+
+### Current Behavior
+
+Users see metrics as **text only**:
+
+```
+Power
+  245 W
+
+HR
+  165 bpm
+```
+
+### With Gauges and Bars
+
+Users see metrics **visually**:
+
+```
+┌─────────────────────┐
+│     ╭───╮           │
+│   ╭─────╮  245 W    │ ← Power gauge (0-400W)
+│   │█████│           │
+│   ╰─────╯           │
+│                     │
+│ HR: 165 bpm         │
+│ ████████████▓▓▒▒    │ ← HR zone bar
+│ Z1│Z2│Z3│Z4│ Z5     │
+└─────────────────────┘
+```
+
+### Features
+
+#### Gauges (Circular/Arc)
+
+- ✅ 16 portions in full circle
+- ✅ Customizable start/end angles
+- ✅ Adjustable thickness (inner/outer radius)
+- ✅ Clockwise or counter-clockwise
+- ✅ Color gradient (16 grey levels)
+- ✅ Perfect for: Power zones, HR zones, cadence ranges
+
+#### Progress Bars (Rectangular)
+
+- ✅ Horizontal or vertical orientation
+- ✅ Customizable size and position
+- ✅ Optional border
+- ✅ Multi-zone support (e.g., HR zones with different colors)
+- ✅ Perfect for: Battery, progress to goal, zone indicators
+
+### Use Cases
+
+**Power Gauge**:
+
+- Display power as circular gauge (0-400W)
+- Text value in center
+- Easy to glance at percentage of FTP
+
+**HR Zone Bar**:
+
+- Horizontal bar showing HR zones (Z1-Z5)
+- Different grey levels for each zone
+- Current HR highlighted
+- Instant zone awareness
+
+**Speed Progress**:
+
+- Bar showing current speed vs. target
+- Visual feedback for pacing
+- Less mental math required
+
+**Multi-Metric Dashboard**:
+
+```
+┌─────────────────────┐
+│ Power ███████▓▓▒    │ 245W/400W (61%)
+│ HR    ████████▓▓▓   │ 165 bpm (Z4)
+│ Cad   █████▓▓▒▒▒    │ 85 rpm (71%)
+└─────────────────────┘
+```
+
+### Implementation Plan
+
+**See**: `docs/Gauge-Bar-Implementation-Plan.md` for complete details
+
+**Phases**:
+
+1. Data models (Gauge, ProgressBar) - 2 hours
+2. ActiveLook service integration - 3 hours
+3. Bridge updates - 2 hours
+4. UI components (config dialogs) - 4 hours
+5. ViewModel updates - 2 hours
+6. Default configurations - 1 hour
+
+**Total Effort**: ~14 hours (2 days) + 4 hours testing = **18 hours**
+
+### Configuration
+
+Users would configure visualization type per zone:
+
+**Field Configuration Dialog**:
+
+```
+┌─────────────────────────┐
+│ Display Style:          │
+│ [ Text ] [Gauge] [ Bar ]│ ← New selector
+│                         │
+│ [Gauge Settings...]     │ ← When gauge selected
+│ - Style: 3/4 circle     │
+│ - Min: 0                │
+│ - Max: 400              │
+│ - Preview: ╭──╮         │
+│            │██│         │
+│            ╰──╯         │
+└─────────────────────────┘
+```
+
+### Pre-configured Options
+
+**Default Gauges**:
+
+- Power gauge (0-400W, 3/4 circle)
+- HR gauge (40-200 bpm, 3/4 circle)
+- Cadence gauge (0-120 rpm, full circle)
+
+**Default Bars**:
+
+- HR zone bar (5 zones with colors)
+- Speed bar (0-60 km/h)
+- Power bar (0-400W)
+- Battery bar (0-100%)
+
+### Benefits
+
+**User Benefits**:
+
+- ✅ **Instant visual feedback** - No need to read numbers
+- ✅ **Zone awareness** - See if in target range at a glance
+- ✅ **Reduced cognitive load** - Colors and shapes vs. numbers
+- ✅ **Professional look** - Like high-end cycling computers
+
+**Technical Benefits**:
+
+- ✅ **Native API support** - Gauges are built-in
+- ✅ **Efficient updates** - 1Hz same as text
+- ✅ **Works with zones** - Each zone can have different visualization
+- ✅ **Backward compatible** - Text remains default
+
+### Performance
+
+**Gauges**:
+
+- Efficient (native API)
+- Single command to update: `gaugeDisplay(id, percentage)`
+- No flickering issues
+
+**Bars**:
+
+- 2-3 rectangle commands per update
+- Use `holdFlush` to prevent flickering
+- Atomic updates ensure smooth visuals
+
+### Estimated Timeline
+
+**Phase 1** (Week 1): Gauge implementation
+
+- Data models
+- Service integration
+- Basic UI
+
+**Phase 2** (Week 2): Bar implementation
+
+- Rectangle-based drawing
+- Zone coloring
+- Multi-zone bars
+
+**Phase 3** (Week 3): Polish & Test
+
+- Hardware testing on glasses
+- Configuration UI polish
+- Documentation
+
+**Release Target**: v0.8 or v0.9
+
+### Design Examples
+
+**Example 1: Power-Focused Layout**
+
+```
+Template: 2D (Two Data)
+┌─────────────────────┐
+│     ╭───────╮       │
+│   ╭───────────╮     │
+│   │    245    │     │ ← Top: Power gauge + text
+│   │     W     │     │
+│   ╰───────────╯     │
+│                     │
+│   165 bpm  •  Z4   │ ← Bottom: HR text
+└─────────────────────┘
+```
+
+**Example 2: Zone-Focused Layout**
+
+```
+Template: 3D Full
+┌─────────────────────┐
+│ 32.5 km/h           │ ← Top: Speed (text)
+├─────────────────────┤
+│ ████████████▓▓▒▒    │ ← Middle: HR bar
+│ Z1 │Z2│Z3│Z4│  Z5   │
+├─────────────────────┤
+│ Power: 245W (61%)   │ ← Bottom: Power text
+└─────────────────────┘
+```
+
+**Example 3: Dashboard Layout**
+
+```
+Template: 6D (Six Data)
+┌─────────────────────┐
+│ ╭─╮  │ 165  │       │ ← Top: Gauge + HR
+│ │█│  │ bpm  │       │
+│ ╰─╯  ├──────┤       │
+│ 85   │ ████ │       │ ← Middle: Cad + Power bar
+│ rpm  │ 61%  │       │
+├──────┼──────┤       │
+│ 32.5 │ 1:45 │       │ ← Bottom: Speed + Time
+│ km/h │      │       │
+└─────────────────────┘
+```
+
+### Alternatives Considered
+
+**Option 1**: Text Only (Current)
+
+- ✅ Simple, reliable
+- ❌ Requires reading numbers
+- ❌ Less glanceable
+
+**Option 2**: Icons Only
+
+- ✅ Very minimal
+- ❌ No range indication
+- ❌ Limited information
+
+**Option 3**: Gauges + Bars (Recommended)
+
+- ✅ Visual feedback
+- ✅ Range indication
+- ✅ Professional look
+- ✅ API supported
+
+### Recommendation
+
+**IMPLEMENT THIS!**
+
+**Reasons**:
+
+1. ✅ Fully supported by ActiveLook API (native gauges!)
+2. ✅ Medium effort (2-3 days)
+3. ✅ High user value (visual feedback highly requested)
+4. ✅ Professional feature (differentiates K2Look)
+5. ✅ Works with existing zone system
+6. ✅ Matches reference perfectly
+
+**Priority**: Implement after Phase 6 (testing & polish) is complete.
+
+**See**: `docs/Gauge-Bar-Implementation-Plan.md` for complete implementation details.
+
+---
+
+## 3. Persistent Layout Storage (cfgWrite/cfgSet)
 
 **Status**: Optional Enhancement  
 **Priority**: Medium  

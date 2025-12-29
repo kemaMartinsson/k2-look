@@ -137,15 +137,24 @@ class KarooActiveLookBridge(context: Context) {
         activeProfile = profile
         Log.i(TAG, "📋 Active profile set: ${profile.name} (${profile.screens.size} screens)")
 
-        // Save layouts to glasses for efficient updates (80% less BLE traffic)
-        if (useEfficientLayouts && activeLookService.isConnected) {
+        // Save layouts and gauges to glasses for efficient updates
+        if (activeLookService.isConnected) {
             scope.launch {
-                val success = layoutService.saveProfileLayouts(profile)
-                if (success) {
-                    Log.i(TAG, "✅ Efficient layouts saved to glasses memory")
-                } else {
-                    Log.w(TAG, "⚠️ Failed to save layouts, falling back to basic mode")
-                    useEfficientLayouts = false
+                // Save text layouts (if using efficient mode)
+                if (useEfficientLayouts) {
+                    val layoutsSuccess = layoutService.saveProfileLayouts(profile)
+                    if (layoutsSuccess) {
+                        Log.i(TAG, "✅ Efficient layouts saved to glasses memory")
+                    } else {
+                        Log.w(TAG, "⚠️ Failed to save layouts, falling back to basic mode")
+                        useEfficientLayouts = false
+                    }
+                }
+
+                // Save gauges (always needed for gauge visualization)
+                val gaugesSuccess = initializeGauges(profile)
+                if (gaugesSuccess) {
+                    Log.i(TAG, "✅ Gauges initialized")
                 }
             }
         }
@@ -881,34 +890,45 @@ class KarooActiveLookBridge(context: Context) {
     }
 
     /**
-     * Efficient mode: Updates using layoutDisplay
+     * Efficient mode: Updates using layoutDisplay for text, direct updates for gauges/bars
      * Only sends values - layouts already saved in glasses
      */
     private fun flushWithEfficientMode(screen: com.kema.k2look.model.LayoutScreen) {
         screen.dataFields.forEach { field ->
             val value = getMetricValue(field.dataField)
-            // Use zoneId for layout identification
-            layoutService.displayFieldValue(field.zoneId, value)
+
+            // Use appropriate update method based on visualization type
+            updateVisualization(field, value)
         }
     }
 
     /**
-     * Basic mode: Full rendering using displayField
-     * Sends all positioning/icons/labels every update
+     * Basic mode: Full rendering based on visualization type
+     * Sends all positioning/icons/labels every update (for text)
+     * Or renders gauges/bars directly
      */
     private fun flushWithBasicMode(screen: com.kema.k2look.model.LayoutScreen) {
         val template = screen.getTemplate()
 
         screen.dataFields.forEach { field ->
-            // Get zone for this field
-            val zone = template.zones.find { it.id == field.zoneId }
-            if (zone == null) {
-                Log.w(TAG, "Zone ${field.zoneId} not found in template ${template.id}")
-                return@forEach
-            }
-
             val value = getMetricValue(field.dataField)
-            activeLookService.displayField(field, value, zone.y)
+
+            when (field.visualizationType) {
+                com.kema.k2look.model.VisualizationType.TEXT -> {
+                    // Get zone for text display
+                    val zone = template.zones.find { it.id == field.zoneId }
+                    if (zone == null) {
+                        Log.w(TAG, "Zone ${field.zoneId} not found in template ${template.id}")
+                        return@forEach
+                    }
+                    activeLookService.displayField(field, value, zone.y)
+                }
+
+                else -> {
+                    // Gauges and bars use direct updates
+                    updateVisualization(field, value)
+                }
+            }
         }
     }
 
@@ -1243,6 +1263,148 @@ class KarooActiveLookBridge(context: Context) {
         }
         reconnectJob?.cancel()
         reconnectJob = null
+    }
+
+    // ========== GAUGE & BAR VISUALIZATION ==========
+
+    /**
+     * Initialize gauges for all fields in the profile that use gauge visualization
+     */
+    private suspend fun initializeGauges(profile: com.kema.k2look.model.DataFieldProfile): Boolean {
+        var allSuccess = true
+
+        profile.screens.forEach { screen ->
+            screen.dataFields.forEach { field ->
+                when (field.visualizationType) {
+                    com.kema.k2look.model.VisualizationType.GAUGE -> {
+                        field.gauge?.let { gauge ->
+                            val success = activeLookService.saveGauge(gauge)
+                            if (!success) {
+                                Log.w(TAG, "Failed to save gauge for ${field.dataField.name}")
+                                allSuccess = false
+                            }
+                        }
+                    }
+
+                    else -> {
+                        // TEXT, BAR, ZONED_BAR don't need pre-initialization
+                    }
+                }
+            }
+        }
+
+        return allSuccess
+    }
+
+    /**
+     * Update visualization (gauge or bar) with current metric value
+     */
+    private fun updateVisualization(field: com.kema.k2look.model.LayoutDataField, value: String) {
+        when (field.visualizationType) {
+            com.kema.k2look.model.VisualizationType.GAUGE -> {
+                updateGauge(field, value)
+            }
+
+            com.kema.k2look.model.VisualizationType.BAR -> {
+                updateProgressBar(field, value)
+            }
+
+            com.kema.k2look.model.VisualizationType.ZONED_BAR -> {
+                updateZonedBar(field, value)
+            }
+
+            com.kema.k2look.model.VisualizationType.TEXT -> {
+                // Text handled by existing displayFieldValue
+                layoutService.displayFieldValue(field.zoneId, value)
+            }
+        }
+    }
+
+    /**
+     * Update gauge with current metric value
+     */
+    private fun updateGauge(field: com.kema.k2look.model.LayoutDataField, value: String) {
+        val gauge = field.gauge ?: return
+
+        // Parse numeric value from string (remove units, etc.)
+        val numericValue = parseNumericValue(value)
+        if (numericValue == null) {
+            Log.d(TAG, "Cannot update gauge: non-numeric value '$value'")
+            return
+        }
+
+        // Calculate percentage
+        val percentage = gauge.calculatePercentage(numericValue)
+
+        // Update gauge on glasses
+        scope.launch {
+            activeLookService.displayGauge(gauge.id, percentage)
+        }
+
+        Log.d(TAG, "Gauge ${gauge.id}: ${field.dataField.name} = $numericValue ($percentage%)")
+    }
+
+    /**
+     * Update progress bar with current metric value
+     */
+    private fun updateProgressBar(field: com.kema.k2look.model.LayoutDataField, value: String) {
+        val bar = field.progressBar ?: return
+
+        // Parse numeric value
+        val numericValue = parseNumericValue(value)
+        if (numericValue == null) {
+            Log.d(TAG, "Cannot update bar: non-numeric value '$value'")
+            return
+        }
+
+        // Calculate percentage
+        val percentage = bar.calculatePercentage(numericValue)
+
+        // Update bar on glasses
+        scope.launch {
+            activeLookService.displayProgressBar(bar, percentage)
+        }
+
+        Log.d(TAG, "Bar ${bar.id}: ${field.dataField.name} = $numericValue ($percentage%)")
+    }
+
+    /**
+     * Update zoned progress bar with current metric value
+     */
+    private fun updateZonedBar(field: com.kema.k2look.model.LayoutDataField, value: String) {
+        val zonedBar = field.zonedBar ?: return
+
+        // Parse numeric value
+        val numericValue = parseNumericValue(value)
+        if (numericValue == null) {
+            Log.d(TAG, "Cannot update zoned bar: non-numeric value '$value'")
+            return
+        }
+
+        // Update zoned bar on glasses (uses actual value, not percentage)
+        scope.launch {
+            activeLookService.displayZonedBar(zonedBar, numericValue)
+        }
+
+        val currentZone = zonedBar.findZone(numericValue)
+        Log.d(
+            TAG,
+            "Zoned bar ${zonedBar.bar.id}: ${field.dataField.name} = $numericValue (${currentZone?.name ?: "?"})"
+        )
+    }
+
+    /**
+     * Parse numeric value from display string (removes units, handles special cases)
+     */
+    private fun parseNumericValue(value: String): Float? {
+        return when {
+            value == "--" || value == "..." || value == "N/A" -> null
+            else -> {
+                // Remove common units and parse
+                val cleaned = value.replace(Regex("[^0-9.-]"), "")
+                cleaned.toFloatOrNull()
+            }
+        }
     }
 
     companion object {

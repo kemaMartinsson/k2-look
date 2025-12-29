@@ -7,6 +7,7 @@ import com.activelook.activelooksdk.DiscoveredGlasses
 import com.activelook.activelooksdk.Glasses
 import com.activelook.activelooksdk.Sdk
 import com.activelook.activelooksdk.types.Rotation
+import com.activelook.activelooksdk.types.holdFlushAction
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -491,6 +492,297 @@ class ActiveLookService(private val context: Context) {
         _discoveredGlasses.value = emptyList()
 
         Log.i(TAG, "✓ Cleanup complete")
+    }
+
+    // ========== GAUGE COMMANDS ==========
+
+    /**
+     * Save gauge configuration to glasses memory
+     *
+     * @param gauge Gauge configuration
+     * @return true if successful
+     */
+    suspend fun saveGauge(gauge: com.kema.k2look.model.Gauge): Boolean {
+        val glasses = connectedGlasses
+        if (glasses == null) {
+            Log.w(TAG, "Cannot save gauge: No glasses connected")
+            return false
+        }
+
+        return try {
+            glasses.gaugeSave(
+                gauge.id.toByte(),
+                gauge.centerX.toShort(),
+                gauge.centerY.toShort(),
+                gauge.radiusOuter.toChar(),
+                gauge.radiusInner.toChar(),
+                gauge.startPortion.toByte(),
+                gauge.endPortion.toByte(),
+                gauge.clockwise
+            )
+            Log.i(TAG, "✓ Gauge ${gauge.id} saved (${gauge.dataField.name})")
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Failed to save gauge ${gauge.id}", e)
+            false
+        }
+    }
+
+    /**
+     * Display gauge with percentage value
+     *
+     * @param gaugeId Gauge identifier
+     * @param percentage Value 0-100
+     * @return true if successful
+     */
+    suspend fun displayGauge(gaugeId: Int, percentage: Int): Boolean {
+        val glasses = connectedGlasses
+        if (glasses == null) {
+            Log.w(TAG, "Cannot display gauge: No glasses connected")
+            return false
+        }
+
+        return try {
+            val clampedPercentage = percentage.coerceIn(0, 100)
+            glasses.gaugeDisplay(
+                gaugeId.toByte(),
+                clampedPercentage.toByte()
+            )
+            Log.d(TAG, "Gauge $gaugeId: $clampedPercentage%")
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Failed to display gauge $gaugeId", e)
+            false
+        }
+    }
+
+    /**
+     * Delete gauge from glasses memory
+     *
+     * @param gaugeId Gauge identifier (or 0xFF for all)
+     * @return true if successful
+     */
+    suspend fun deleteGauge(gaugeId: Int): Boolean {
+        val glasses = connectedGlasses
+        if (glasses == null) {
+            Log.w(TAG, "Cannot delete gauge: No glasses connected")
+            return false
+        }
+
+        return try {
+            glasses.gaugeDelete(gaugeId.toByte())
+            Log.i(TAG, "✓ Gauge $gaugeId deleted")
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Failed to delete gauge $gaugeId", e)
+            false
+        }
+    }
+
+    // ========== PROGRESS BAR COMMANDS ==========
+
+    /**
+     * Display progress bar using rectangles
+     *
+     * @param bar Progress bar configuration
+     * @param percentage Value 0-100
+     * @return true if successful
+     */
+    suspend fun displayProgressBar(
+        bar: com.kema.k2look.model.ProgressBar,
+        percentage: Int
+    ): Boolean {
+        val glasses = connectedGlasses
+        if (glasses == null) {
+            Log.w(TAG, "Cannot display progress bar: No glasses connected")
+            return false
+        }
+
+        return try {
+            val clampedPercentage = percentage.coerceIn(0, 100)
+            val fillAmount = bar.calculateFillAmount(clampedPercentage.toFloat())
+
+            // Hold flush to prevent flickering
+            glasses.holdFlush(holdFlushAction.HOLD)
+
+            // Clear previous bar area
+            glasses.color(0) // Black
+            glasses.rectf(
+                bar.x.toShort(),
+                bar.y.toShort(),
+                (bar.x + bar.width).toShort(),
+                (bar.y + bar.height).toShort()
+            )
+
+            // Draw border if enabled
+            if (bar.showBorder) {
+                glasses.color(8) // Mid-grey border
+                glasses.rect(
+                    bar.x.toShort(),
+                    bar.y.toShort(),
+                    (bar.x + bar.width).toShort(),
+                    (bar.y + bar.height).toShort()
+                )
+            }
+
+            // Draw filled portion
+            glasses.color(15) // White fill
+            when (bar.orientation) {
+                com.kema.k2look.model.Orientation.HORIZONTAL -> {
+                    if (fillAmount > 0) {
+                        glasses.rectf(
+                            bar.x.toShort(),
+                            bar.y.toShort(),
+                            (bar.x + fillAmount).toShort(),
+                            (bar.y + bar.height).toShort()
+                        )
+                    }
+                }
+
+                com.kema.k2look.model.Orientation.VERTICAL -> {
+                    if (fillAmount > 0) {
+                        val fillY = bar.y + bar.height - fillAmount
+                        glasses.rectf(
+                            bar.x.toShort(),
+                            fillY.toShort(),
+                            (bar.x + bar.width).toShort(),
+                            (bar.y + bar.height).toShort()
+                        )
+                    }
+                }
+            }
+
+            // Flush to display
+            glasses.holdFlush(holdFlushAction.FLUSH)
+
+            Log.d(TAG, "Progress bar ${bar.id}: $clampedPercentage% (${bar.dataField.name})")
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Failed to display progress bar ${bar.id}", e)
+            // Try to flush anyway to recover
+            try {
+                connectedGlasses?.holdFlush(holdFlushAction.FLUSH)
+            } catch (_: Exception) {
+            }
+            false
+        }
+    }
+
+    /**
+     * Display zoned progress bar with color-coded zones
+     *
+     * @param zonedBar Zoned bar configuration
+     * @param currentValue Current metric value
+     * @return true if successful
+     */
+    suspend fun displayZonedBar(
+        zonedBar: com.kema.k2look.model.ZonedProgressBar,
+        currentValue: Float
+    ): Boolean {
+        val glasses = connectedGlasses
+        if (glasses == null) {
+            Log.w(TAG, "Cannot display zoned bar: No glasses connected")
+            return false
+        }
+
+        return try {
+            val bar = zonedBar.bar
+
+            // Hold flush to prevent flickering
+            glasses.holdFlush(holdFlushAction.HOLD)
+
+            // Clear previous bar area
+            glasses.color(0) // Black
+            glasses.rectf(
+                bar.x.toShort(),
+                bar.y.toShort(),
+                (bar.x + bar.width).toShort(),
+                (bar.y + bar.height).toShort()
+            )
+
+            // Draw border
+            if (bar.showBorder) {
+                glasses.color(8) // Mid-grey border
+                glasses.rect(
+                    bar.x.toShort(),
+                    bar.y.toShort(),
+                    (bar.x + bar.width).toShort(),
+                    (bar.y + bar.height).toShort()
+                )
+            }
+
+            // Draw each zone as background
+            zonedBar.zones.forEach { zone ->
+                val zoneStartPx = zonedBar.valueToPixel(zone.minValue)
+                val zoneEndPx = zonedBar.valueToPixel(zone.maxValue)
+
+                // Draw zone background
+                glasses.color(zone.color.toByte())
+                when (bar.orientation) {
+                    com.kema.k2look.model.Orientation.HORIZONTAL -> {
+                        glasses.rectf(
+                            zoneStartPx.toShort(),
+                            (bar.y + 2).toShort(),
+                            zoneEndPx.toShort(),
+                            (bar.y + bar.height - 2).toShort()
+                        )
+                    }
+
+                    com.kema.k2look.model.Orientation.VERTICAL -> {
+                        glasses.rectf(
+                            (bar.x + 2).toShort(),
+                            zoneEndPx.toShort(),
+                            (bar.x + bar.width - 2).toShort(),
+                            zoneStartPx.toShort()
+                        )
+                    }
+                }
+            }
+
+            // Draw current value indicator (bright overlay)
+            val currentPx = zonedBar.valueToPixel(currentValue)
+            val currentZone = zonedBar.findZone(currentValue)
+
+            glasses.color(15) // White indicator
+            when (bar.orientation) {
+                com.kema.k2look.model.Orientation.HORIZONTAL -> {
+                    // Draw vertical line at current position
+                    glasses.rectf(
+                        (currentPx - 1).toShort(),
+                        bar.y.toShort(),
+                        (currentPx + 1).toShort(),
+                        (bar.y + bar.height).toShort()
+                    )
+                }
+
+                com.kema.k2look.model.Orientation.VERTICAL -> {
+                    // Draw horizontal line at current position
+                    glasses.rectf(
+                        bar.x.toShort(),
+                        (currentPx - 1).toShort(),
+                        (bar.x + bar.width).toShort(),
+                        (currentPx + 1).toShort()
+                    )
+                }
+            }
+
+            // Flush to display
+            glasses.holdFlush(holdFlushAction.FLUSH)
+
+            Log.d(
+                TAG,
+                "Zoned bar ${bar.id}: ${currentValue.toInt()} ${currentZone?.name ?: "?"} (${bar.dataField.name})"
+            )
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Failed to display zoned bar ${zonedBar.bar.id}", e)
+            // Try to flush anyway to recover
+            try {
+                connectedGlasses?.holdFlush(holdFlushAction.FLUSH)
+            } catch (_: Exception) {
+            }
+            false
+        }
     }
 
     companion object {
