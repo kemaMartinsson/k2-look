@@ -1,10 +1,11 @@
 # DataField Builder Guide
 
-**K2Look Version 0.6+**
+**K2Look Version 0.10+**
 
-The DataField Builder (select tab Builder) allows you to create custom display layouts for your
-glasses.  
-Configure which metrics appear on your glasses and how they're displayed.
+The DataField Builder (select tab **Datafields**) allows you to create custom display layouts for
+your glasses using **6 professional templates**.  
+Configure which metrics appear on your glasses, choose from multiple layout templates, and customize
+how they're displayed.
 
 ---
 
@@ -56,10 +57,10 @@ K2Look supports **22 real-time metrics** from your Karoo 2:
 
 ## 🎨 Creating a Profile
 
-### Step 1: Open the Builder Tab
+### Step 1: Open the Datafields Tab
 
 1. Launch K2Look on your Karoo 2
-2. Tap the **Builder** tab at the top
+2. Tap the **Datafields** tab at the top
 
 ### Step 2: Create a New Profile
 
@@ -70,40 +71,110 @@ K2Look supports **22 real-time metrics** from your Karoo 2:
 
 **💡 Tip:** Use the same name as your Karoo ride profile for automatic switching!
 
-### Step 3: Configure Your Screen
+### Step 3: Choose a Layout Template
 
-Each profile has a screen divided into **3 positions**:
+Each profile can use one of **6 professional layout templates**. Each template determines how many
+data fields you can display and their positioning.
 
-- **TOP** - Upper third of display
-- **MIDDLE** - Middle third of display
-- **BOTTOM** - Lower third of display
+**Available Templates:**
+
+1. **Single Data (1D)** - 1 large centered field
+    - Best for: Focusing on one primary metric
+    - Example: Power only, Speed only
+
+2. **Two Data (2D)** - 2 full-width stacked fields
+    - Best for: Two equally important metrics
+    - Example: Speed + Heart Rate
+
+3. **Triangle Layout (3D Triangle)** - 1 top + 2 bottom halves
+    - Best for: One primary + two secondary metrics
+    - Example: Speed (top), Power + HR (bottom)
+
+4. **Three Rows (3D Full)** - 3 full-width rows ✅ **Default**
+    - Best for: Balanced view of 3 metrics
+    - Example: Speed, Power, Heart Rate
+
+5. **Four Data (4D)** - 2 full + 2 half-width
+    - Best for: Multiple important metrics
+    - Example: Speed, HR, Power, Cadence
+
+6. **Six Data (6D)** - 6 half-width fields (3×2 grid)
+    - Best for: Maximum data density
+    - Example: Speed, HR, Power, Cadence, Time, Distance
+
+**To Change Template:**
+
+1. In your profile screen, tap the **"Layout: [Current Template]"** button
+2. The **Layout Template Selector** appears
+3. Browse through all 6 templates (scroll down for more)
+4. Tap on your desired template
+5. Your existing metrics are preserved where possible
+
+**💡 Tip:** Start with "Three Rows" (default) and adjust based on your needs!
 
 ---
 
 ## 📱 Configuring Metrics
 
-### Adding a Metric
+### Understanding Zones
 
-1. Tap on a position card (TOP, MIDDLE, or BOTTOM)
-2. The **Metric Configuration** dialog appears
+Each template divides the display into **zones**. Depending on your chosen template, you'll have
+between 1-6 zones to configure.
 
-### Metric Configuration Options
+**Zone Names Examples:**
 
-#### 1. Select Metric
+- **Top**, **Middle**, **Bottom** (Three Rows template)
+- **Top Center**, **Bottom Right**, **Bottom Left** (Triangle template)
+- **Top Right**, **Middle Left**, etc. (Six Data template)
 
-- Tap **"Select Metric"**
-- Choose a category (General, Heart Rate, Power, etc.)
-- Select your desired metric
+Each zone automatically optimizes:
 
-#### 2. Font Size
+- ✅ **Font size** - Sized appropriately for the zone
+- ✅ **Position** - Precisely placed using ActiveLook coordinates
+- ✅ **Layout** - Professionally arranged
 
-Choose text size for the metric value:
+### Adding a Metric to a Zone
 
-- **SMALL** (24px / Font 1) - Compact
-- **MEDIUM** (35px / Font 2) - Balanced ✅ **Default**
-- **LARGE** (49px / Font 3) - Maximum visibility
+1. Tap on an empty zone card (e.g., "Top - Tap to add field")
+2. The **Metric Selector** appears
+3. Choose a category (General, Heart Rate, Power, etc.)
+4. Select your desired metric
+5. The metric appears in the zone
 
-#### 3. Display Options
+### Configuring Metric Display
+
+After adding a metric, tap the **✏️ (edit)** icon to configure:
+
+### Configuring Metric Display
+
+After adding a metric, tap the **✏️ (edit)** icon to configure:
+
+#### 1. Display Options
+
+**Show Label**
+
+- ☑️ Display field name above value (e.g., "Heart Rate")
+- ☐ Hide label (value only)
+
+**Show Unit**
+
+- ☑️ Display unit next to value (e.g., "145 bpm")
+- ☐ Hide unit (value only)
+
+#### 2. Icon Options
+
+**Show Icon**
+
+- ☑️ Display ActiveLook icon (28×28px) ✅ **Default**
+- ☐ No icon
+
+**Large Icon** (when icon enabled)
+
+- ☐ Small icon (28×28px) ✅ **Default**
+- ☑️ Large icon (40×40px) - More prominent
+
+**Note:** Font size is **automatically optimized** based on the zone size. No manual selection
+needed!
 
 **Show Label**
 
@@ -129,23 +200,185 @@ Choose text size for the metric value:
 
 ### Example Configuration
 
-**TOP Position - Heart Rate:**
+**Using "Three Rows" Template:**
+
+**Top Zone - Speed:**
 
 ```
-Metric: Heart Rate
-Font Size: MEDIUM
+Metric: Speed
 Show Label: ✅
 Show Unit: ✅
 Show Icon: ✅
 Large Icon: ☐
+Font: MEDIUM (automatic)
 ```
 
-**Display Result:**
+**Middle Zone - Heart Rate:**
 
 ```
+Metric: Heart Rate
+Show Label: ✅
+Show Unit: ✅
+Show Icon: ✅
+Large Icon: ☐
+Font: MEDIUM (automatic)
+```
+
+**Display Result on Glasses:**
+
+```
+🚴 Speed
+   32.5 km/h
+
 ❤️ Heart Rate
    145 bpm
+
+⚡ Power
+   245 W
 ```
+
+---
+
+## 📐 Layout Template Reference
+
+### Understanding Templates
+
+Each template is designed by ActiveLook for optimal readability on AR glasses. Templates differ in:
+
+- **Number of zones** (1-6 data fields)
+- **Zone sizes** (full-width vs half-width)
+- **Font sizes** (automatically optimized)
+- **Layout arrangement** (stacked, grid, triangle)
+
+### Template Visual Guide
+
+#### 1D - Single Data
+
+```
+┌─────────────────────┐
+│                     │
+│     ╔═══════╗       │
+│     ║  245  ║       │ (LARGE font)
+│     ║   W   ║       │
+│     ╚═══════╝       │
+│                     │
+└─────────────────────┘
+Zones: 1 center field
+Best for: Focus on single metric
+```
+
+#### 2D - Two Data
+
+```
+┌─────────────────────┐
+│   ╔═══════════╗     │
+│   ║   32.5    ║     │ (LARGE font)
+│   ║   km/h    ║     │
+│   ╚═══════════╝     │
+│   ╔═══════════╗     │
+│   ║    145    ║     │ (LARGE font)
+│   ║    bpm    ║     │
+│   ╚═══════════╝     │
+└─────────────────────┘
+Zones: 2 full-width
+Best for: Two primary metrics
+```
+
+#### 3D Triangle - Triangle Layout
+
+```
+┌─────────────────────┐
+│   ╔═══════════╗     │
+│   ║   32.5    ║     │ (LARGE font)
+│   ║   km/h    ║     │
+│   ╚═══════════╝     │
+│                     │
+│  ╔═════╗  ╔═════╗   │
+│  ║ 145 ║  ║ 245 ║   │ (MEDIUM font)
+│  ║ bpm ║  ║  W  ║   │
+│  ╚═════╝  ╚═════╝   │
+└─────────────────────┘
+Zones: 1 top + 2 bottom halves
+Best for: One primary + two supporting
+```
+
+#### 3D Full - Three Rows ✅ Default
+
+```
+┌─────────────────────┐
+│   ╔═══════════╗     │
+│   ║   32.5    ║     │ (MEDIUM font)
+│   ║   km/h    ║     │
+│   ╚═══════════╝     │
+│   ╔═══════════╗     │
+│   ║    145    ║     │ (MEDIUM font)
+│   ║    bpm    ║     │
+│   ╚═══════════╝     │
+│   ╔═══════════╗     │
+│   ║    245    ║     │ (MEDIUM font)
+│   ║     W     ║     │
+│   ╚═══════════╝     │
+└─────────────────────┘
+Zones: 3 equal rows
+Best for: Balanced view
+```
+
+#### 4D - Four Data
+
+```
+┌─────────────────────┐
+│   ╔═══════════╗     │
+│   ║   32.5    ║     │ (LARGE font)
+│   ║   km/h    ║     │
+│   ╚═══════════╝     │
+│   ╔═══════════╗     │
+│   ║    145    ║     │ (LARGE font)
+│   ║    bpm    ║     │
+│   ╚═══════════╝     │
+│  ╔═════╗  ╔═════╗   │
+│  ║ 245 ║  ║  89 ║   │ (MEDIUM font)
+│  ║  W  ║  ║ rpm ║   │
+│  ╚═════╝  ╚═════╝   │
+└─────────────────────┘
+Zones: 2 full + 2 half-width
+Best for: Multiple key metrics
+```
+
+#### 6D - Six Data
+
+```
+┌─────────────────────┐
+│  ╔═════╗  ╔═════╗   │
+│  ║ 32  ║  ║ 145 ║   │ (MEDIUM font)
+│  ║km/h ║  ║ bpm ║   │
+│  ╚═════╝  ╚═════╝   │
+│  ╔═════╗  ╔═════╗   │
+│  ║ 245 ║  ║  89 ║   │ (MEDIUM font)
+│  ║  W  ║  ║ rpm ║   │
+│  ╚═════╝  ╚═════╝   │
+│  ╔═════╗  ╔═════╗   │
+│  ║1:45 ║  ║ 25  ║   │ (MEDIUM font)
+│  ║     ║  ║ km  ║   │
+│  ╚═════╝  ╚═════╝   │
+└─────────────────────┘
+Zones: 3×2 grid
+Best for: Maximum data
+```
+
+### Template Selection Guide
+
+**Choose based on your needs:**
+
+| Template   | Fields | Use Case                     | Readability |
+|------------|--------|------------------------------|-------------|
+| 1D         | 1      | TT, focused intervals        | ⭐⭐⭐⭐⭐       |
+| 2D         | 2      | Simple rides, two priorities | ⭐⭐⭐⭐        |
+| Triangle   | 3      | One main + two support       | ⭐⭐⭐⭐        |
+| Three Rows | 3      | Balanced general use         | ⭐⭐⭐⭐⭐       |
+| Four Data  | 4      | Multiple key metrics         | ⭐⭐⭐         |
+| Six Data   | 6      | Maximum information          | ⭐⭐          |
+
+**💡 Tip:** More fields = smaller text. Start with Three Rows and adjust based on your preference.
 
 ---
 
@@ -186,37 +419,49 @@ Road Bike" profile with Speed/Power/HR displayed on your glasses!
 
 ## 🎯 Example Profiles
 
-### XC Bike Profile
+### Road Bike Profile
 
-**Focus:** Power, speed, and heart rate
+**Template:** Four Data (4D)  
+**Focus:** Speed, power, heart rate, and cadence
 
-- **TOP:** Power (LARGE font, icon)
-- **MIDDLE:** Speed (MEDIUM font, icon)
-- **BOTTOM:** Heart Rate (MEDIUM font, icon)
+- **Top:** Power (large zone, auto-sized font, icon)
+- **Second Row:** Heart Rate (large zone, auto-sized font, icon)
+- **Bottom Right:** Speed (compact, auto-sized font, icon)
+- **Bottom Left:** Cadence (compact, auto-sized font, icon)
 
 ### Climbing Profile
 
-**Focus:** Climbing metrics and effort
+**Template:** Triangle Layout (3D Triangle)  
+**Focus:** Climbing metrics with primary VAM display
 
-- **TOP:** VAM (LARGE font, icon)
-- **MIDDLE:** Heart Rate + Zone (MEDIUM font, icon)
-- **BOTTOM:** Power (MEDIUM font, icon)
+- **Top Center:** VAM (large display, auto-sized font, icon)
+- **Bottom Right:** Heart Rate (compact, auto-sized font, icon)
+- **Bottom Left:** Power (compact, auto-sized font, icon)
 
 ### Endurance Profile
 
-**Focus:** Pacing and time
+**Template:** Three Rows (3D Full) ✅ Default  
+**Focus:** Balanced pacing metrics
 
-- **TOP:** Avg Speed (LARGE font, icon)
-- **MIDDLE:** Heart Rate (MEDIUM font, icon)
-- **BOTTOM:** Elapsed Time (MEDIUM font, icon)
+- **Top:** Avg Speed (auto-sized font, icon)
+- **Middle:** Heart Rate (auto-sized font, icon)
+- **Bottom:** Elapsed Time (auto-sized font, icon)
 
 ### Training Profile
 
-**Focus:** Training zones and power
+**Template:** Six Data (6D)  
+**Focus:** Maximum data for intervals
 
-- **TOP:** HR Zone (LARGE font, no icon) - "Z3"
-- **MIDDLE:** Power 3s (LARGE font, icon)
-- **BOTTOM:** Avg Power (MEDIUM font, icon)
+- **Top Row:** HR Zone | Power 3s
+- **Middle Row:** Avg Power | Speed
+- **Bottom Row:** Cadence | Elapsed Time
+
+### Minimalist Profile
+
+**Template:** Single Data (1D)  
+**Focus:** One primary metric only
+
+- **Center:** Speed (extra large display, auto-sized font, icon)
 
 ---
 
@@ -224,16 +469,20 @@ Road Bike" profile with Speed/Power/HR displayed on your glasses!
 
 ### Selecting a Profile
 
-1. In Builder tab, tap the **profile dropdown**
+1. In Datafields tab, tap the **profile dropdown**
 2. Select a profile from the list
-3. Profile is immediately applied to glasses (if connected)
+3. Profile (with its template and metrics) is immediately applied to glasses (if connected)
 
 ### Editing a Profile
 
 1. Select the profile you want to edit
-2. Tap on any position (TOP/MIDDLE/BOTTOM) to reconfigure
-3. Changes save automatically
-4. Tap **"Apply to Glasses"** to update display
+2. **Change template** (optional): Tap "Layout: [Template Name]" button
+3. **Configure zones**: Tap on any zone to add/edit metrics
+4. Changes save automatically
+5. Tap **"Apply to Glasses"** to update display
+
+**Note:** When changing templates, existing metrics are preserved in compatible zones where
+possible.
 
 ### Duplicating a Profile
 
@@ -256,11 +505,22 @@ Road Bike" profile with Speed/Power/HR displayed on your glasses!
 
 ## 💡 Tips & Best Practices
 
-### Font Size Selection
+### Template Selection
 
-- **SMALL** - Use when showing 3+ short values
-- **MEDIUM** - Best balance for most metrics ✅
-- **LARGE** - Use for primary metric you glance at most
+- **Single Data (1D)** - Perfect for TT/time trials focusing on one metric (power or speed)
+- **Two Data (2D)** - Great for simple rides with two priorities
+- **Triangle (3D Triangle)** - Excellent for one main + two supporting metrics
+- **Three Rows (3D Full)** - Best balanced option for most rides ✅ **Recommended**
+- **Four Data (4D)** - Ideal when you need 4 key metrics
+- **Six Data (6D)** - Maximum information for data-driven training
+
+### Font Sizes (Automatic)
+
+Font sizes are **automatically optimized** based on your template:
+
+- **Large zones** get bigger fonts for better visibility
+- **Small zones** get compact fonts to fit all information
+- **No manual adjustment needed** - it just works! ✅
 
 ### Icon Usage
 
@@ -285,11 +545,23 @@ Road Bike" profile with Speed/Power/HR displayed on your glasses!
 
 ## 🔧 Troubleshooting
 
+### Can't see all templates in selector
+
+- ✅ **Scroll down** - The template selector shows 4 templates initially
+- ✅ Look for **"↓ Scroll for more"** indicator at the bottom left
+- ✅ Swipe up to see templates 5 and 6
+
+### Template changed but metrics disappeared
+
+- ✅ Some zones from your old template may not exist in the new template
+- ✅ Metrics are preserved where zone types match
+- ✅ You may need to **re-add metrics** to the new zones
+
 ### Profile doesn't auto-switch
 
 - ✅ Check K2Look profile name **exactly matches** Karoo profile name
 - ✅ Ensure you **start the ride** in Karoo (auto-switch happens on ride start)
-- ✅ Check Builder tab to see which profile is active
+- ✅ Check Datafields tab to see which profile is active
 
 ### Metrics show "--" or "N/A"
 
@@ -303,11 +575,11 @@ Road Bike" profile with Speed/Power/HR displayed on your glasses!
 - ✅ Tap **"Apply to Glasses"** after making changes
 - ✅ Check if you're in **simulation mode** (disable for real ride)
 
-### Large values get cut off
+### Text appears too small/large
 
-- ✅ Reduce **font size** (LARGE → MEDIUM)
-- ✅ Disable **"Show Label"** for more space
-- ✅ Use **abbreviations** where possible
+- ✅ Font sizes are **automatic** based on template zones
+- ✅ Try a **different template** if current one doesn't suit your needs
+- ✅ **Three Rows** template offers good readability for most users
 
 ---
 
@@ -316,24 +588,31 @@ Road Bike" profile with Speed/Power/HR displayed on your glasses!
 **5-Minute Setup:**
 
 1. **Create your first profile:**
-    - Builder tab → ⚙️ → Create New Profile → "My Ride"
+    - Datafields tab → ⚙️ → Create New Profile → "My Ride"
 
-2. **Configure 3 metrics:**
-    - TOP: Speed (MEDIUM font, icon)
-    - MIDDLE: Heart Rate (MEDIUM font, icon)
-    - BOTTOM: Power (MEDIUM font, icon)
+2. **Choose a template:**
+    - Tap **"Layout: Three Rows"** button
+    - Browse templates (scroll to see all 6)
+    - Select **"Three Rows"** (or your preferred template)
 
-3. **Connect glasses:**
+3. **Configure zones:**
+    - **Top zone:** Tap → Select "Speed"
+    - **Middle zone:** Tap → Select "Heart Rate"
+    - **Bottom zone:** Tap → Select "Power"
+
+4. **Connect glasses:**
     - Status tab → "Scan for Glasses" → Select your glasses
 
-4. **Test with simulation:**
+5. **Test with simulation:**
     - Debug tab → Enable "Simulation Mode"
     - Check glasses display
 
-5. **Go ride!**
+6. **Go ride!**
     - Start a ride in Karoo
-    - Your metrics appear on glasses
+    - Your custom layout appears on glasses
     - Focus on the road, not your Karoo screen
+
+**💡 Pro Tip:** Try different templates to find what works best for your riding style!
 
 ---
 
@@ -350,10 +629,12 @@ Road Bike" profile with Speed/Power/HR displayed on your glasses!
 
 **DataField Builder gives you:**
 
+- ✅ **6 professional layout templates** (1-6 data fields per screen)
 - ✅ **22 real-time metrics** from Karoo
-- ✅ **Custom layouts** with 3 configurable positions
+- ✅ **Visual template selector** with preview images
+- ✅ **Automatic font sizing** optimized per zone
 - ✅ **Automatic profile switching** based on Karoo profile
-- ✅ **Flexible display options** (fonts, icons, labels)
+- ✅ **Flexible display options** (icons, labels, units)
 - ✅ **Multiple profiles** for different bikes/rides
 - ✅ **Live updates** at 1 update per second during rides
 
@@ -361,7 +642,7 @@ Road Bike" profile with Speed/Power/HR displayed on your glasses!
 
 ---
 
-**Version:** 0.10+  
-**Last Updated:** 2025-12-28  
+**Version:** 0.7+  
+**Last Updated:** 2025-12-29  
 **Compatible with:** Karoo 2 + ActiveLook Glasses
 
