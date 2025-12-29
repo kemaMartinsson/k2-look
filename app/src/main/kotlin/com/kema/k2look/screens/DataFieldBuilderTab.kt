@@ -289,6 +289,9 @@ fun DataFieldBuilderTab(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                // Preview button - Commented out, moved to future updates
+                // See docs/Future-Updates.md for implementation plan
+                /*
                 Button(
                     onClick = { /* TODO: Preview on glasses */ },
                     modifier = Modifier.weight(1f),
@@ -296,9 +299,10 @@ fun DataFieldBuilderTab(
                 ) {
                     Text("Preview")
                 }
+                */
                 Button(
                     onClick = { /* TODO: Build & Send to Glasses */ },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxWidth(), // Changed from weight(1f) since it's now the only button
                     enabled = false
                 ) {
                     Text("Build & Send")

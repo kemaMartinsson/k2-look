@@ -1,19 +1,158 @@
 # K2Look - Future Updates & Enhancements
 
-**Last Updated**: 2025-12-28  
+**Last Updated**: 2025-12-29  
 **Status**: Ideas & Enhancements for Future Releases
 
 ---
 
 ## Overview
 
-This document outlines potential future enhancements for K2Look. The current implementation (Phase
-4.2) is **fully functional and production-ready**. These updates are optional improvements that
-could be added based on user feedback and needs.
+This document outlines potential future enhancements for K2Look. The current implementation is *
+*fully functional and production-ready**. These updates are optional improvements that could be
+added based on user feedback and needs.
 
 ---
 
-## 1. Persistent Layout Storage (cfgWrite/cfgSet)
+## 1. Preview Button - Test Layout on Glasses
+
+**Status**: Deferred to Future Release  
+**Priority**: Medium  
+**Complexity**: Low-Medium  
+**Benefit**: Users can test layouts before riding
+
+### What It Does
+
+Adds a "Preview" button in the Datafields tab that sends the current profile layout to the glasses
+for testing, without starting a ride.
+
+### Current Behavior
+
+Users must:
+
+1. Configure their profile
+2. Start a ride in Karoo
+3. Check if layout looks good on glasses
+4. Stop ride, go back, adjust if needed
+
+### With Preview Button
+
+Users can:
+
+1. Configure their profile
+2. **Click "Preview"** → Layout instantly displayed on glasses
+3. View on glasses, make adjustments
+4. Click "Preview" again to test changes
+5. When satisfied, start ride
+
+### Implementation Plan
+
+```kotlin
+// In DataFieldBuilderTab.kt
+Button(
+    onClick = {
+        viewModel.previewProfile()
+    },
+    modifier = Modifier.weight(1f),
+    enabled = uiState.canPreview && !uiState.isPreviewing
+) {
+    if (uiState.isPreviewing) {
+        Text("Stop Preview")
+    } else {
+        Text("Preview")
+    }
+}
+
+// In LayoutBuilderViewModel.kt
+fun previewProfile() {
+    viewModelScope.launch {
+        val profile = _uiState.value.activeProfile ?: return@launch
+
+        // Send current profile to glasses
+        bridge.previewProfile(profile)
+
+        // Update state
+        _uiState.update { it.copy(isPreviewing = true) }
+
+        // Auto-stop preview after 30 seconds
+        delay(30_000)
+        stopPreview()
+    }
+}
+
+fun stopPreview() {
+    viewModelScope.launch {
+        bridge.clearGlassesDisplay()
+        _uiState.update { it.copy(isPreviewing = false) }
+    }
+}
+
+// In KarooActiveLookBridge.kt
+suspend fun previewProfile(profile: DataFieldProfile) {
+    // Save layouts to glasses
+    layoutService.saveProfileLayouts(profile)
+
+    // Send sample data for preview
+    val sampleData = mapOf(
+        "speed" to "32.5",
+        "hr" to "145",
+        "power" to "245"
+    )
+
+    // Display with sample values
+    profile.screens.firstOrNull()?.let { screen ->
+        screen.dataFields.forEach { field ->
+            val value = sampleData[field.dataField.id] ?: "---"
+            layoutService.displayFieldValue(field.zoneId, value)
+        }
+    }
+}
+```
+
+### UI Flow
+
+```
+Before Preview:
+┌─────────────────────┐
+│ [   Preview   ]     │ ← Enabled when glasses connected
+│ [ Build & Send ]    │ ← Disabled (future feature)
+└─────────────────────┘
+
+During Preview:
+┌─────────────────────┐
+│ [ Stop Preview ]    │ ← Click to clear glasses
+│ [ Build & Send ]    │ ← Still disabled
+└─────────────────────┘
+
+Glasses show layout with sample data
+User can adjust config and click Preview again
+```
+
+### Requirements
+
+- ✅ Glasses must be connected
+- ✅ Profile must have at least one configured field
+- ✅ Uses sample/dummy data (not real sensor data)
+- ✅ Auto-stops after 30 seconds
+- ✅ Manual stop available
+
+### Benefits
+
+- Test layouts without starting a ride
+- Iterate quickly on design
+- See font sizes and positioning
+- Verify icon display
+- Check readability
+
+### Estimated Effort
+
+- **Time**: 2-3 hours
+- **Files to modify**: 2 (DataFieldBuilderTab.kt, LayoutBuilderViewModel.kt)
+- **New methods**: 3 (previewProfile, stopPreview, sample data generation)
+- **Testing**: 30 minutes
+
+---
+
+## 2. Persistent Layout Storage (cfgWrite/cfgSet)
 
 **Status**: Optional Enhancement  
 **Priority**: Medium  
