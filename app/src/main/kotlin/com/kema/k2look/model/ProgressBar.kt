@@ -96,9 +96,16 @@ data class ZonedProgressBar(
 
     /**
      * Find which zone the current value is in
+     * Uses inclusive start, exclusive end boundaries, except for the last zone's max value
      */
     fun findZone(value: Float): Zone? {
-        return zones.find { value >= it.minValue && value < it.maxValue }
+        val lastZone = zones.lastOrNull()
+        return zones.find { zone ->
+            val matchesRange = value >= zone.minValue && value < zone.maxValue
+            // Special case: include the last zone's max value
+            val isAtLastZoneMax = zone == lastZone && value == zone.maxValue
+            matchesRange || isAtLastZoneMax
+        }
     }
 
     /**

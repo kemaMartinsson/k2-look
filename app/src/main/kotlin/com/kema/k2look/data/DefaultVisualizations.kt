@@ -76,7 +76,7 @@ object DefaultVisualizations {
             clockwise = true,
             minValue = 0f,
             maxValue = 120f,     // Typical cadence range
-            dataField = DataFieldRegistry.getById(8)!! // Cadence
+            dataField = DataFieldRegistry.getById(18)!! // Cadence
         )
     }
 
@@ -220,7 +220,7 @@ object DefaultVisualizations {
             minValue = 0f,
             maxValue = 120f,
             showBorder = true,
-            dataField = DataFieldRegistry.getById(8)!! // Cadence
+            dataField = DataFieldRegistry.getById(18)!! // Cadence
         )
     }
 
@@ -233,7 +233,7 @@ object DefaultVisualizations {
         return when (dataField.id) {
             4 -> VisualizationType.ZONED_BAR to createHRZoneBar() // Heart Rate
             7 -> VisualizationType.GAUGE to createPowerGauge()     // Power
-            8 -> VisualizationType.GAUGE to createCadenceGauge()   // Cadence
+            18 -> VisualizationType.GAUGE to createCadenceGauge()  // Cadence
             12 -> VisualizationType.BAR to createSpeedBar()        // Speed
             else -> VisualizationType.TEXT to null                 // Default to text
         }

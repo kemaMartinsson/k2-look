@@ -143,14 +143,16 @@ fun LayoutTemplateCard(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Preview image
-            Image(
-                painter = painterResource(id = template.preview),
-                contentDescription = "${template.name} preview",
-                modifier = Modifier
-                    .size(100.dp, 80.dp)
-                    .padding(end = 16.dp)
-            )
+            // Preview image (if available)
+            template.preview?.let { previewRes ->
+                Image(
+                    painter = painterResource(id = previewRes),
+                    contentDescription = "${template.name} preview",
+                    modifier = Modifier
+                        .size(100.dp, 80.dp)
+                        .padding(end = 16.dp)
+                )
+            }
 
             // Template info
             Column(
