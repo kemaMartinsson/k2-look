@@ -103,17 +103,32 @@ class UpdateChecker(private val context: Context) {
             }
 
             // Extract version code from tag or use simple comparison
-            val versionCode = extractVersionCode(tagName)
+            val remoteVersionCode = extractVersionCode(tagName)
+            val currentVersionCode = extractVersionCode(BuildConfig.VERSION_NAME)
 
-            // Check if this version is newer
-            if (versionCode > BuildConfig.VERSION_CODE) {
+            Log.d(
+                TAG,
+                "Current version: ${BuildConfig.VERSION_NAME} (parsed code: $currentVersionCode)"
+            )
+            Log.d(TAG, "Remote version: $tagName (parsed code: $remoteVersionCode)")
+
+            // Check if this version is newer - compare parsed version codes from version strings
+            val isNewer = remoteVersionCode > currentVersionCode
+
+            if (isNewer) {
+                Log.d(TAG, "Update available: $tagName")
                 return AppUpdate(
                     version = tagName,
-                    versionCode = versionCode,
+                    versionCode = remoteVersionCode,
                     downloadUrl = downloadUrl,
                     releaseNotes = releaseNotes,
                     publishedAt = publishedAt,
                     isPrerelease = isPrerelease
+                )
+            } else {
+                Log.d(
+                    TAG,
+                    "No update needed, current version $currentVersionCode >= remote version $remoteVersionCode"
                 )
             }
 
@@ -127,19 +142,28 @@ class UpdateChecker(private val context: Context) {
 
     /**
      * Extract version code from version string
-     * Assumes format like "1.2.3" -> 10203 or just uses the current code + 1 as fallback
+     * Assumes format like "0.11" -> 11, "1.2.3" -> 10203
+     * For 0.x versions, treat minor version as the version code
      */
     private fun extractVersionCode(version: String): Int {
         return try {
             val parts = version.split(".")
-            when (parts.size) {
-                1 -> parts[0].toInt() * 10000
-                2 -> parts[0].toInt() * 10000 + parts[1].toInt() * 100
+            when {
+                parts.isEmpty() -> 0
+                parts[0] == "0" && parts.size >= 2 -> {
+                    // For 0.x versions, use minor version as code
+                    // 0.11 -> 11
+                    parts[1].toInt()
+                }
+
+                parts.size == 1 -> parts[0].toInt() * 10000
+                parts.size == 2 -> parts[0].toInt() * 10000 + parts[1].toInt() * 100
                 else -> parts[0].toInt() * 10000 + parts[1].toInt() * 100 + parts[2].toInt()
             }
         } catch (e: Exception) {
-            // Fallback: if we can't parse, assume it's newer
-            BuildConfig.VERSION_CODE + 1
+            Log.e(TAG, "Failed to parse version: $version", e)
+            // Return 0 if we can't parse
+            0
         }
     }
 }

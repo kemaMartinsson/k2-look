@@ -2,6 +2,33 @@
 
 All notable changes to K2Look will be documented in this file.
 
+## [0.12] - 2025-12-31
+
+### Changed
+
+- **Improved Update Dialog UI**
+    - Simplified and cleaned up update notification dialog
+    - Removed messy markdown rendering from update messages
+    - Cleaner layout with better spacing and professional appearance
+    - Clear messaging directing users to GitHub Release page for APK and CHANGELOG
+
+### Fixed
+
+- **Update Download Functionality**
+    - Fixed crash when clicking Download button in update dialog
+    - Changed download destination from public Downloads to app's external files directory
+    - No longer requires `WRITE_EXTERNAL_STORAGE` permission
+    - Compatible with Android 10+ scoped storage requirements
+    - Added comprehensive error logging for troubleshooting
+
+- **Version Comparison Logic**
+    - Fixed false update notifications when already on latest version
+    - Improved semantic version comparison for 0.x releases
+    - Added detailed logging for version checks
+
+- **Dialog UI Improvements**
+    - Improved visual consistency across all update dialogs
+
 ## [0.11] - 2025-12-31
 
 ### Added

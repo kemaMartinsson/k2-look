@@ -4,6 +4,10 @@
     <external-path
         name="downloads"
         path="Download/" />
+    <!-- External files directory (no permission needed) -->
+    <external-files-path
+        name="external_files"
+        path="." />
     <!-- Cache directory for temporary files -->
     <cache-path
         name="cache"
