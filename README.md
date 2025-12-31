@@ -124,6 +124,32 @@ DataField Builder interface. Control your display with hand gestures for safer, 
 > **See [DataField Builder Guide](./docs/DataFieldBuilder.md)** for complete documentation on
 > creating custom layouts, choosing visualization styles, and configuring training zones.
 
+## Screenshots
+
+![Status Tab](docs/images/status.png)
+*Status Tab: Connect to ActiveLook glasses and view connection status.*
+
+![DataFields Tab](docs/images/datafields.png)
+*DataFields Tab: Create and manage custom display profiles with the built-in DataField Builder.*
+
+![Profiles](docs/images/custom-profiles.png)
+*Custom Profiles: Create multiple profiles for different bikes or activities.*
+
+![Layouts](docs/images/layouts.png)
+*Layout Templates: Choose from 6 layout templates (1-6 data fields).*
+
+![Metric Selector](docs/images/metric-selector.png)
+*Metric Selector: Choose from 23 real-time metrics from your Karoo2.*
+
+![Gesture Tab](docs/images/gestures.png)
+*Gesture Tab: Configure hand gesture and touch button actions for hands-free control.*
+
+![About Tab](docs/images/about.png)
+*About Tab: View app version, enable debug.*
+
+![Debug view](docs/images/debug.png)
+*Debug View: Real-time data stream monitoring for troubleshooting.*
+
 ## Repository Structure
 
 ```
@@ -252,17 +278,17 @@ Transfer the APK to your Karoo2 and install it.
     - Select metrics to display
     - Choose visualization styles (Text, Gauge, Bar, Zoned Bar)
     - Pick a layout template (1-6 fields)
-3. **Go to "Gestures" tab** to configure hands-free control:
+4. **Go to "Gestures" tab** to configure hands-free control:
     - Select hand gesture action (default: Cycle Screens)
     - Select touch button action (default: Show/Hide Display)
     - Settings save automatically
-4. **Go to "Status" tab** to connect to your glasses:
+5. **Go to "Status" tab** to connect to your glasses:
     - Turn on your ActiveLook glasses
     - Tap **"Scan for Glasses"**
     - Select your glasses from the list
     - Wait for "Connected" status
-5. **Start a ride** - Your custom layout appears on your glasses automatically!
-6. **During ride** - Wave hand or tap button to control display without touching Karoo!
+6. **Start a ride** - Your custom layout appears on your glasses automatically!
+7. **During ride** - Wave hand or tap button to control display without touching Karoo!
 
 > **💡 Pro Tip:** Create multiple profiles with different names matching your Karoo ride profiles for
 > automatic switching! Use gestures to switch between screens hands-free.
@@ -276,15 +302,6 @@ Transfer the APK to your Karoo2 and install it.
 - 🎨 [DataField Builder Guide](./docs/DataFieldBuilder.md) - **Complete guide to creating custom
   layouts**
 - 🛠️ [Development Setup Guide](./docs/Karoo2-ActiveLook-Dev-Setup.md)
-
-### Advanced Topics
-
-- 📊 [Gauge & Bar Visualizations](./docs/Gauge_Bar.png) - Visual reference for gauges and bars
-- 🏋️ [Training Zones](./docs/DataFieldBuilder.md#-zoned-bar) - HR and Power zone configuration
-- 🔄 [Automatic Profile Switching](./docs/DataFieldBuilder.md#profile-organization) - Match Karoo
-  profiles
-- 🎮 [Gesture Actions](./docs/Gesture-Implementation-Complete.md#-implemented-actions) - Screen
-  cycling, brightness, display toggle
 
 ## External Resources
 
