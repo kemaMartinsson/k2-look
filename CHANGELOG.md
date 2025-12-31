@@ -2,6 +2,20 @@
 
 All notable changes to K2Look will be documented in this file.
 
+## [0.11] - 2025-12-31
+
+### Added
+
+- **Proper resource cleanup on "Forget Glasses"**
+    - Forgetting connected glasses now clears all associated resources
+    - Prevents residual data from interfering with future connections
+    - Ensures a clean state for re-pairing or switching glasses
+
+### Changed
+
+- **Activelook SDK compliance report**
+    - Updated compliance report to reflect latest changes
+
 ## [0.10] - 2025-12-30
 
 ### Added
@@ -87,6 +101,101 @@ All notable changes to K2Look will be documented in this file.
 ### Known Issues
 
 - None
+
+## [0.9] - 2025-12-28
+
+### Added
+
+- Added comprehensive runtime permission checking on app startup
+    - Bluetooth permissions
+    - Location permissions
+    - Notification permissions
+- User-friendly permission dialogs with clear explanations
+    - Initial rationale dialog explaining why each permission is needed
+    - Retry dialog if user denies permissions once
+    - Settings redirect dialog for permanently denied permissions
+- Android version-aware permission requests
+- Graceful handling of permission denial scenarios
+- Privacy-conscious messaging: explicitly states location data is not collected
+
+#### Auto-Connect Functionality
+
+- Fixed critical bug: Glasses were being discovered but never automatically connected
+- Implemented auto-connect logic that automatically connects to the first discovered glasses
+- Proper scan job tracking to prevent multiple concurrent scan operations
+- 30-second scan timeout with automatic cleanup
+- Improved connection reliability and speed
+
+#### Multi-Stage Pairing Status Display
+
+- Visual feedback for all pairing stages:
+    - Stage 1: Scanning - Shows spinner while searching for glasses
+    - Stage 2: Found - Shows checkmark when glasses are discovered
+    - Stage 3: Connecting - Shows spinner during connection establishment
+- Connected state displays glasses name with checkmark icon
+- Disconnected state shows clear status with Connect glasses button
+- Real-time device count display during scanning
+- Color-coded status indicators (primary/success, secondary/in-progress, error/disconnected)
+
+#### Forget Glasses Feature
+
+- New Forget glasses button in Auto-Reconnect Settings
+- Clears saved glasses address and connection history
+- Disconnects if currently connected
+- Button state shows whether glasses are saved
+- Helpful description text explaining the action
+
+### Fixed
+
+- Fixed glasses discovery not triggering connection
+- Fixed UI showing Connecting... indefinitely
+- Resolved race conditions in scan job management
+- Fixed stale connection state display
+
+- Fixed glasses status display text: Changed from Glasses <Name>: to
+  Glasses: <Name>
+- Improved status text formatting and spacing
+- Better visual hierarchy in status cards
+- Proper icon sizing and alignment
+
+## [0.8] - 2025-10-29
+
+### Added
+
+- Updated README.md
+- New detailed INSTALLATION.md
+- Cleaning up source folder
+
+## [0.7] - 2025-10-27
+
+### Added
+
+- Check for updates directly from the About tab
+- Auto-check for updates on app launch (once per day)
+- Get notified when new versions are available
+- One-tap download and install
+- View release notes before updating
+
+### Changed
+
+- Enhanced About tab with update controls
+- Added user preferences for auto-check
+- Better user experience with clear update dialogs
+
+### Fixed
+
+- Fixed CI/CD pipeline reliability
+- Resolved build configuration issues
+- Improved overall stability
+
+## [0.5] - 2025-10-25
+
+### Added
+
+- Updated tabs UX
+- **Run as service**
+- Configurable autostart
+- *Optional* glasses disconnect on ride end
 
 ## [0.1] - 2025-01-23
 
