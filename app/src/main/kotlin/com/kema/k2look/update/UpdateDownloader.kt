@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import android.util.Log
 import androidx.core.content.FileProvider
 import java.io.File
@@ -23,6 +24,7 @@ class UpdateDownloader(private val context: Context) {
 
     private var downloadId: Long = -1
     private var onDownloadComplete: ((Boolean) -> Unit)? = null
+    private var onDownloadProgress: ((Int) -> Unit)? = null
 
     private val downloadReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -36,10 +38,16 @@ class UpdateDownloader(private val context: Context) {
     /**
      * Download an APK update
      * @param update The update to download
+     * @param onProgress Callback for download progress (0-100)
      * @param onComplete Callback when download completes (true = success, false = failure)
      */
-    fun downloadUpdate(update: AppUpdate, onComplete: (Boolean) -> Unit) {
+    fun downloadUpdate(
+        update: AppUpdate,
+        onProgress: (Int) -> Unit = {},
+        onComplete: (Boolean) -> Unit
+    ) {
         this.onDownloadComplete = onComplete
+        this.onDownloadProgress = onProgress
 
         // Register download completion receiver
         val filter = IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
@@ -73,6 +81,55 @@ class UpdateDownloader(private val context: Context) {
 
         downloadId = downloadManager.enqueue(request)
         Log.d(TAG, "Started download with ID: $downloadId")
+
+        // Start monitoring download progress
+        startProgressMonitoring()
+    }
+
+    /**
+     * Monitor download progress and report via callback
+     */
+    private fun startProgressMonitoring() {
+        val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+
+        Thread {
+            var downloading = true
+            while (downloading) {
+                val query = DownloadManager.Query().setFilterById(downloadId)
+                val cursor = downloadManager.query(query)
+
+                if (cursor.moveToFirst()) {
+                    val bytesDownloaded = cursor.getLong(
+                        cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)
+                    )
+                    val bytesTotal = cursor.getLong(
+                        cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)
+                    )
+
+                    if (bytesTotal > 0) {
+                        val progress = ((bytesDownloaded * 100) / bytesTotal).toInt()
+                        onDownloadProgress?.invoke(progress)
+                        Log.d(
+                            TAG,
+                            "Download progress: $progress% ($bytesDownloaded / $bytesTotal bytes)"
+                        )
+                    }
+
+                    val status =
+                        cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
+                    if (status == DownloadManager.STATUS_SUCCESSFUL ||
+                        status == DownloadManager.STATUS_FAILED
+                    ) {
+                        downloading = false
+                    }
+                }
+                cursor.close()
+
+                if (downloading) {
+                    Thread.sleep(100) // Update every 100ms
+                }
+            }
+        }.start()
     }
 
     /**
@@ -145,6 +202,21 @@ class UpdateDownloader(private val context: Context) {
         try {
             Log.d(TAG, "Installing APK from URI: $uri")
 
+            // Check if we have permission to install unknown apps (Android 8.0+)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val canInstall = context.packageManager.canRequestPackageInstalls()
+                if (!canInstall) {
+                    Log.w(TAG, "Permission to install unknown apps not granted, opening settings")
+                    // Open settings to allow installing from this source
+                    val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                        data = Uri.parse("package:${context.packageName}")
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    context.startActivity(intent)
+                    return
+                }
+            }
+
             // Convert file:// URI to actual File
             val filePath = uri.path?.removePrefix("file://") ?: run {
                 Log.e(TAG, "Invalid URI path: ${uri.path}")
@@ -158,6 +230,8 @@ class UpdateDownloader(private val context: Context) {
             }
 
             Log.d(TAG, "APK file exists at: ${file.absolutePath}")
+            Log.d(TAG, "APK file size: ${file.length()} bytes")
+            Log.d(TAG, "APK readable: ${file.canRead()}")
 
             val installUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 // Use FileProvider for Android 7.0+

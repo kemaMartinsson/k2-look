@@ -1,5 +1,6 @@
 package com.kema.k2look.update
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -7,11 +8,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -97,8 +98,10 @@ fun parseSimpleMarkdown(text: String): AnnotatedString {
 @Composable
 fun UpdateDialog(
     update: AppUpdate,
-    isDownloading: Boolean,
+    isDownloading: Boolean = false,
+    downloadProgress: Int = 0,
     onDownload: () -> Unit,
+    onOpenReleaseUrl: () -> Unit,
     onDismiss: () -> Unit
 ) {
     Dialog(onDismissRequest = { if (!isDownloading) onDismiss() }) {
@@ -137,7 +140,7 @@ fun UpdateDialog(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Info section
+                // Info section with clickable link
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
@@ -148,7 +151,7 @@ fun UpdateDialog(
                         modifier = Modifier.padding(12.dp)
                     ) {
                         Text(
-                            text = "📦 Download APK and view CHANGELOG from:",
+                            text = "📦 View release notes and details:",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium
                         )
@@ -157,7 +160,8 @@ fun UpdateDialog(
                             text = "GitHub Release Page",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.clickable(onClick = onOpenReleaseUrl)
                         )
                     }
                 }
@@ -165,14 +169,23 @@ fun UpdateDialog(
                 Spacer(modifier = Modifier.height(20.dp))
 
                 if (isDownloading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(48.dp)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Downloading...",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        LinearProgressIndicator(
+                            progress = { downloadProgress / 100f },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "Downloading... $downloadProgress%",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                 } else {
                     Row(
                         modifier = Modifier.fillMaxWidth(),

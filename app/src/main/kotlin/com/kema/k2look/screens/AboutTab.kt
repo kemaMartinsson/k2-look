@@ -1,5 +1,8 @@
 package com.kema.k2look.screens
 
+import android.content.Intent
+import android.net.Uri
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -139,6 +142,7 @@ fun AboutTab(
     var availableUpdate by remember { mutableStateOf<AppUpdate?>(null) }
     var showNoUpdateDialog by remember { mutableStateOf(false) }
     var isDownloading by remember { mutableStateOf(false) }
+    var downloadProgress by remember { mutableStateOf(0) }
     var autoCheckEnabled by remember { mutableStateOf(prefsManager.isAutoCheckUpdatesEnabled()) }
     var showDebugDialog by remember { mutableStateOf(false) }
 
@@ -412,13 +416,34 @@ fun AboutTab(
         UpdateDialog(
             update = availableUpdate!!,
             isDownloading = isDownloading,
+            downloadProgress = downloadProgress,
             onDownload = {
+                // Download and install the APK
                 isDownloading = true
-                updateDownloader.downloadUpdate(availableUpdate!!) { success ->
-                    isDownloading = false
-                    if (success) {
-                        availableUpdate = null
+                downloadProgress = 0
+                updateDownloader.downloadUpdate(
+                    update = availableUpdate!!,
+                    onProgress = { progress ->
+                        downloadProgress = progress
+                    },
+                    onComplete = { success ->
+                        isDownloading = false
+                        downloadProgress = 0
+                        if (success) {
+                            availableUpdate = null
+                        }
                     }
+                )
+            },
+            onOpenReleaseUrl = {
+                // Open GitHub release page in browser
+                Log.d("AboutTab", "Opening GitHub release URL: ${availableUpdate!!.htmlUrl}")
+                try {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(availableUpdate!!.htmlUrl))
+                    context.startActivity(intent)
+                    Log.d("AboutTab", "Successfully launched browser intent")
+                } catch (e: Exception) {
+                    Log.e("AboutTab", "Failed to open GitHub release page", e)
                 }
             },
             onDismiss = {

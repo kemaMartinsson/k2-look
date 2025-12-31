@@ -16,6 +16,7 @@ data class AppUpdate(
     val version: String,
     val versionCode: Int,
     val downloadUrl: String,
+    val htmlUrl: String,
     val releaseNotes: String,
     val publishedAt: String,
     val isPrerelease: Boolean
@@ -28,11 +29,12 @@ class UpdateChecker(private val context: Context) {
 
     companion object {
         private const val TAG = "UpdateChecker"
-        private const val GITHUB_API_URL = "https://api.github.com/repos/OWNER/REPO/releases/latest"
 
         // Replace with your GitHub username and repository name
         private const val GITHUB_OWNER = "kemaMartinsson"
         private const val GITHUB_REPO = "k2-look"
+        private const val GITHUB_API_URL =
+            "https://api.github.com/repos/$GITHUB_OWNER/$GITHUB_REPO/releases/latest"
     }
 
     /**
@@ -41,11 +43,8 @@ class UpdateChecker(private val context: Context) {
      */
     suspend fun checkForUpdate(): AppUpdate? = withContext(Dispatchers.IO) {
         try {
-            val apiUrl = GITHUB_API_URL
-                .replace("OWNER", GITHUB_OWNER)
-                .replace("REPO", GITHUB_REPO)
-
-            val url = URL(apiUrl)
+            Log.d(TAG, "Checking for updates at: $GITHUB_API_URL")
+            val url = URL(GITHUB_API_URL)
             val connection = url.openConnection() as HttpsURLConnection
 
             connection.apply {
@@ -80,6 +79,7 @@ class UpdateChecker(private val context: Context) {
             val json = JSONObject(jsonString)
 
             val tagName = json.getString("tag_name").removePrefix("v")
+            val htmlUrl = json.getString("html_url")
             val releaseNotes = json.getString("body")
             val publishedAt = json.getString("published_at")
             val isPrerelease = json.getBoolean("prerelease")
@@ -116,11 +116,12 @@ class UpdateChecker(private val context: Context) {
             val isNewer = remoteVersionCode > currentVersionCode
 
             if (isNewer) {
-                Log.d(TAG, "Update available: $tagName")
+                Log.d(TAG, "Update available: $tagName (htmlUrl: $htmlUrl)")
                 return AppUpdate(
                     version = tagName,
                     versionCode = remoteVersionCode,
                     downloadUrl = downloadUrl,
+                    htmlUrl = htmlUrl,
                     releaseNotes = releaseNotes,
                     publishedAt = publishedAt,
                     isPrerelease = isPrerelease
@@ -142,8 +143,8 @@ class UpdateChecker(private val context: Context) {
 
     /**
      * Extract version code from version string
-     * Assumes format like "0.11" -> 11, "1.2.3" -> 10203
-     * For 0.x versions, treat minor version as the version code
+     * Assumes format like "0.11" -> 1100, "0.12.1" -> 1201, "1.2.3" -> 10203
+     * For 0.x versions, use minor*100 + patch to support patch versions
      */
     private fun extractVersionCode(version: String): Int {
         return try {
@@ -151,9 +152,11 @@ class UpdateChecker(private val context: Context) {
             when {
                 parts.isEmpty() -> 0
                 parts[0] == "0" && parts.size >= 2 -> {
-                    // For 0.x versions, use minor version as code
-                    // 0.11 -> 11
-                    parts[1].toInt()
+                    // For 0.x versions, calculate: minor*100 + patch
+                    // 0.11 -> 1100, 0.12 -> 1200, 0.12.1 -> 1201
+                    val minor = parts[1].toInt()
+                    val patch = if (parts.size >= 3) parts[2].toInt() else 0
+                    minor * 100 + patch
                 }
 
                 parts.size == 1 -> parts[0].toInt() * 10000

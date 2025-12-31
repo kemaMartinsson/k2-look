@@ -2,6 +2,22 @@
 
 All notable changes to K2Look will be documented in this file.
 
+## [0.12.1] - 2025-12-31
+
+### Changed
+
+- **Improved Update Dialog UX**
+    - "GitHub Release Page" text is now a clickable link that opens the release page in browser
+    - "Download" button directly downloads and installs the APK
+    - Users can either download directly or view full release notes on GitHub
+
+### Fixed
+
+- **Version Comparison for Patch Releases**
+    - Fixed version code extraction to properly handle patch versions (0.12.1, 0.12.2, etc.)
+    - Version comparison now correctly identifies newer patch releases
+    - Example: 0.12 (code 1200) < 0.12.1 (code 1201) ✓
+
 ## [0.12] - 2025-12-31
 
 ### Changed
@@ -10,16 +26,17 @@ All notable changes to K2Look will be documented in this file.
     - Simplified and cleaned up update notification dialog
     - Removed messy markdown rendering from update messages
     - Cleaner layout with better spacing and professional appearance
-    - Clear messaging directing users to GitHub Release page for APK and CHANGELOG
+    - "View Release" button now opens GitHub Release page in browser instead of downloading
+    - Users can download APK and view full CHANGELOG directly from GitHub
 
 ### Fixed
 
-- **Update Download Functionality**
-    - Fixed crash when clicking Download button in update dialog
-    - Changed download destination from public Downloads to app's external files directory
-    - No longer requires `WRITE_EXTERNAL_STORAGE` permission
-    - Compatible with Android 10+ scoped storage requirements
-    - Added comprehensive error logging for troubleshooting
+- **Update Installation Issues**
+    - Fixed "App not installed" error when trying to install updates
+    - Changed approach from automatic download/install to browser-based download
+    - Avoids signature mismatch issues between debug and release builds
+    - Users can now properly download and install updates from GitHub Releases
+    - Added permission checking for installing unknown apps (Android 8.0+)
 
 - **Version Comparison Logic**
     - Fixed false update notifications when already on latest version
@@ -27,6 +44,8 @@ All notable changes to K2Look will be documented in this file.
     - Added detailed logging for version checks
 
 - **Dialog UI Improvements**
+    - Centered text alignment in "You're up to date!" dialog
+    - Better padding and spacing throughout dialogs
     - Improved visual consistency across all update dialogs
 
 ## [0.11] - 2025-12-31
