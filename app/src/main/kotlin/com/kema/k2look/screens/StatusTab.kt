@@ -570,6 +570,47 @@ fun StatusTab(viewModel: MainViewModel, uiState: MainViewModel.UiState) {
                 }
             }
         }
+
+        // Warning dialog when trying to forget glasses while not connected
+        if (uiState.showForgetWarningDialog) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { viewModel.dismissForgetWarning() },
+                title = {
+                    Text(
+                        text = "Glasses Not Connected",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                text = {
+                    Text(
+                        text = "Cannot clean up resources on glasses when not connected.\n\n" +
+                                "Layouts and gauges will remain in glasses memory and consume space.\n\n" +
+                                "For proper cleanup, connect to glasses first, then forget.\n\n" +
+                                "Force forget anyway?",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                },
+                confirmButton = {
+                    androidx.compose.material3.TextButton(
+                        onClick = { viewModel.forceForgetGlasses() }
+                    ) {
+                        Text("Force Forget", color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                dismissButton = {
+                    androidx.compose.material3.TextButton(
+                        onClick = { viewModel.dismissForgetWarning() }
+                    ) {
+                        Text("Cancel")
+                    }
+                },
+                containerColor = MaterialTheme.colorScheme.surface,
+                titleContentColor = MaterialTheme.colorScheme.onSurface,
+                textContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
+
 

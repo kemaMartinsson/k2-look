@@ -101,6 +101,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val touchEventCount: Int = 0,
         val gestureAction: com.kema.k2look.model.GestureAction = com.kema.k2look.model.GestureAction.CYCLE_SCREENS,
         val touchAction: com.kema.k2look.model.TouchAction = com.kema.k2look.model.TouchAction.SHOW_HIDE_DISPLAY,
+        // Forget glasses warning dialog
+        val showForgetWarningDialog: Boolean = false,
     )
 
     private var simulatorJob: kotlinx.coroutines.Job? = null
@@ -192,17 +194,67 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     /**
      * Forget saved glasses and disconnect if connected
+     * Best practice: Clean up resources (layouts, gauges) before disconnecting
      */
     fun forgetGlasses() {
         Log.i(TAG, "Forgetting saved glasses")
 
-        // Disconnect if currently connected
+        val isConnected = activeLookService.isConnected
+
+        if (isConnected) {
+            // Connected: Clean up resources before disconnecting
+            viewModelScope.launch {
+                try {
+                    Log.i(TAG, "Cleaning up resources on glasses before disconnect...")
+
+                    // Delete all layouts (using 0xFF for all)
+                    bridge.getLayoutService().clearLayouts()
+
+                    // Delete all gauges (using 0xFF for all)
+                    activeLookService.deleteGauge(0xFF)
+
+                    Log.i(TAG, "✓ Resources cleaned from glasses")
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to clean resources: ${e.message}", e)
+                } finally {
+                    // Always disconnect and clear preferences
+                    bridge.disconnectActiveLook()
+                    preferencesManager.clearLastConnectedGlasses()
+                    Log.i(TAG, "Saved glasses cleared")
+                }
+            }
+        } else {
+            // Not connected: Show warning dialog
+            Log.w(TAG, "Glasses not connected - cannot clean resources, showing warning")
+            _uiState.value = _uiState.value.copy(showForgetWarningDialog = true)
+        }
+    }
+
+    /**
+     * Force forget glasses without cleanup (when not connected)
+     * Resources (layouts, gauges) will remain on glasses
+     */
+    fun forceForgetGlasses() {
+        Log.i(TAG, "Force forgetting glasses (not connected, resources may remain on glasses)")
+
+        // Disconnect if somehow connected
         bridge.disconnectActiveLook()
 
         // Clear saved glasses address
         preferencesManager.clearLastConnectedGlasses()
 
-        Log.i(TAG, "Saved glasses cleared")
+        // Dismiss warning dialog
+        _uiState.value = _uiState.value.copy(showForgetWarningDialog = false)
+
+        Log.i(TAG, "Force forget complete (resources not cleaned)")
+    }
+
+    /**
+     * Dismiss forget glasses warning dialog
+     */
+    fun dismissForgetWarning() {
+        Log.d(TAG, "Dismissed forget glasses warning")
+        _uiState.value = _uiState.value.copy(showForgetWarningDialog = false)
     }
 
     /**
