@@ -76,12 +76,23 @@ jobs:
             echo EOF
           } >> $GITHUB_OUTPUT
 
+      - name: Read Changelog
+        id: changelog_full
+        run: |
+          {
+            echo 'CHANGELOG<<EOF'
+            cat CHANGELOG.md
+            echo EOF
+          } >> $GITHUB_OUTPUT
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
             app/build/outputs/apk/release/K2Look-${{ steps.get_version.outputs.VERSION }}.apk
             README.md
+            CHANGELOG.md
+            docs/DataFieldBuilder.md
           body: |
             ## K2Look ${{ steps.get_version.outputs.VERSION }}
             
@@ -106,6 +117,17 @@ jobs:
             <summary><b>Click here to learn how to customize your display</b></summary>
             
             ${{ steps.builder_guide.outputs.BUILDER_GUIDE }}
+            
+            </details>
+            
+            ---
+            
+            ## 📋 Full Changelog
+            
+            <details>
+            <summary><b>Click here to view complete version history</b></summary>
+            
+            ${{ steps.changelog_full.outputs.CHANGELOG }}
             
             </details>
             
