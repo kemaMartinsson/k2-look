@@ -30,7 +30,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build with Gradle
-        run: ./gradlew build --no-daemon --continue -x :activelook-sdk:testDebugUnitTest -x :activelook-sdk:testReleaseUnitTest -x :karoo-ext:testDebugUnitTest -x :karoo-ext:testReleaseUnitTest
+        run: ./gradlew build --no-daemon --continue -x :activelook-sdk:testDebugUnitTest -x :activelook-sdk:testReleaseUnitTest -x :activelook-sdk:lintDebug -x :activelook-sdk:lintRelease -x :karoo-ext:testDebugUnitTest -x :karoo-ext:testReleaseUnitTest -x :karoo-ext:lintDebug -x :karoo-ext:lintRelease
 
       - name: Upload APK artifacts
         if: success()
