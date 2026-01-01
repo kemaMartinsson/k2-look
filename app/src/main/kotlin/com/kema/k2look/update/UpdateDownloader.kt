@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import android.util.Log
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import java.io.File
 
@@ -51,11 +52,12 @@ class UpdateDownloader(private val context: Context) {
 
         // Register download completion receiver
         val filter = IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(downloadReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
-        } else {
-            context.registerReceiver(downloadReceiver, filter)
-        }
+        ContextCompat.registerReceiver(
+            context,
+            downloadReceiver,
+            filter,
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
 
         // Start download
         val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager

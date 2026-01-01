@@ -557,7 +557,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val h = seconds / 3600
         val m = (seconds % 3600) / 60
         val s = seconds % 60
-        return String.format("%02d:%02d:%02d", h, m, s)
+        return String.format(java.util.Locale.ROOT, "%02d:%02d:%02d", h, m, s)
     }
 
     /**

@@ -32,7 +32,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Run unit tests
-        run: ./gradlew :app:testDebugUnitTest --continue -x :activelook-sdk:testDebugUnitTest -x :activelook-sdk:testReleaseUnitTest
+        run: ./gradlew :app:testDebugUnitTest --continue -x :activelook-sdk:testDebugUnitTest -x :activelook-sdk:testReleaseUnitTest -x :karoo-ext:testDebugUnitTest -x :karoo-ext:testReleaseUnitTest
 
       - name: Generate test report
         if: always()

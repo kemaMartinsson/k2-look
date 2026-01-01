@@ -115,7 +115,7 @@ object ValueFormatter {
         val minutes = (totalSeconds % 3600) / 60
         val seconds = totalSeconds % 60
 
-        return String.format("%02d:%02d:%02d", hours, minutes, seconds)
+        return String.format(java.util.Locale.ROOT, "%02d:%02d:%02d", hours, minutes, seconds)
     }
 
     /**
@@ -128,7 +128,7 @@ object ValueFormatter {
         val minutes = totalSeconds / 60
         val seconds = totalSeconds % 60
 
-        return String.format("%02d:%02d", minutes, seconds)
+        return String.format(java.util.Locale.ROOT, "%02d:%02d", minutes, seconds)
     }
 
     /**

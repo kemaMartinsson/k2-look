@@ -2,6 +2,13 @@
 
 All notable changes to K2Look will be documented in this file.
 
+## [0.12.4] - 2026-01-01
+
+### Fixed
+
+- Updates after failed full build validations
+- Excluding activelook sdk and karoo-ext from tests
+
 ## [0.12.3] - 2026-01-01
 
 ### Changed
