@@ -72,7 +72,9 @@ K2Look supports **23 real-time metrics** from your Karoo 2:
 3. Enter a profile name (e.g., "Training", "Race", "Recovery")
 4. Tap **"Create"**
 
-**💡 Tip:** Use the same name as your Karoo ride profile for automatic switching!
+**💡 Tip:** Use the same name as your Karoo ride profile for automatic switching!  
+On ride start, K2Look will load the matching profile automatically.  
+If no match, it uses the last selected profile.
 
 ### Step 3: Choose a Layout Template
 

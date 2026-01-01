@@ -1,11 +1,34 @@
 # Karoo2 ↔ ActiveLook (K2-Look)
 
+[![License](https://img.shields.io/github/license/kemaMartinsson/k2-look)](LICENSE)
+[![Latest Release](https://img.shields.io/github/v/release/kemaMartinsson/k2-look)](https://github.com/kemaMartinsson/k2-look/releases/latest)
+[![GitHub Stars](https://img.shields.io/github/stars/kemaMartinsson/k2-look)](https://github.com/kemaMartinsson/k2-look/stargazers)
+
+**K2Look** connects your Hammerhead Karoo 2 to ActiveLook smart glasses, displaying real-time
+cycling metrics in your field of vision with hands-free gesture control.
+
+📥 **[Download Latest Release](https://github.com/kemaMartinsson/k2-look/releases/latest)** | 📖 *
+*[Installation Guide](./docs/INSTALLATION.md)** | 🎨 *
+*[DataField Builder Guide](./docs/DataFieldBuilder.md)**
+
+## 📑 Table of Contents
+
+- [Features](#key-features)
+- [Screenshots](#screenshots)
+- [Installation](#-installation) - **For end users**
+- [Quick Start](#quick-start) - **For developers**
+- [Development Setup](#️-development-setup)
+- [Documentation](#documentation)
+- [Architecture](#architecture)
+- [Contributing](#contributing)
+
+---
+
 ## ⚠️ Disclaimer
 
 This is a **personal project** shared with the community.  
 The software is provided **"as is"** without warranty of any kind.  
-Please use at your own risk.  
-This is my very first Android app, so please be patient with bugs and rough edges!
+Please use at your own risk.
 
 **What this means:**
 
@@ -14,15 +37,16 @@ This is my very first Android app, so please be patient with bugs and rough edge
 - ⚠️ Fixes are provided on a best-effort basis with no guarantees
 - ⚠️ Support for different ActiveLook glasses brands can only be done if I have access to the
   hardware
-- 💡 Community contributions, feature request and testing are encouraged!
+- 💡 Community contributions, feature requests, and testing are encouraged!
 
 This project is developed and tested
-with [Engo2](https://engoeyewear.com/products/engo-2-photochromic).
+with [Engo2](https://engoeyewear.com/products/engo-2-photochromic).  
 Function may vary with different devices, but should generally work with any ActiveLook glasses.
 
 ---
 
-Real-time data gateway between Hammerhead Karoo2 and (hopefully any) ActiveLook glasses, .
+**K2Look** is a real-time data gateway that connects your Hammerhead Karoo 2 cycling computer to
+ActiveLook smart glasses, displaying your ride metrics directly in your field of vision.
 
 ## Project Status
 
@@ -103,7 +127,7 @@ directly on your Karoo 2 - no smartphone app needed!
 - Six Data (6 fields) - Maximum data density
 
 **🔄 Real-time Updates:**
-All metrics update at **1Hz** (1 update/second) for optimal BLE performance and battery life.
+All metrics update at **1Hz** (1 update/second) for optimal Bluetooth performance and battery life.
 
 ## Project Overview
 
@@ -118,7 +142,8 @@ glasses, featuring:
 - **Automatic profile switching** - Match your Karoo ride profiles
 - **Training zone support** - HR zones (Z1-Z5) and Power zones (Z1-Z7 based on FTP)
 
-**No smartphone app required!** Configure everything directly on your Karoo 2 using the intuitive
+**No smartphone app required!**  
+Configure everything directly on your Karoo 2 using the intuitive
 DataField Builder interface. Control your display with hand gestures for safer, hands-free riding!
 
 > **See [DataField Builder Guide](./docs/DataFieldBuilder.md)** for complete documentation on
@@ -194,7 +219,33 @@ cd k2-look
 .\gradlew :app:assembleDebug  # That's it! Reference projects are already included
 ```
 
-## Development Setup
+---
+
+## 📥 Installation
+
+### For End Users
+
+**Download the latest release:**
+
+1. Visit the [Releases page](https://github.com/kemaMartinsson/k2-look/releases/latest)
+2. Download `K2Look-X.X.X.apk` (replace X.X.X with version number)
+3. Follow the [Installation Guide](./docs/INSTALLATION.md) for detailed setup instructions
+
+**Quick Install (if you have ADB):**
+
+```bash
+adb install K2Look-X.X.X.apk
+```
+
+**Alternative: Using File Manager on Karoo 2**
+
+See the complete [Installation Guide](./docs/INSTALLATION.md) for step-by-step instructions using
+WiFi
+transfer with CX File Explorer.
+
+---
+
+## 🛠️ Development Setup
 
 ### Install Android Studio
 
@@ -223,29 +274,79 @@ cd k2-look
 ### Alternative: VSCode with Dev Container
 
 For developers who prefer Visual Studio Code, a devcontainer configuration is available (currently
-disabled):
+disabled by default):
 
-1. **Enable the Dev Container:**
-    - Rename `.devcontainer.disabled/` to `.devcontainer/`
-    - This folder contains Docker configuration for a complete Android development environment
+#### 1. Enable the Dev Container
 
-2. **Prerequisites:**
-    - Install [Docker Desktop](https://www.docker.com/products/docker-desktop)
-    - Install [Visual Studio Code](https://code.visualstudio.com/)
-    - Install the "Dev Containers" extension in VSCode
+Rename `.devcontainer.disabled/` to `.devcontainer/` in the repository root.
 
-3. **Open in Container:**
-    - Open VSCode
-    - Press **F1** and select **"Dev Containers: Open Folder in Container..."**
-    - Navigate to the cloned repository
-    - VSCode will build and start the development container (first time takes several minutes)
+This folder contains:
 
-4. **Build in Container:**
-    - Once the container is running, open the integrated terminal
-    - Run: `./gradlew :app:assembleDebug`
+- **devcontainer.json** - VSCode Dev Container configuration
+- **Dockerfile** - Container image definition
+- **setup.sh** - Android SDK installation script
 
-> **Note:** The devcontainer is disabled by default to avoid confusion for Android Studio users. It
-> provides a consistent Linux-based development environment with all necessary tools pre-installed.
+#### 2. Prerequisites
+
+**Container Runtime (choose one):**
+
+- **[Docker Desktop](https://www.docker.com/products/docker-desktop)** (Recommended)
+    - Available for Windows, macOS, and Linux
+    - GUI management interface
+    - Easy to install and configure
+
+- **[Podman Desktop](https://podman-desktop.io/)** (Alternative)
+    - Open-source Docker alternative
+    - Rootless containers (better security)
+    - Compatible with Docker commands
+    - Lighter weight than Docker Desktop
+
+**VSCode:**
+
+- Install [Visual Studio Code](https://code.visualstudio.com/)
+- Install the **"Dev Containers"** extension (ms-vscode-remote.remote-containers)
+- *Optional for Podman users*: Install **"Podman Manager"** extension for container management UI
+
+#### 3. Open in Container
+
+1. Open VSCode
+2. Press **F1** and select **"Dev Containers: Open Folder in Container..."**
+3. Navigate to the cloned repository
+4. VSCode will build and start the development container
+    - First build takes 5-10 minutes (downloads Android SDK, installs tools)
+    - Subsequent starts are much faster (~30 seconds)
+
+#### 4. Build in Container
+
+Once the container is running:
+
+```bash
+./gradlew :app:assembleDebug
+```
+
+#### What's Included
+
+The devcontainer provides a complete Android development environment:
+
+- ✅ **Ubuntu 22.04** base image
+- ✅ **Java 21** with Gradle support
+- ✅ **Android SDK** (Platform 30, Build Tools 30.0.3)
+- ✅ **Android Platform Tools** (adb, fastboot)
+- ✅ **Kotlin** language support
+- ✅ **Node.js LTS** for build tools
+- ✅ **Pre-configured VSCode extensions** (Java, Gradle, Kotlin)
+
+#### Why Use Dev Container?
+
+✅ **Consistent environment** - Same setup across all development machines  
+✅ **No local installation** - Doesn't pollute your host system  
+✅ **Linux-based** - Matches CI/CD environment  
+✅ **Isolated** - Separate from other projects  
+✅ **Version controlled** - Configuration is part of the repo
+
+> **Note:** The devcontainer is disabled by default to avoid confusion for Android Studio users who
+> typically prefer the native IDE experience. It's most useful for developers working on multiple
+> projects or those who prefer VSCode's workflow.
 
 ## Quick Start
 
@@ -297,8 +398,6 @@ Transfer the APK to your Karoo2 and install it.
 
 ### Getting Started
 
-- 📘 [Quick Start & Testing Guide](./docs/Quick-Start-Testing-Guide.md) - **Start here for
-  deployment!**
 - 🎨 [DataField Builder Guide](./docs/DataFieldBuilder.md) - **Complete guide to creating custom
   layouts**
 - 🛠️ [Development Setup Guide](./docs/Karoo2-ActiveLook-Dev-Setup.md)
@@ -339,7 +438,7 @@ Karoo2 Sensors → KarooSystemService → KarooDataService
 - **LayoutBuilderViewModel** - Profile and layout management
 - **DataFieldProfile** - User-defined metrics and visualization configurations
 - **KarooDataService** - Consumes Karoo data streams (23 metrics)
-- **ActiveLookService** - Manages BLE connection and display rendering
+- **ActiveLookService** - Manages Bluetooth connection and display rendering
 - **KarooActiveLookBridge** - Coordinates both services, transforms data, applies layouts
 - **MainViewModel** - UI state management
 - **MainScreen** - Jetpack Compose UI with 4 tabs (Status, Datafields, Debug, About)

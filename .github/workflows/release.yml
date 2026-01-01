@@ -63,7 +63,7 @@ jobs:
         run: |
           {
             echo 'INSTALL_GUIDE<<EOF'
-            cat INSTALLATION.md
+            cat docs/INSTALLATION.md
             echo EOF
           } >> $GITHUB_OUTPUT
 
@@ -93,7 +93,7 @@ jobs:
             README.md
             CHANGELOG.md
             docs/DataFieldBuilder.md
-            INSTALLATION.md
+            docs/INSTALLATION.md
           body: |
             ## K2Look ${{ steps.get_version.outputs.VERSION }}
             

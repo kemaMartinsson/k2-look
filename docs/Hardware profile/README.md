@@ -212,8 +212,6 @@ via ADB commands and official specifications.
 ## Related Documentation
 
 - [Karoo2-Hardware-Profile.md](../Karoo2-Hardware-Profile.md) - Complete technical specifications
-- [Real-Hardware-Testing-Karoo2.md](../Real-Hardware-Testing-Karoo2.md) - Testing guide for real
-  device
 - [Karoo2-Quick-Reference.md](../Karoo2-Quick-Reference.md) - Command reference card
 
 ---
