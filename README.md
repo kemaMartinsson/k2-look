@@ -2,6 +2,7 @@
 
 [![License](https://img.shields.io/github/license/kemaMartinsson/k2-look)](LICENSE)
 [![Latest Release](https://img.shields.io/github/v/release/kemaMartinsson/k2-look)](https://github.com/kemaMartinsson/k2-look/releases/latest)
+[![Android Validate](https://github.com/kemaMartinsson/k2-look/actions/workflows/android-validate.yml/badge.svg)](https://github.com/kemaMartinsson/k2-look/actions/workflows/android-validate.yml)
 [![GitHub Stars](https://img.shields.io/github/stars/kemaMartinsson/k2-look)](https://github.com/kemaMartinsson/k2-look/stargazers)
 
 **K2Look** connects your Hammerhead Karoo 2 to ActiveLook smart glasses, displaying real-time
@@ -17,7 +18,7 @@ cycling metrics in your field of vision with hands-free gesture control.
 - [Screenshots](#screenshots)
 - [Installation](#-installation) - **For end users**
 - [Quick Start](#quick-start) - **For developers**
-- [Development Setup](#️-development-setup)
+- [Development Setup](#️development-setup)
 - [Documentation](#documentation)
 - [Architecture](#architecture)
 - [Contributing](#contributing)
@@ -45,7 +46,7 @@ Function may vary with different devices, but should generally work with any Act
 
 ---
 
-**K2Look** is a real-time data gateway that connects your Hammerhead Karoo 2 cycling computer to
+**K2Look** is a real-time data gateway that connects your Hammerhead Karoo 2 to
 ActiveLook smart glasses, displaying your ride metrics directly in your field of vision.
 
 ## Project Status
@@ -136,7 +137,7 @@ glasses, featuring:
 
 - **Hands-Free Gesture & Touch Control** - Wave hand or tap button to control display during rides
 - **Built-in DataField Builder** - Create custom layouts directly on your Karoo 2
-- **23 real-time metrics** - All cycling data you need (HR, Power, Speed, Cadence, VAM, and more)
+- **23 real-time metrics** - All data you need (HR, Power, Speed, Cadence, VAM, and more)
 - **4 visualization styles** - Text, Gauge, Bar, and Zoned Bar
 - **6 professional templates** - From minimal (1 field) to data-dense (6 fields)
 - **Automatic profile switching** - Match your Karoo ride profiles
@@ -151,28 +152,28 @@ DataField Builder interface. Control your display with hand gestures for safer, 
 
 ## Screenshots
 
-![Status Tab](docs/images/status.png)
+![Status Tab](docs/images/status.png)  
 *Status Tab: Connect to ActiveLook glasses and view connection status.*
 
-![DataFields Tab](docs/images/datafields.png)
+![DataFields Tab](docs/images/datafields.png)  
 *DataFields Tab: Create and manage custom display profiles with the built-in DataField Builder.*
 
-![Profiles](docs/images/custom-profiles.png)
+![Profiles](docs/images/custom-profiles.png)  
 *Custom Profiles: Create multiple profiles for different bikes or activities.*
 
-![Layouts](docs/images/layouts.png)
+![Layouts](docs/images/layouts.png)  
 *Layout Templates: Choose from 6 layout templates (1-6 data fields).*
 
-![Metric Selector](docs/images/metric-selector.png)
+![Metric Selector](docs/images/metric-selector.png)  
 *Metric Selector: Choose from 23 real-time metrics from your Karoo2.*
 
-![Gesture Tab](docs/images/gestures.png)
+![Gesture Tab](docs/images/gestures.png)  
 *Gesture Tab: Configure hand gesture and touch button actions for hands-free control.*
 
-![About Tab](docs/images/about.png)
+![About Tab](docs/images/about.png)  
 *About Tab: View app version, enable debug.*
 
-![Debug view](docs/images/debug.png)
+![Debug view](docs/images/debug.png)  
 *Debug View: Real-time data stream monitoring for troubleshooting.*
 
 ## Repository Structure

@@ -2,6 +2,13 @@
 
 All notable changes to K2Look will be documented in this file.
 
+## [0.12.3] - 2026-01-01
+
+### Changed
+
+- **Updating docs and README.md.**
+- **Update CI workflow, adding full build validation.**
+
 ## [0.12.2] - 2026-01-01
 
 ### Changed
