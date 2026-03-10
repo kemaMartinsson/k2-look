@@ -56,6 +56,9 @@ class KarooActiveLookBridge(context: Context) {
     // Active DataField profile for dynamic layouts
     private var activeProfile: com.kema.k2look.model.DataFieldProfile? = null
 
+    // Currently displayed screen ID (updated by gesture cycling / profile selection)
+    private var activeScreenId: Int? = null
+
     // Use efficient layout system (layoutSave/layoutDisplay vs individual txt commands)
     // Reduces BLE traffic by 80% and improves battery life by 50%
     private var useEfficientLayouts = true // Can be toggled for testing/fallback
@@ -136,7 +139,9 @@ class KarooActiveLookBridge(context: Context) {
      */
     fun setActiveProfile(profile: com.kema.k2look.model.DataFieldProfile) {
         activeProfile = profile
-        Log.i(TAG, "📋 Active profile set: ${profile.name} (${profile.screens.size} screens)")
+        // Reset to first screen when profile changes
+        activeScreenId = profile.screens.firstOrNull()?.id
+        Log.i(TAG, "📋 Active profile set: ${profile.name} (${profile.screens.size} screens), active screen: $activeScreenId")
 
         // Save layouts and gauges to glasses for efficient updates
         if (activeLookService.isConnected) {
@@ -165,6 +170,16 @@ class KarooActiveLookBridge(context: Context) {
             currentData.isDirty = true
             flushToGlasses()
         }
+    }
+
+    /**
+     * Set the currently displayed screen (called by gesture cycling / LayoutBuilderViewModel)
+     */
+    fun setActiveScreen(screenId: Int) {
+        activeScreenId = screenId
+        Log.d(TAG, "Active screen changed to: $screenId")
+        // Force flush so the new screen is displayed immediately
+        currentData.isDirty = true
     }
 
     /**
@@ -874,7 +889,12 @@ class KarooActiveLookBridge(context: Context) {
      * Flush data using configured DataField profile
      */
     private fun flushWithProfile(profile: com.kema.k2look.model.DataFieldProfile) {
-        val screen = profile.screens.first() // TODO: Support multiple screens
+        // Use the currently selected screen index (driven by gesture cycling)
+        val selectedScreenId = activeScreenId
+        val screen = if (selectedScreenId != null)
+            profile.screens.find { it.id == selectedScreenId } ?: profile.screens.first()
+        else
+            profile.screens.first()
 
         Log.v(
             TAG,

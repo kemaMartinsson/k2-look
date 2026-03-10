@@ -2,7 +2,9 @@ package com.kema.k2look.screens
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,9 +12,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -24,7 +25,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kema.k2look.R
 import com.kema.k2look.viewmodel.MainViewModel
@@ -48,14 +51,14 @@ fun MainScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.surface)
-                .padding(vertical = 12.dp),
+                .padding(vertical = 6.dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Image(
                 painter = painterResource(id = R.drawable.logo),
                 contentDescription = "K2Look Logo",
-                modifier = Modifier.height(32.dp)
+                modifier = Modifier.height(26.dp)
             )
             Spacer(modifier = Modifier.padding(horizontal = 8.dp))
             Text(
@@ -66,32 +69,12 @@ fun MainScreen(
             )
         }
 
-        // Tab Row
-        TabRow(
+        // 2x2 Tab Grid
+        TwoRowTabGrid(
             selectedTabIndex = selectedTabIndex,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Tab(
-                selected = selectedTabIndex == 0,
-                onClick = { selectedTabIndex = 0 },
-                text = { Text("Status") }
-            )
-            Tab(
-                selected = selectedTabIndex == 1,
-                onClick = { selectedTabIndex = 1 },
-                text = { Text("Datafields") }
-            )
-            Tab(
-                selected = selectedTabIndex == 2,
-                onClick = { selectedTabIndex = 2 },
-                text = { Text("Gestures") }
-            )
-            Tab(
-                selected = selectedTabIndex == 3,
-                onClick = { selectedTabIndex = 3 },
-                text = { Text("About") }
-            )
-        }
+            onTabSelected = { selectedTabIndex = it },
+            tabs = listOf("Status", "Fields", "Gestures", "About")
+        )
 
         // Content based on selected tab
         when (selectedTabIndex) {
@@ -103,3 +86,63 @@ fun MainScreen(
     }
 }
 
+@Composable
+private fun TwoRowTabGrid(
+    selectedTabIndex: Int,
+    onTabSelected: (Int) -> Unit,
+    tabs: List<String>
+) {
+    val primary = MaterialTheme.colorScheme.primary
+    val surface = MaterialTheme.colorScheme.surface
+    val onSurface = MaterialTheme.colorScheme.onSurface
+    val onPrimary = MaterialTheme.colorScheme.onPrimary
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        // Row 1: tabs 0 and 1
+        Row(modifier = Modifier.fillMaxWidth()) {
+            for (index in 0..1) {
+                val selected = selectedTabIndex == index
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .background(if (selected) primary else surface)
+                        .clickable { onTabSelected(index) }
+                        .padding(vertical = 10.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = tabs[index],
+                        color = if (selected) onPrimary else onSurface,
+                        fontSize = 13.sp,
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+        HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
+        // Row 2: tabs 2 and 3
+        Row(modifier = Modifier.fillMaxWidth()) {
+            for (index in 2..3) {
+                val selected = selectedTabIndex == index
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .background(if (selected) primary else surface)
+                        .clickable { onTabSelected(index) }
+                        .padding(vertical = 10.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = tabs[index],
+                        color = if (selected) onPrimary else onSurface,
+                        fontSize = 13.sp,
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+        HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
+    }
+}

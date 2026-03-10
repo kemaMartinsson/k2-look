@@ -122,7 +122,7 @@ fun ProfileManagementScreen(
                 }
             }
 
-            // Default profile (read-only, shown at bottom)
+            // Default profile (shown at bottom)
             item {
                 Spacer(modifier = Modifier.padding(vertical = 8.dp))
                 Text(

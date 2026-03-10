@@ -423,9 +423,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 activeLookService.setDisplayPower(displayPowerOn)
 
                 if (displayPowerOn) {
-                    // TODO: Redraw current layout when turning back on
-                    // Will need bridge method to refresh display
-                    Log.d(TAG, "Display turned on - layout refresh needed")
+                    // Redraw current layout by re-applying the active profile
+                    layoutBuilderViewModel?.applyProfileToGlasses()
+                    Log.d(TAG, "Display turned on - layout refreshed")
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to toggle display: ${e.message}", e)

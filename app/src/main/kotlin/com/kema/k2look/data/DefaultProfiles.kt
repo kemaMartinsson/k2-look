@@ -11,7 +11,7 @@ import com.kema.k2look.model.LayoutScreen
 object DefaultProfiles {
 
     /**
-     * Default read-only profile with essential metrics:
+     * Default profile with essential metrics:
      * - Speed
      * - Distance
      * - Elapsed Time
@@ -21,7 +21,7 @@ object DefaultProfiles {
             id = "default",
             name = "Default",
             isDefault = true,
-            isReadOnly = true,
+            isReadOnly = false,
             screens = listOf(
                 LayoutScreen(
                     id = 1,

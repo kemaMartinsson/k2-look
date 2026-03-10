@@ -286,18 +286,18 @@ class ActiveLookLayoutService(
      * This is advanced - can be implemented later
      */
     suspend fun saveConfiguration(profile: DataFieldProfile): Boolean {
-        // TODO: Implement cfgWrite for persistent storage
-        // This would allow layouts to survive glasses power cycles
+        // Future: cfgWrite for persistent storage across power cycles
+        // See docs/Future-Updates.md
         Log.i(TAG, "Configuration persistence not yet implemented")
         return false
     }
 
     /**
      * Load configuration from glasses
-     * This is advanced - can be implemented later
      */
     suspend fun loadConfiguration(profileId: String): Boolean {
-        // TODO: Implement cfgSet to load saved configuration
+        // Future: cfgSet to load saved configuration
+        // See docs/Future-Updates.md
         Log.i(TAG, "Configuration loading not yet implemented")
         return false
     }
@@ -311,8 +311,8 @@ class ActiveLookLayoutService(
             return false
         }
 
-        // TODO: Query glasses for layout list and verify our IDs exist
-        // For now, assume they need to be re-saved after reconnection
+        // Future: Query glasses for layout list and verify our IDs exist
+        // For now, re-save on reconnection is the safe approach
         Log.d(TAG, "Layout verification not implemented - will re-save on reconnection")
         return false
     }

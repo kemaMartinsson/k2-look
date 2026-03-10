@@ -8,7 +8,7 @@ import java.util.UUID
  * @param id Unique profile identifier
  * @param name Profile name (e.g., "Road Bike", "Gravel")
  * @param isDefault Whether this is the default profile
- * @param isReadOnly Whether this profile can be edited (default profile is read-only)
+ * @param isReadOnly Whether this profile can be edited
  * @param screens List of screens in this profile
  * @param createdAt Creation timestamp
  * @param modifiedAt Last modification timestamp

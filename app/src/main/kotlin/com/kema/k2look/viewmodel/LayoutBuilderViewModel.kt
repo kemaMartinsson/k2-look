@@ -11,6 +11,8 @@ import com.kema.k2look.model.VisualizationType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
 /**
@@ -31,7 +33,8 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
         val selectedScreen: Int = 1,
         val isLoading: Boolean = false,
         val error: String? = null,
-        val showProfileManagement: Boolean = false
+        val showProfileManagement: Boolean = false,
+        val isGlassesConnected: Boolean = false
     )
 
 
@@ -67,6 +70,15 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
 
             matchingProfile
         }
+
+        // Observe glasses connection state to keep isGlassesConnected up to date
+        bridge.getActiveLookService().connectionState
+            .onEach { state ->
+                val connected = state is com.kema.k2look.service.ActiveLookService.ConnectionState.Connected
+                _uiState.value = _uiState.value.copy(isGlassesConnected = connected)
+                Log.d(TAG, "Glasses connection state changed: $state (connected=$connected)")
+            }
+            .launchIn(viewModelScope)
 
         // Auto-apply current active profile if one is selected
         _uiState.value.activeProfile?.let { profile ->
@@ -340,6 +352,7 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
      */
     fun selectScreen(screenId: Int) {
         _uiState.value = _uiState.value.copy(selectedScreen = screenId)
+        bridge?.setActiveScreen(screenId)
         Log.d(TAG, "Selected screen: $screenId")
     }
 

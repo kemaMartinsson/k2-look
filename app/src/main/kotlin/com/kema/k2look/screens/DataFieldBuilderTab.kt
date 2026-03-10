@@ -314,11 +314,13 @@ fun DataFieldBuilderTab(
                 }
                 */
                 Button(
-                    onClick = { /* TODO: Build & Send to Glasses */ },
-                    modifier = Modifier.fillMaxWidth(), // Changed from weight(1f) since it's now the only button
-                    enabled = false
+                    onClick = { viewModel.applyProfileToGlasses() },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = uiState.isGlassesConnected && uiState.activeProfile != null
                 ) {
-                    Text("Build & Send")
+                    Text(
+                        if (uiState.isGlassesConnected) "Build & Send" else "Build & Send (glasses not connected)"
+                    )
                 }
             }
         }
