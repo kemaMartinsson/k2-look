@@ -2,6 +2,7 @@
     "conventionalCommits.scopes": [
         "Devcontainer",
         "Documentation",
-        "Changelog"
+        "Changelog",
+        "UpdateChecker"
     ]
 }
