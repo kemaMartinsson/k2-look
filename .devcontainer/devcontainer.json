@@ -40,5 +40,6 @@
       ]
     }
   },
-  "remoteUser": "vscode"
+  "remoteUser": "vscode",
+  "postCreateCommand": "mkdir -p ~/.ssh && chmod 700 ~/.ssh && printf 'Host github-private\\n  HostName github.com\\n  User git\\n' >> ~/.ssh/config && chmod 600 ~/.ssh/config"
 }
