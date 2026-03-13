@@ -3,6 +3,7 @@
         "Devcontainer",
         "Documentation",
         "Changelog",
-        "UpdateChecker"
+        "UpdateChecker",
+        "K2 Sync"
     ]
 }
