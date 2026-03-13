@@ -1,6 +1,7 @@
 {
     "conventionalCommits.scopes": [
         "Devcontainer",
-        "Documentation"
+        "Documentation",
+        "Changelog"
     ]
 }

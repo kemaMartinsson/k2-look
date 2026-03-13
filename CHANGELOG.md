@@ -2,6 +2,14 @@
 
 All notable changes to K2Look will be documented in this file.
 
+## [0.12.5] - 2026-03-113
+
+### Fixed 
+
+- Fixed tabs. Text took too much space and made the UI look bad. Now the tabs are smaller and more compact, allowing more space for the content and improving the overall appearance of the app.
+- Fixed hardcoded disable button for sending config to glasses. Now the button is enabled and functional if glasses are connected, allowing users to send their custom configurations to the glasses directly from the app.
+- Changed default profile. Not readonly anymore, since, well. You can have a profile named `Default` so... yeah. It's just a default profile that you can edit and customize as you wish, and it will be the one used when you don't have any other profile selected or active on Karoo 2.
+
 ## [0.12.4] - 2026-01-01
 
 ### Fixed
