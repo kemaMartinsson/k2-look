@@ -1,14 +1,15 @@
 {
   "name": "Karoo2-ActiveLook DevContainer",
-  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-22.04",
-  "runArgs": ["--userns=keep-id"],
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "runArgs": ["--userns=keep-id", "--security-opt=label=disable"],
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/${localWorkspaceFolderBasename},type=bind",
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
-  "onCreateCommand": "bash .devcontainer/setup.sh",
   "customizations": {
     "vscode": {
       "settings": {
-        "terminal.integrated.shell.linux": "/bin/bash",
+        "terminal.integrated.defaultProfile.linux": "bash",
         "java.configuration.updateBuildConfiguration": "automatic",
         "java.compile.nullAnalysis.mode": "automatic",
         "java.saveActions.organizeImports": true,
@@ -39,21 +40,5 @@
       ]
     }
   },
-  "features": {
-    "ghcr.io/devcontainers/features/sshd:1": {
-      "version": "latest"
-    },
-    "ghcr.io/devcontainers/features/node:1": {
-      "version": "lts"
-    },
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {
-      "version": "latest"
-    },
-    "ghcr.io/devcontainers/features/java:1": {
-      "version": "21",
-      "installGradle": "true"
-    }
-  },
-  "postCreateCommand": "sdkmanager --licenses || true",
   "remoteUser": "vscode"
 }
