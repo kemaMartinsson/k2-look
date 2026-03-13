@@ -36,7 +36,8 @@
         "redhat.vscode-xml",
         "vscjava.vscode-checkstyle",
         "shengchen.vscode-checkstyle",
-        "vivaxy.vscode-conventional-commits"
+        "vivaxy.vscode-conventional-commits",
+        "mhutchie.git-graph"
       ]
     }
   },
