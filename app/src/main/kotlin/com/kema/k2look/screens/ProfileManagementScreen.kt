@@ -24,10 +24,12 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,7 +38,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.kema.k2look.data.DataFieldRegistry
 import com.kema.k2look.model.DataFieldProfile
+import io.hammerhead.karooext.models.RideProfile
 
 /**
  * Screen for managing DataField profiles (create, delete, duplicate)
@@ -45,15 +49,32 @@ import com.kema.k2look.model.DataFieldProfile
 @Composable
 fun ProfileManagementScreen(
     profiles: List<DataFieldProfile>,
+    activeRideProfile: RideProfile?,
+    isRiding: Boolean,
+    karooSyncEnabled: Boolean,
     onBack: () -> Unit,
     onCreateProfile: (name: String) -> Unit,
     onDeleteProfile: (String) -> Unit,
     onDuplicateProfile: (String, String) -> Unit,
+    onToggleKarooSync: (Boolean) -> Unit,
+    onImportFromKaroo: (RideProfile) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var showCreateDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf<String?>(null) }
     var showDuplicateDialog by remember { mutableStateOf<String?>(null) }
+    var showImportPreview by remember { mutableStateOf(false) }
+
+    // Dismiss import preview if a ride starts while it is open
+    LaunchedEffect(isRiding) {
+        if (isRiding) showImportPreview = false
+    }
+
+    // Show Karoo suggestion when sync is on, not riding, profile exists, and no name match
+    val hasKarooSuggestion = karooSyncEnabled
+        && !isRiding
+        && activeRideProfile != null
+        && profiles.none { it.name.equals(activeRideProfile.name, ignoreCase = true) }
 
     Scaffold(
         topBar = {
@@ -81,6 +102,51 @@ fun ProfileManagementScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // Karoo Sync toggle
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Karoo Sync",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Auto-switch profiles when Karoo profile changes",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            )
+                        }
+                        Switch(
+                            checked = karooSyncEnabled,
+                            onCheckedChange = onToggleKarooSync
+                        )
+                    }
+                }
+            }
+
+            // From Karoo suggestion
+            if (hasKarooSuggestion && activeRideProfile != null) {
+                item {
+                    KarooSuggestionCard(
+                        rideProfile = activeRideProfile,
+                        onImport = { showImportPreview = true }
+                    )
+                }
+            }
             // User profiles (exclude default)
             val userProfiles = profiles.filter { !it.isDefault }
 
@@ -140,6 +206,18 @@ fun ProfileManagementScreen(
                 )
             }
         }
+    }
+
+    // Import Preview Dialog
+    if (showImportPreview && activeRideProfile != null) {
+        ImportPreviewDialog(
+            rideProfile = activeRideProfile,
+            onDismiss = { showImportPreview = false },
+            onConfirm = {
+                onImportFromKaroo(activeRideProfile)
+                showImportPreview = false
+            }
+        )
     }
 
     // Create Profile Dialog
@@ -332,6 +410,126 @@ private fun DuplicateProfileDialog(
                 enabled = newName.isNotBlank()
             ) {
                 Text("Duplicate")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+private fun KarooSuggestionCard(
+    rideProfile: RideProfile,
+    onImport: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val screenCount = remember(rideProfile) {
+        rideProfile.pages.count { page ->
+            !page.mapPage && page.elements.any { el ->
+                DataFieldRegistry.ALL_FIELDS.any { f -> f.karooStreamType == el.dataTypeId }
+            }
+        }
+    }
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "Import from Karoo",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = rideProfile.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Text(
+                        text = "$screenCount screen${if (screenCount != 1) "s" else ""}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                    )
+                }
+                Button(onClick = onImport) {
+                    Text("Import")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ImportPreviewDialog(
+    rideProfile: RideProfile,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    val screenSummaries = remember(rideProfile) {
+        rideProfile.pages
+            .filter { !it.mapPage }
+            .mapNotNull { page ->
+                val fieldNames = page.elements.mapNotNull { element ->
+                    DataFieldRegistry.ALL_FIELDS
+                        .find { it.karooStreamType == element.dataTypeId }?.name
+                }
+                if (fieldNames.isEmpty()) null
+                else fieldNames.take(6).joinToString(" · ")
+            }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Import '${rideProfile.name}'?") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (screenSummaries.isNotEmpty()) {
+                    Text(
+                        text = "Generates ${screenSummaries.size} screen${if (screenSummaries.size != 1) "s" else ""} from your Karoo configuration:",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.padding(vertical = 2.dp))
+                    screenSummaries.forEachIndexed { index, summary ->
+                        Text(
+                            text = "Screen ${index + 1}: $summary",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                        )
+                    }
+                } else {
+                    Text(
+                        text = "No recognisable fields found in this Karoo profile.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                enabled = screenSummaries.isNotEmpty()
+            ) {
+                Text("Import")
             }
         },
         dismissButton = {

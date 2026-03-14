@@ -6,8 +6,12 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.kema.k2look.data.DefaultProfiles
 import com.kema.k2look.data.ProfileRepository
+import com.kema.k2look.data.KarooProfileImporter
+import com.kema.k2look.data.SettingsRepository
 import com.kema.k2look.model.DataFieldProfile
 import com.kema.k2look.model.VisualizationType
+import io.hammerhead.karooext.models.RideProfile
+import io.hammerhead.karooext.models.RideState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,6 +25,7 @@ import kotlinx.coroutines.launch
 class LayoutBuilderViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = ProfileRepository(application)
+    private val settingsRepository = SettingsRepository(application)
     private var bridge: com.kema.k2look.service.KarooActiveLookBridge? = null
 
     // UI State
@@ -34,12 +39,19 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
         val isLoading: Boolean = false,
         val error: String? = null,
         val showProfileManagement: Boolean = false,
-        val isGlassesConnected: Boolean = false
+        val isGlassesConnected: Boolean = false,
+        val activeRideProfile: RideProfile? = null,
+        val isRiding: Boolean = false,
+        val karooSyncEnabled: Boolean = true
     )
 
 
     init {
         Log.i(TAG, "LayoutBuilderViewModel initialized")
+        _uiState.value = _uiState.value.copy(karooSyncEnabled = settingsRepository.karooSyncEnabled.value)
+        settingsRepository.karooSyncEnabled
+            .onEach { enabled -> _uiState.value = _uiState.value.copy(karooSyncEnabled = enabled) }
+            .launchIn(viewModelScope)
         loadProfiles()
     }
 
@@ -52,6 +64,12 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
 
         // Register profile lookup callback for auto-switching on ride start
         bridge.setProfileLookup { karooProfileName ->
+            // Respect Karoo Sync toggle
+            if (!_uiState.value.karooSyncEnabled) {
+                Log.d(TAG, "Karoo sync disabled, skipping auto-switch for '$karooProfileName'")
+                return@setProfileLookup null
+            }
+
             // Find K2Look profile with matching name (case-insensitive)
             val matchingProfile = _uiState.value.profiles.find { profile ->
                 profile.name.equals(karooProfileName, ignoreCase = true)
@@ -77,6 +95,20 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
                 val connected = state is com.kema.k2look.service.ActiveLookService.ConnectionState.Connected
                 _uiState.value = _uiState.value.copy(isGlassesConnected = connected)
                 Log.d(TAG, "Glasses connection state changed: $state (connected=$connected)")
+            }
+            .launchIn(viewModelScope)
+
+        // Observe Karoo ride state
+        bridge.getKarooDataService().rideState
+            .onEach { state ->
+                _uiState.value = _uiState.value.copy(isRiding = state !is RideState.Idle)
+            }
+            .launchIn(viewModelScope)
+
+        // Observe active Karoo ride profile for import suggestions
+        bridge.getKarooDataService().activeRideProfile
+            .onEach { rideProfile ->
+                _uiState.value = _uiState.value.copy(activeRideProfile = rideProfile)
             }
             .launchIn(viewModelScope)
 
@@ -757,6 +789,35 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
         applyProfileToGlasses(currentProfile)
 
         return true
+    }
+
+    fun importFromKaroo(rideProfile: RideProfile) {
+        viewModelScope.launch {
+            try {
+                val profile = KarooProfileImporter.import(rideProfile)
+                repository.saveProfile(profile)
+
+                val userProfiles = repository.loadProfiles()
+                val defaultProfile = DefaultProfiles.getDefaultProfile()
+                val allProfiles = listOf(defaultProfile) + userProfiles
+
+                _uiState.value = _uiState.value.copy(
+                    profiles = allProfiles,
+                    activeProfile = profile
+                )
+
+                applyProfileToGlasses(profile)
+                Log.i(TAG, "Imported Karoo profile '${rideProfile.name}' → '${profile.name}'")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to import Karoo profile", e)
+                _uiState.value = _uiState.value.copy(error = "Import failed: ${e.message}")
+            }
+        }
+    }
+
+    fun setKarooSyncEnabled(enabled: Boolean) {
+        settingsRepository.setKarooSyncEnabled(enabled)
+        Log.i(TAG, "Karoo sync ${if (enabled) "enabled" else "disabled"}")
     }
 
     companion object {

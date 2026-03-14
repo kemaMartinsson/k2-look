@@ -78,6 +78,9 @@ fun DataFieldBuilderTab(
     if (uiState.showProfileManagement) {
         ProfileManagementScreen(
             profiles = uiState.profiles,
+            activeRideProfile = uiState.activeRideProfile,
+            isRiding = uiState.isRiding,
+            karooSyncEnabled = uiState.karooSyncEnabled,
             onBack = { viewModel.setShowProfileManagement(false) },
             onCreateProfile = { name ->
                 viewModel.createProfile(name)
@@ -87,6 +90,13 @@ fun DataFieldBuilderTab(
             },
             onDuplicateProfile = { profileId, newName ->
                 viewModel.duplicateProfile(profileId, newName)
+            },
+            onToggleKarooSync = { enabled ->
+                viewModel.setKarooSyncEnabled(enabled)
+            },
+            onImportFromKaroo = { rideProfile ->
+                viewModel.importFromKaroo(rideProfile)
+                viewModel.setShowProfileManagement(false)
             }
         )
         return
