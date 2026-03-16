@@ -16,6 +16,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -35,10 +36,19 @@ import com.kema.k2look.viewmodel.MainViewModel
 @Composable
 fun MainScreen(
     viewModel: MainViewModel = viewModel(),
-    onBack: () -> Unit = {}
+    onBack: () -> Unit = {},
+    openUpdateDialog: Boolean = false,
+    onUpdateDialogHandled: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var selectedTabIndex by remember { mutableIntStateOf(0) }
+
+    // Navigate to About tab and open update dialog when launched from notification
+    LaunchedEffect(openUpdateDialog) {
+        if (openUpdateDialog) {
+            selectedTabIndex = 3 // About tab
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -81,7 +91,12 @@ fun MainScreen(
             0 -> StatusTab(viewModel, uiState)
             1 -> DataFieldBuilderTab(mainViewModel = viewModel)
             2 -> GesturesTab(viewModel, uiState)
-            3 -> AboutTab(viewModel, uiState)
+            3 -> AboutTab(
+                viewModel = viewModel,
+                uiState = uiState,
+                openUpdateDialogOnStart = openUpdateDialog,
+                onUpdateDialogHandled = onUpdateDialogHandled
+            )
         }
     }
 }
