@@ -92,8 +92,6 @@ fun PreviewProfileSelectorCard() {
         DataFieldProfile(
             id = "default",
             name = "Default",
-            isDefault = true,
-            isReadOnly = true,
             screens = listOf(
                 LayoutScreen(
                     id = 1,
@@ -106,8 +104,6 @@ fun PreviewProfileSelectorCard() {
         DataFieldProfile(
             id = "road",
             name = "Road Bike",
-            isDefault = false,
-            isReadOnly = false,
             screens = listOf(
                 LayoutScreen(
                     id = 1,

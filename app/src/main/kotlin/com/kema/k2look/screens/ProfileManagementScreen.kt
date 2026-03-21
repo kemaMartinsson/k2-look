@@ -138,19 +138,20 @@ fun ProfileManagementScreen(
                 }
             }
 
-            // From Karoo suggestion
-            if (hasKarooSuggestion && activeRideProfile != null) {
-                item {
-                    KarooSuggestionCard(
-                        rideProfile = activeRideProfile,
-                        onImport = { showImportPreview = true }
-                    )
+            // From Karoo suggestion (hasKarooSuggestion guarantees activeRideProfile != null)
+            if (hasKarooSuggestion) {
+                activeRideProfile?.let { karooProfile ->
+                    item {
+                        KarooSuggestionCard(
+                            rideProfile = karooProfile,
+                            onImport = { showImportPreview = true }
+                        )
+                    }
                 }
             }
-            // User profiles (exclude default)
-            val userProfiles = profiles.filter { !it.isDefault }
-
-            if (userProfiles.isEmpty()) {
+            // All profiles — every profile is equal and deletable
+            // (ViewModel prevents deleting the last remaining profile)
+            if (profiles.isEmpty()) {
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -165,7 +166,7 @@ fun ProfileManagementScreen(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                text = "No custom profiles yet",
+                                text = "No profiles yet",
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -179,45 +180,30 @@ fun ProfileManagementScreen(
                     }
                 }
             } else {
-                items(userProfiles) { profile ->
+                items(profiles) { profile ->
                     ProfileCard(
                         profile = profile,
+                        canDelete = profiles.size > 1,
                         onDuplicate = { showDuplicateDialog = profile.id },
                         onDelete = { showDeleteDialog = profile.id }
                     )
                 }
             }
-
-            // Default profile (shown at bottom)
-            item {
-                Spacer(modifier = Modifier.padding(vertical = 8.dp))
-                Text(
-                    text = "System Profiles",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                )
-            }
-
-            items(profiles.filter { it.isDefault }) { profile ->
-                ProfileCard(
-                    profile = profile,
-                    onDuplicate = { showDuplicateDialog = profile.id },
-                    onDelete = null // Cannot delete default
-                )
-            }
         }
     }
 
     // Import Preview Dialog
-    if (showImportPreview && activeRideProfile != null) {
-        ImportPreviewDialog(
-            rideProfile = activeRideProfile,
-            onDismiss = { showImportPreview = false },
-            onConfirm = {
-                onImportFromKaroo(activeRideProfile)
-                showImportPreview = false
-            }
-        )
+    if (showImportPreview) {
+        activeRideProfile?.let { karooProfile ->
+            ImportPreviewDialog(
+                rideProfile = karooProfile,
+                onDismiss = { showImportPreview = false },
+                onConfirm = {
+                    onImportFromKaroo(karooProfile)
+                    showImportPreview = false
+                }
+            )
+        }
     }
 
     // Create Profile Dialog
@@ -273,8 +259,9 @@ fun ProfileManagementScreen(
 @Composable
 private fun ProfileCard(
     profile: DataFieldProfile,
+    canDelete: Boolean,
     onDuplicate: () -> Unit,
-    onDelete: (() -> Unit)?,
+    onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -303,13 +290,6 @@ private fun ProfileCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )
-                if (profile.isReadOnly) {
-                    Text(
-                        text = "Read-only",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
-                }
             }
 
             Row {
@@ -321,14 +301,16 @@ private fun ProfileCard(
                     )
                 }
 
-                if (onDelete != null) {
-                    IconButton(onClick = onDelete) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete Profile",
-                            tint = MaterialTheme.colorScheme.error
-                        )
-                    }
+                IconButton(
+                    onClick = onDelete,
+                    enabled = canDelete
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete Profile",
+                        tint = if (canDelete) MaterialTheme.colorScheme.error
+                               else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                    )
                 }
             }
         }

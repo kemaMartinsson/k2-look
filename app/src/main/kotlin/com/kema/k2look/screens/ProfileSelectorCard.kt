@@ -104,29 +104,16 @@ fun ProfileSelectorCard(
                 onDismissRequest = { expanded = false }
             ) {
                 profiles.forEach { profile ->
-                    DropdownMenuItem(
+                        DropdownMenuItem(
                         text = {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = profile.name,
-                                    fontWeight = if (profile.id == activeProfile?.id) {
-                                        FontWeight.Bold
-                                    } else {
-                                        FontWeight.Normal
-                                    }
-                                )
-                                if (profile.isDefault) {
-                                    Text(
-                                        text = "Default",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
+                            Text(
+                                text = profile.name,
+                                fontWeight = if (profile.id == activeProfile?.id) {
+                                    FontWeight.Bold
+                                } else {
+                                    FontWeight.Normal
                                 }
-                            }
+                            )
                         },
                         onClick = {
                             onProfileSelected(profile.id)
@@ -138,23 +125,15 @@ fun ProfileSelectorCard(
 
             // Profile info - displayed inline with minimal spacing
             if (activeProfile != null) {
-                // Removed Spacer - info directly follows profile selector
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
                         text = "${activeProfile.screens.size} screen(s)",
-                        style = MaterialTheme.typography.labelSmall, // Changed from bodySmall
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) // More subtle
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                     )
-                    if (activeProfile.isReadOnly) {
-                        Text(
-                            text = "Read-only",
-                            style = MaterialTheme.typography.labelSmall, // Changed from bodySmall
-                            color = MaterialTheme.colorScheme.secondary
-                        )
-                    }
                 }
             }
         }

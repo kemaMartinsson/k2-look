@@ -233,20 +233,18 @@ fun DataFieldBuilderTab(
                     }
 
                     // Add screen button
-                    if (!profile.isReadOnly) {
-                        IconButton(
-                            onClick = { viewModel.addScreen() }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = "Add Screen",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
+                    IconButton(
+                        onClick = { viewModel.addScreen() }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add Screen",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
 
                     // Remove screen button (only show if more than 1 screen)
-                    if (!profile.isReadOnly && profile.screens.size > 1) {
+                    if (profile.screens.size > 1) {
                         IconButton(
                             onClick = { viewModel.removeScreen(validSelectedScreen) }
                         ) {
@@ -295,17 +293,6 @@ fun DataFieldBuilderTab(
 
             Spacer(modifier = Modifier.padding(vertical = 16.dp))
 
-            // Read-only indicator - moved above buttons for better visibility
-            if (profile.isReadOnly) {
-                Text(
-                    text = "⚠️ This is a read-only profile. Duplicate it to make changes.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-            }
 
             // Action buttons
             Row(

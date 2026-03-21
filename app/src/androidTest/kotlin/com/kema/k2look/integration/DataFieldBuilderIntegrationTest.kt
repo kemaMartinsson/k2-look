@@ -4,11 +4,10 @@ import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.kema.k2look.data.DataFieldRegistry
+import com.kema.k2look.data.SeedProfile
 import com.kema.k2look.data.ProfileRepository
-import com.kema.k2look.model.FontSize
 import com.kema.k2look.model.IconSize
 import com.kema.k2look.model.LayoutDataField
-import com.kema.k2look.model.Position
 import com.kema.k2look.viewmodel.LayoutBuilderViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -16,9 +15,9 @@ import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -69,40 +68,23 @@ class DataFieldBuilderIntegrationTest {
         // 2. Add fields to the profile
         val speedField = LayoutDataField(
             dataField = DataFieldRegistry.getById(12)!!, // Speed
-            position = Position.TOP,
-            fontSize = FontSize.LARGE,
-            showLabel = true,
-            showUnit = true,
-            showIcon = true,
-            iconSize = IconSize.SMALL
+            zoneId = "3D_FULL_H",
+            showLabel = true, showUnit = true, showIcon = true, iconSize = IconSize.SMALL
         )
-
         val hrField = LayoutDataField(
             dataField = DataFieldRegistry.getById(4)!!, // Heart Rate
-            position = Position.MIDDLE,
-            fontSize = FontSize.MEDIUM,
-            showLabel = true,
-            showUnit = true,
-            showIcon = true,
-            iconSize = IconSize.LARGE
+            zoneId = "3D_FULL_M",
+            showLabel = true, showUnit = true, showIcon = true, iconSize = IconSize.LARGE
         )
-
         val powerField = LayoutDataField(
             dataField = DataFieldRegistry.getById(7)!!, // Power
-            position = Position.BOTTOM,
-            fontSize = FontSize.MEDIUM,
-            showLabel = false,
-            showUnit = true,
-            showIcon = true,
-            iconSize = IconSize.SMALL
+            zoneId = "3D_FULL_L",
+            showLabel = false, showUnit = true, showIcon = true, iconSize = IconSize.SMALL
         )
 
         val screen = profile.screens[0]
-        val updatedScreen = screen.copy(
-            dataFields = listOf(speedField, hrField, powerField)
-        )
         val updatedProfile = profile.copy(
-            screens = listOf(updatedScreen)
+            screens = listOf(screen.copy(dataFields = listOf(speedField, hrField, powerField)))
         )
 
         // 3. Save the updated profile
@@ -136,52 +118,34 @@ class DataFieldBuilderIntegrationTest {
 
         // 2. Add a field to original
         val speedField = LayoutDataField(
-            dataField = DataFieldRegistry.getById(12)!!, // Speed
-            position = Position.TOP,
-            fontSize = FontSize.LARGE,
-            showLabel = true,
-            showUnit = true,
-            showIcon = true,
-            iconSize = IconSize.SMALL
+            dataField = DataFieldRegistry.getById(12)!!,
+            zoneId = "3D_FULL_H",
+            showLabel = true, showUnit = true, showIcon = true, iconSize = IconSize.SMALL
         )
 
         val screen = original.screens[0]
-        val updatedScreen = screen.copy(dataFields = listOf(speedField))
-        val updatedOriginal = original.copy(screens = listOf(updatedScreen))
-
+        val updatedOriginal = original.copy(screens = listOf(screen.copy(dataFields = listOf(speedField))))
         viewModel.updateProfile(updatedOriginal)
 
         // 3. Duplicate the profile
         viewModel.duplicateProfile(updatedOriginal.id, "Duplicate")
-
         state = viewModel.uiState.first()
 
         val duplicate = state.profiles.find { it.name == "Duplicate" }
         assertNotNull(duplicate)
-
-        // 4. Verify duplicate has same fields
-        assertEquals(
-            updatedOriginal.screens[0].dataFields.size,
-            duplicate?.screens?.get(0)?.dataFields?.size
-        )
+        assertEquals(updatedOriginal.screens[0].dataFields.size, duplicate?.screens?.get(0)?.dataFields?.size)
 
         // 5. Modify duplicate (add another field)
         val hrField = LayoutDataField(
-            dataField = DataFieldRegistry.getById(4)!!, // Heart Rate
-            position = Position.MIDDLE,
-            fontSize = FontSize.MEDIUM,
-            showLabel = true,
-            showUnit = true,
-            showIcon = true,
-            iconSize = IconSize.LARGE
+            dataField = DataFieldRegistry.getById(4)!!,
+            zoneId = "3D_FULL_M",
+            showLabel = true, showUnit = true, showIcon = true, iconSize = IconSize.LARGE
         )
 
         val duplicateScreen = duplicate!!.screens[0]
-        val modifiedScreen = duplicateScreen.copy(
-            dataFields = duplicateScreen.dataFields + hrField
+        val modifiedDuplicate = duplicate.copy(
+            screens = listOf(duplicateScreen.copy(dataFields = duplicateScreen.dataFields + hrField))
         )
-        val modifiedDuplicate = duplicate.copy(screens = listOf(modifiedScreen))
-
         viewModel.updateProfile(modifiedDuplicate)
 
         state = viewModel.uiState.first()
@@ -204,33 +168,9 @@ class DataFieldBuilderIntegrationTest {
         val roadBike = state.profiles.find { it.name == "Road Bike" }!!
 
         val roadFields = listOf(
-            LayoutDataField(
-                dataField = DataFieldRegistry.getById(12)!!, // Speed
-                position = Position.TOP,
-                fontSize = FontSize.LARGE,
-                showLabel = true,
-                showUnit = true,
-                showIcon = true,
-                iconSize = IconSize.SMALL
-            ),
-            LayoutDataField(
-                dataField = DataFieldRegistry.getById(7)!!, // Power
-                position = Position.MIDDLE,
-                fontSize = FontSize.LARGE,
-                showLabel = true,
-                showUnit = true,
-                showIcon = true,
-                iconSize = IconSize.SMALL
-            ),
-            LayoutDataField(
-                dataField = DataFieldRegistry.getById(4)!!, // Heart Rate
-                position = Position.BOTTOM,
-                fontSize = FontSize.MEDIUM,
-                showLabel = true,
-                showUnit = true,
-                showIcon = true,
-                iconSize = IconSize.LARGE
-            )
+            LayoutDataField(DataFieldRegistry.getById(12)!!, zoneId = "3D_FULL_H", iconSize = IconSize.SMALL),
+            LayoutDataField(DataFieldRegistry.getById(7)!!,  zoneId = "3D_FULL_M", iconSize = IconSize.SMALL),
+            LayoutDataField(DataFieldRegistry.getById(4)!!,  zoneId = "3D_FULL_L", iconSize = IconSize.LARGE)
         )
 
         var screen = roadBike.screens[0]
@@ -243,33 +183,9 @@ class DataFieldBuilderIntegrationTest {
         val climbing = state.profiles.find { it.name == "Climbing" }!!
 
         val climbingFields = listOf(
-            LayoutDataField(
-                dataField = DataFieldRegistry.getById(24)!!, // VAM
-                position = Position.TOP,
-                fontSize = FontSize.LARGE,
-                showLabel = true,
-                showUnit = true,
-                showIcon = true,
-                iconSize = IconSize.LARGE
-            ),
-            LayoutDataField(
-                dataField = DataFieldRegistry.getById(47)!!, // HR Zone
-                position = Position.MIDDLE,
-                fontSize = FontSize.LARGE,
-                showLabel = false,
-                showUnit = false,
-                showIcon = false,
-                iconSize = IconSize.SMALL
-            ),
-            LayoutDataField(
-                dataField = DataFieldRegistry.getById(7)!!, // Power
-                position = Position.BOTTOM,
-                fontSize = FontSize.MEDIUM,
-                showLabel = true,
-                showUnit = true,
-                showIcon = true,
-                iconSize = IconSize.SMALL
-            )
+            LayoutDataField(DataFieldRegistry.getById(24)!!, zoneId = "3D_FULL_H", iconSize = IconSize.LARGE),
+            LayoutDataField(DataFieldRegistry.getById(47)!!, zoneId = "3D_FULL_M", showLabel = false, showUnit = false, showIcon = false, iconSize = IconSize.SMALL),
+            LayoutDataField(DataFieldRegistry.getById(7)!!,  zoneId = "3D_FULL_L", iconSize = IconSize.SMALL)
         )
 
         screen = climbing.screens[0]
@@ -282,33 +198,9 @@ class DataFieldBuilderIntegrationTest {
         val endurance = state.profiles.find { it.name == "Endurance" }!!
 
         val enduranceFields = listOf(
-            LayoutDataField(
-                dataField = DataFieldRegistry.getById(1)!!, // Time
-                position = Position.TOP,
-                fontSize = FontSize.MEDIUM,
-                showLabel = true,
-                showUnit = false,
-                showIcon = true,
-                iconSize = IconSize.SMALL
-            ),
-            LayoutDataField(
-                dataField = DataFieldRegistry.getById(2)!!, // Distance
-                position = Position.MIDDLE,
-                fontSize = FontSize.LARGE,
-                showLabel = true,
-                showUnit = true,
-                showIcon = true,
-                iconSize = IconSize.SMALL
-            ),
-            LayoutDataField(
-                dataField = DataFieldRegistry.getById(6)!!, // Avg HR
-                position = Position.BOTTOM,
-                fontSize = FontSize.MEDIUM,
-                showLabel = true,
-                showUnit = true,
-                showIcon = true,
-                iconSize = IconSize.LARGE
-            )
+            LayoutDataField(DataFieldRegistry.getById(1)!!, zoneId = "3D_FULL_H", showUnit = false, iconSize = IconSize.SMALL),
+            LayoutDataField(DataFieldRegistry.getById(2)!!, zoneId = "3D_FULL_M", iconSize = IconSize.SMALL),
+            LayoutDataField(DataFieldRegistry.getById(6)!!, zoneId = "3D_FULL_L", iconSize = IconSize.LARGE)
         )
 
         screen = endurance.screens[0]
@@ -320,8 +212,8 @@ class DataFieldBuilderIntegrationTest {
 
         assertEquals(4, state.profiles.size) // Default + 3 custom
 
-        val finalRoadBike = state.profiles.find { it.name == "Road Bike" }
-        val finalClimbing = state.profiles.find { it.name == "Climbing" }
+        val finalRoadBike  = state.profiles.find { it.name == "Road Bike" }
+        val finalClimbing  = state.profiles.find { it.name == "Climbing" }
         val finalEndurance = state.profiles.find { it.name == "Endurance" }
 
         assertNotNull(finalRoadBike)
@@ -332,8 +224,7 @@ class DataFieldBuilderIntegrationTest {
         assertEquals(3, finalClimbing?.screens?.get(0)?.dataFields?.size)
         assertEquals(3, finalEndurance?.screens?.get(0)?.dataFields?.size)
 
-        // Verify different configurations
-        assertEquals(FontSize.LARGE, finalRoadBike?.screens?.get(0)?.dataFields?.get(0)?.fontSize)
+        // Verify different icon configurations
         assertEquals(IconSize.LARGE, finalClimbing?.screens?.get(0)?.dataFields?.get(0)?.iconSize)
         assertFalse(finalEndurance?.screens?.get(0)?.dataFields?.get(0)?.showUnit ?: true)
     }
@@ -391,8 +282,8 @@ class DataFieldBuilderIntegrationTest {
 
         state = viewModel.uiState.first()
 
-        // Should automatically switch to default
-        assertTrue(state.activeProfile?.isDefault ?: false)
+        // Should automatically switch to first remaining profile
+        assertNotEquals(custom.id, state.activeProfile?.id)
 
         // Custom profile should be gone
         assertNull(state.profiles.find { it.name == "Custom" })
@@ -400,10 +291,10 @@ class DataFieldBuilderIntegrationTest {
 
     @Test
     fun testEndToEndProfileLifecycle() = runTest {
-        // 1. Start with default profile
+        // 1. Start with seeded Default profile
         var state = viewModel.uiState.first()
         assertEquals(1, state.profiles.size)
-        assertTrue(state.activeProfile?.isDefault ?: false)
+        assertEquals(SeedProfile.SEED_PROFILE_ID, state.activeProfile?.id)
 
         // 2. Create a profile
         viewModel.createProfile("Test Profile")
@@ -413,19 +304,12 @@ class DataFieldBuilderIntegrationTest {
         // 3. Configure it
         val profile = state.profiles.find { it.name == "Test Profile" }!!
         val field = LayoutDataField(
-            dataField = DataFieldRegistry.getById(12)!!, // Speed
-            position = Position.TOP,
-            fontSize = FontSize.LARGE,
-            showLabel = true,
-            showUnit = true,
-            showIcon = true,
-            iconSize = IconSize.SMALL
+            dataField = DataFieldRegistry.getById(12)!!,
+            zoneId = "3D_FULL_H",
+            showLabel = true, showUnit = true, showIcon = true, iconSize = IconSize.SMALL
         )
-
         val screen = profile.screens[0]
-        val updatedProfile = profile.copy(
-            screens = listOf(screen.copy(dataFields = listOf(field)))
-        )
+        val updatedProfile = profile.copy(screens = listOf(screen.copy(dataFields = listOf(field))))
         viewModel.updateProfile(updatedProfile)
 
         // 4. Select it
@@ -449,4 +333,3 @@ class DataFieldBuilderIntegrationTest {
         assertEquals(1, copy?.screens?.get(0)?.dataFields?.size)
     }
 }
-

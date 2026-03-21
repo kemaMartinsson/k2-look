@@ -4,11 +4,9 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.kema.k2look.model.DataFieldProfile
-import com.kema.k2look.model.FontSize
 import com.kema.k2look.model.IconSize
 import com.kema.k2look.model.LayoutDataField
 import com.kema.k2look.model.LayoutScreen
-import com.kema.k2look.model.Position
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -148,8 +146,7 @@ class ProfileRepositoryTest {
             dataFields = listOf(
                 LayoutDataField(
                     dataField = DataFieldRegistry.getById(12)!!, // Speed
-                    position = Position.TOP,
-                    fontSize = FontSize.LARGE,
+                    zoneId = "3D_FULL_H",
                     showLabel = true,
                     showUnit = true,
                     showIcon = true,
@@ -157,8 +154,7 @@ class ProfileRepositoryTest {
                 ),
                 LayoutDataField(
                     dataField = DataFieldRegistry.getById(4)!!, // Heart Rate
-                    position = Position.MIDDLE,
-                    fontSize = FontSize.MEDIUM,
+                    zoneId = "3D_FULL_M",
                     showLabel = true,
                     showUnit = true,
                     showIcon = true,
@@ -166,8 +162,7 @@ class ProfileRepositoryTest {
                 ),
                 LayoutDataField(
                     dataField = DataFieldRegistry.getById(7)!!, // Power
-                    position = Position.BOTTOM,
-                    fontSize = FontSize.MEDIUM,
+                    zoneId = "3D_FULL_L",
                     showLabel = false,
                     showUnit = true,
                     showIcon = true,
@@ -180,8 +175,6 @@ class ProfileRepositoryTest {
             id = "complex_test",
             name = "Complex Profile",
             screens = listOf(screen),
-            isDefault = false,
-            isReadOnly = false,
             createdAt = System.currentTimeMillis(),
             modifiedAt = System.currentTimeMillis()
         )
@@ -205,15 +198,14 @@ class ProfileRepositoryTest {
 
         // Verify field details
         val fields = loadedProfile.screens[0].dataFields
-        assertEquals(Position.TOP, fields[0].position)
-        assertEquals(FontSize.LARGE, fields[0].fontSize)
-        assertTrue(fields[0].showIcon)
+        assertEquals("3D_FULL_H", fields[0].zoneId)
         assertEquals(IconSize.SMALL, fields[0].iconSize)
+        assertTrue(fields[0].showIcon)
 
-        assertEquals(Position.MIDDLE, fields[1].position)
+        assertEquals("3D_FULL_M", fields[1].zoneId)
         assertEquals(IconSize.LARGE, fields[1].iconSize)
 
-        assertEquals(Position.BOTTOM, fields[2].position)
+        assertEquals("3D_FULL_L", fields[2].zoneId)
         assertFalse(fields[2].showLabel)
     }
 
@@ -242,8 +234,7 @@ class ProfileRepositoryTest {
             dataFields = listOf(
                 LayoutDataField(
                     dataField = DataFieldRegistry.getById(12)!!, // Speed
-                    position = Position.TOP,
-                    fontSize = FontSize.MEDIUM,
+                    zoneId = "3D_FULL_H",
                     showLabel = true,
                     showUnit = true,
                     showIcon = true,
@@ -256,8 +247,6 @@ class ProfileRepositoryTest {
             id = "test_${System.currentTimeMillis()}",
             name = name,
             screens = listOf(screen),
-            isDefault = false,
-            isReadOnly = false,
             createdAt = System.currentTimeMillis(),
             modifiedAt = System.currentTimeMillis()
         )
