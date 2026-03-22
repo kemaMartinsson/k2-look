@@ -102,35 +102,19 @@ class KarooActiveLookBridge(context: Context) {
      */
     fun setActiveProfile(profile: com.kema.k2look.model.DataFieldProfile) {
         activeProfile = profile
-        // Reset to first screen when profile changes
         activeScreenId = profile.screens.firstOrNull()?.id
         Log.i(TAG, "📋 Active profile set: ${profile.name} (${profile.screens.size} screens), active screen: $activeScreenId")
 
-        // Save layouts/gauges then flush to glasses — always when connected.
-        // When streaming this shows live values; when idle it shows "--" placeholders
-        // so the user gets immediate visual confirmation of their layout (Build & Send).
         if (activeLookService.isConnected) {
             scope.launch {
-                // Save text layouts (if using efficient mode)
-                if (useEfficientLayouts) {
-                    val layoutsSuccess = layoutService.saveProfileLayouts(profile)
-                    if (layoutsSuccess) {
-                        Log.i(TAG, "✅ Efficient layouts saved to glasses memory")
-                    } else {
-                        Log.w(TAG, "⚠️ Failed to save layouts, falling back to basic mode")
-                        useEfficientLayouts = false
-                    }
+                // saveAndActivateProfile handles cfgWrite/cfgSet (fast path if already stored)
+                val success = layoutService.saveAndActivateProfile(profile)
+                if (success) {
+                    Log.i(TAG, "✅ Profile '${profile.name}' activated on glasses")
+                } else {
+                    Log.w(TAG, "⚠️ Failed to activate profile '${profile.name}' on glasses")
                 }
 
-                // Save gauges (always needed for gauge visualization)
-                val gaugesSuccess = initializeGauges(profile)
-                if (gaugesSuccess) {
-                    Log.i(TAG, "✅ Gauges initialized")
-                }
-
-                // Force a display update now that layouts are saved.
-                // flushWithProfile falls back to basic mode if efficient layouts aren't
-                // ready yet, so the ordering here is always safe.
                 currentData.isDirty = true
                 flushToGlasses()
                 Log.i(TAG, "✅ Display updated after profile apply")
@@ -144,8 +128,16 @@ class KarooActiveLookBridge(context: Context) {
     fun setActiveScreen(screenId: Int) {
         activeScreenId = screenId
         Log.d(TAG, "Active screen changed to: $screenId")
-        // Force flush so the new screen is displayed immediately
         currentData.isDirty = true
+    }
+
+    /**
+     * Invalidate the glasses-side config cache for [profileId].
+     * Call this whenever a profile's fields or layout are modified so the next
+     * [setActiveProfile] triggers a re-upload rather than a stale cfgSet.
+     */
+    fun invalidateProfileConfig(profileId: String) {
+        layoutService.invalidateConfig(profileId)
     }
 
     /**
@@ -729,6 +721,9 @@ class KarooActiveLookBridge(context: Context) {
                             "Tracking connected glasses address: $lastConnectedGlassesAddress"
                         )
 
+                        // Refresh config cache so fast-path cfgSet works immediately
+                        scope.launch { layoutService.refreshConfigCache() }
+
                         updateBridgeState()
                         // If Karoo is also connected and riding, start streaming
                         if (karooDataService.isConnected) {
@@ -883,7 +878,7 @@ class KarooActiveLookBridge(context: Context) {
 
         Log.v(
             TAG,
-            "Flushing with profile: ${profile.name}, screen: ${screen.id}, fields: ${screen.dataFields.size}, efficient: $useEfficientLayouts"
+            "Flushing: profile=${profile.name}, screen=${screen.id}, fields=${screen.dataFields.size}, cfgSaved=${layoutService.isProfileSaved(profile.id)}"
         )
 
         if (useEfficientLayouts && layoutService.isProfileSaved(profile.id)) {
@@ -1008,21 +1003,14 @@ class KarooActiveLookBridge(context: Context) {
             return
         }
 
-        Log.i(TAG, "✅ Starting simulator (debug values)")
+        Log.i(TAG, "✅ Starting simulator (profile-aware)")
         simulatorJob = scope.launch {
-            var counter = 0
+            var tick = 0
             Log.i(TAG, "🔁 Simulator coroutine loop started")
             while (true) {
-                counter++
-                Log.d(TAG, "📊 Simulator tick $counter")
-                setSimulatedMetrics(
-                    speed = "${20 + (counter % 20)} km/h",
-                    heartRate = "${140 + (counter % 30)} bpm",
-                    cadence = "${80 + (counter % 20)} rpm",
-                    power = "${200 + (counter % 100)} w",
-                    distance = "${counter / 10}.${counter % 10} km",
-                    time = formatSimulatedTime(counter * 2)
-                )
+                tick++
+                Log.d(TAG, "📊 Simulator tick $tick (profile: ${activeProfile?.name ?: "none"})")
+                pushSimulatedFrame(tick)
                 delay(2000)
             }
         }
@@ -1039,29 +1027,118 @@ class KarooActiveLookBridge(context: Context) {
     }
 
     /**
-     * Push a single set of simulated metric strings. This marks the frame dirty and flushes.
+     * Simulate one frame: populate every field that appears in the active profile,
+     * then flush to the glasses.  Falls back to the 6 core fields when no profile is set.
      */
-    fun setSimulatedMetrics(
-        speed: String,
-        heartRate: String,
-        cadence: String,
-        power: String,
-        distance: String,
-        time: String
-    ) {
-        Log.v(TAG, "setSimulatedMetrics: SPD=$speed, HR=$heartRate, PWR=$power")
-        currentData.speed = speed
-        currentData.heartRate = heartRate
-        currentData.cadence = cadence
-        currentData.power = power
-        currentData.distance = distance
-        currentData.time = time
-        currentData.isDirty = true
+    private fun pushSimulatedFrame(tick: Int) {
+        val fieldIds = activeProfile
+            ?.screens
+            ?.flatMap { it.dataFields }
+            ?.map { it.dataField.id }
+            ?.distinct()
+            ?.takeIf { it.isNotEmpty() }
+            ?: listOf(1, 2, 4, 7, 12, 18) // fallback: time, distance, HR, power, speed, cadence
 
-        Log.v(TAG, "Calling flushToGlasses() from simulator")
-        // Flush immediately (still respects internal throttling), so simulator works even when
-        // Karoo isn't connected and the normal 1Hz streaming job isn't running.
+        for (id in fieldIds) {
+            applySimulatedValue(id, tick)
+        }
+        currentData.isDirty = true
         flushToGlasses()
+    }
+
+    /** Write one simulated value into [currentData] for [id]. */
+    @Suppress("ComplexMethod")
+    private fun applySimulatedValue(id: Int, t: Int) {
+        when (id) {
+            // ── General ──────────────────────────────────────────────────
+            1  -> currentData.time          = formatSimulatedTime(t * 2)
+            2  -> currentData.distance      = "${t / 10}.${t % 10} km"
+            53 -> currentData.clockTime     = String.format(java.util.Locale.ROOT, "14:%02d", t % 60)
+            54 -> currentData.temperature   = "${18 + t % 10} °C"
+            55 -> currentData.batteryPercent= "${80 - t % 30}%"
+            56 -> currentData.rideTime      = formatSimulatedTime(t * 2)
+            // ── Heart Rate ───────────────────────────────────────────────
+            4  -> currentData.heartRate     = "${140 + t % 30}"
+            5  -> currentData.maxHeartRate  = "175"
+            6  -> currentData.avgHeartRate  = "145"
+            47 -> currentData.hrZone        = "Z${2 + (t / 10) % 3}"
+            57 -> currentData.percentMaxHr  = "${75 + t % 15}%"
+            58 -> currentData.percentHrr    = "${65 + t % 20}%"
+            // ── Power ────────────────────────────────────────────────────
+            7  -> currentData.power         = "${200 + t % 100}"
+            8  -> currentData.maxPower      = "450"
+            9  -> currentData.avgPower      = "210"
+            10 -> currentData.power3s       = "${195 + t % 80}"
+            48 -> currentData.powerZone     = "Z${2 + (t / 15) % 4}"
+            59 -> currentData.power5s       = "${198 + t % 90}"
+            60 -> currentData.power10s      = "${205 + t % 70}"
+            61 -> currentData.power30s      = "${210 + t % 50}"
+            62 -> currentData.normalizedPower= "${215 + t % 40}"
+            63 -> currentData.percentFtp    = "${85 + t % 30}%"
+            64 -> currentData.intensityFactor= String.format(java.util.Locale.ROOT, "%.2f", 0.85 + (t % 15) * 0.01)
+            65 -> currentData.tss           = "${50 + t * 2}"
+            66 -> currentData.wPerKg        = String.format(java.util.Locale.ROOT, "%.1f", 3.2 + (t % 10) * 0.1)
+            // ── Speed ────────────────────────────────────────────────────
+            12 -> currentData.speed         = "${25 + t % 15}"
+            13 -> currentData.maxSpeed      = "42"
+            14 -> currentData.avgSpeed      = "28"
+            70 -> currentData.speed3s       = "${24 + t % 12}"
+            // ── Cadence ──────────────────────────────────────────────────
+            18 -> currentData.cadence       = "${85 + t % 20}"
+            19 -> currentData.maxCadence    = "102"
+            20 -> currentData.avgCadence    = "88"
+            71 -> currentData.cadence3s     = "${83 + t % 18}"
+            // ── Energy ───────────────────────────────────────────────────
+            67 -> currentData.energyOutput  = "${200 + t * 5} kJ"
+            68 -> currentData.calories      = "${150 + t * 3}"
+            69 -> currentData.caloriesPerHour= "${600 + t % 200}"
+            // ── Climbing ─────────────────────────────────────────────────
+            24 -> currentData.vam           = "${800 + t % 400}"
+            25 -> currentData.avgVam        = "650"
+            // ── Elevation ────────────────────────────────────────────────
+            72 -> currentData.elevationGrade= "${-2 + t % 8}%"
+            73 -> currentData.elevationGain = "${100 + t * 2} m"
+            74 -> currentData.elevationLoss = "${30 + t} m"
+            75 -> currentData.altitude      = "${250 + t * 3} m"
+            76 -> currentData.vam30s        = "${700 + t % 300}"
+            // ── Lap ──────────────────────────────────────────────────────
+            77 -> currentData.lapNumber     = "${1 + t / 30}"
+            78 -> currentData.lapTime       = formatSimulatedTime(t * 2 % 3600)
+            79 -> currentData.lapDistance   = String.format(java.util.Locale.ROOT, "%.1f km", (t % 50) * 0.1 + 0.1)
+            80 -> currentData.lapSpeed      = "${26 + t % 10}"
+            81 -> currentData.lapHr         = "${138 + t % 25}"
+            82 -> currentData.lapPower      = "${205 + t % 80}"
+            83 -> currentData.lapNp         = "${210 + t % 70}"
+            84 -> currentData.lapCadence    = "${87 + t % 15}"
+            85 -> currentData.lapAscent     = "${20 + t % 80} m"
+            // ── Last Lap ─────────────────────────────────────────────────
+            86 -> currentData.lastLapTime   = "00:45:12"
+            87 -> currentData.lastLapDistance= "22.5 km"
+            88 -> currentData.lastLapSpeed  = "29"
+            89 -> currentData.lastLapHr     = "142"
+            90 -> currentData.lastLapPower  = "215"
+            91 -> currentData.lastLapNp     = "220"
+            // ── Radar ────────────────────────────────────────────────────
+            50 -> currentData.radarThreatLevel  = "${t % 3}"
+            51 -> currentData.radarTargetCount  = "${1 + t % 4}"
+            52 -> currentData.radarClosestRange = "${15 + t % 50} m"
+            // ── Shifting ─────────────────────────────────────────────────
+            92 -> currentData.shiftingFrontGear = "3/3"
+            93 -> currentData.shiftingRearGear  = "${1 + t % 11}/11"
+            94 -> currentData.shiftingBattery   = "${85 - t % 20}%"
+            95 -> currentData.shiftingCount     = "${t * 3}"
+            // ── Navigation ───────────────────────────────────────────────
+            96 -> currentData.distanceToTurn= "${(2000 - t * 10).coerceAtLeast(0)} m"
+            97 -> currentData.distanceToDest= String.format(java.util.Locale.ROOT, "%.1f km", (50.0 - t * 0.1).coerceAtLeast(0.0))
+            98 -> currentData.timeOfArrival = "15:30"
+            99 -> currentData.timeToDest    = formatSimulatedTime((5400 - t * 2).coerceAtLeast(0))
+            100-> currentData.heading       = listOf("N","NE","E","SE","S","SW","W","NW")[t % 8]
+            // ── eBike ────────────────────────────────────────────────────
+            101-> currentData.levBattery    = "${80 - t % 30}%"
+            102-> currentData.levRange      = "${(60 - t).coerceAtLeast(0)} km"
+            103-> currentData.levAssistMode = listOf("OFF","ECO","TRAIL","BOOST")[t % 4]
+            104-> currentData.levMotorPower = "${80 + t % 120} w"
+        }
     }
 
     private fun formatSimulatedTime(seconds: Int): String {
@@ -1131,31 +1208,6 @@ class KarooActiveLookBridge(context: Context) {
     /**
      * Initialize gauges for all fields in the profile that use gauge visualization
      */
-    private suspend fun initializeGauges(profile: com.kema.k2look.model.DataFieldProfile): Boolean {
-        var allSuccess = true
-
-        profile.screens.forEach { screen ->
-            screen.dataFields.forEach { field ->
-                when (field.visualizationType ?: VisualizationType.TEXT) {
-                    com.kema.k2look.model.VisualizationType.GAUGE -> {
-                        field.gauge?.let { gauge ->
-                            val success = activeLookService.saveGauge(gauge)
-                            if (!success) {
-                                Log.w(TAG, "Failed to save gauge for ${field.dataField.name}")
-                                allSuccess = false
-                            }
-                        }
-                    }
-
-                    else -> {
-                        // TEXT, BAR, ZONED_BAR don't need pre-initialization
-                    }
-                }
-            }
-        }
-
-        return allSuccess
-    }
 
     /**
      * Update visualization (gauge or bar) with current metric value

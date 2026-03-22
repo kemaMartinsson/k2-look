@@ -1,135 +1,238 @@
 package com.kema.k2look.service
 
 import android.util.Log
+import com.activelook.activelooksdk.Glasses
+import com.activelook.activelooksdk.types.ConfigurationDescription
+import com.activelook.activelooksdk.types.FreeSpace
 import com.kema.k2look.layout.ActiveLookLayout
-import com.kema.k2look.layout.ActiveLookLayoutEncoder
 import com.kema.k2look.layout.LayoutBuilder
 import com.kema.k2look.model.DataFieldProfile
+import com.kema.k2look.model.VisualizationType
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.coroutines.resume
 
 /**
- * Service for managing ActiveLook layouts with persistent storage
+ * Service for managing ActiveLook layouts with persistent configuration storage.
  *
- * Phase 4.2: Implements efficient layout system using layoutSave/layoutDisplay
+ * Each K2Look [DataFieldProfile] is stored as a named **configuration** on the glasses
+ * (cfgWrite / layoutSave / gaugeSave).  Switching between already-saved profiles is a
+ * single `cfgSet` command — no BLE re-upload required.
  *
- * Benefits:
- * - 80% less BLE traffic (3 commands vs 12 per update)
- * - 50% better battery life on glasses
- * - Persistent layouts (survive power cycles)
- * - Instant profile switching
+ * Fast-path logic:
+ *   - On connection: [refreshConfigCache] reads the glasses' config list once.
+ *   - On [saveAndActivateProfile]: if the cached version matches profile.modifiedAt, just cfgSet.
+ *   - Otherwise: cfgWrite + layoutSave + gaugeSave + cfgSet, then update cache.
  */
 class ActiveLookLayoutService(
     private val activeLookService: ActiveLookService
 ) {
 
     private val layoutBuilder = LayoutBuilder()
-    private val layoutEncoder = ActiveLookLayoutEncoder()
 
-    // Track which profile is currently saved in glasses
-    private var savedProfileId: String? = null
-    private var savedScreenId: Int? = null
+    /**
+     * In-memory cache: configName → version stored on glasses.
+     * Populated by [refreshConfigCache] on every connection.
+     */
+    private val configVersionCache = mutableMapOf<String, Long>()
 
     companion object {
         private const val TAG = "ActiveLookLayoutService"
 
-        // Layout ID allocation
-        // 0-9: Reserved by ActiveLook
-        // 10-99: Custom layouts (zone-based)
         const val LAYOUT_ID_BASE = 10
-
-        // Configuration name prefix
-        const val CFG_PREFIX = "K2LOOK_"
-
-        // Delay between layout save commands (to avoid overwhelming glasses)
+        const val CFG_PREFIX = "K2L"          // 3 chars — leaves 9 chars for profile hash
         const val COMMAND_DELAY_MS = 100L
+        private const val FREE_SPACE_TIMEOUT_MS = 5_000L
+        private const val CFG_LIST_TIMEOUT_MS   = 5_000L
+        private const val MAX_USER_CONFIGS       = 12
+        private const val MIN_FREE_SPACE_PERCENT = 10
 
-        /**
-         * Map zone ID to layout ID
-         * Each zone gets a unique layout ID starting from LAYOUT_ID_BASE
-         */
         private val zoneToLayoutId = mutableMapOf<String, Int>()
         private var nextLayoutId = LAYOUT_ID_BASE
 
-        fun getLayoutIdForZone(zoneId: String): Int {
-            return zoneToLayoutId.getOrPut(zoneId) {
-                val id = nextLayoutId
-                nextLayoutId++
-                Log.d(TAG, "Assigned layout ID $id to zone $zoneId")
-                id
+        fun getLayoutIdForZone(zoneId: String): Int =
+            zoneToLayoutId.getOrPut(zoneId) { nextLayoutId++ }
+
+        /**
+         * Stable 12-char config name derived from [profileId].
+         * Format: "K2L" + first 9 hex chars of UUID (without dashes).
+         */
+        fun configNameFor(profileId: String): String {
+            val hex = profileId.replace("-", "").take(9).uppercase()
+            return "$CFG_PREFIX$hex"
+        }
+
+        /**
+         * Lower 32 bits of [DataFieldProfile.modifiedAt] used as the cfgWrite version.
+         * Changes whenever the profile is edited, driving the stale-check.
+         */
+        fun versionFor(profile: DataFieldProfile): Long =
+            profile.modifiedAt and 0xFFFF_FFFFL
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Public API
+    // ──────────────────────────────────────────────────────────────────────
+
+    /**
+     * Main entry point called by [KarooActiveLookBridge] on every profile activation.
+     *
+     * Fast path  (version match) → single `cfgSet` command.
+     * Slow path  (new / modified) → cfgWrite + layoutSave + gaugeSave + cfgSet.
+     */
+    suspend fun saveAndActivateProfile(profile: DataFieldProfile): Boolean {
+        if (!activeLookService.isConnected) {
+            Log.w(TAG, "Cannot activate profile: glasses not connected")
+            return false
+        }
+        val glasses = activeLookService.getConnectedGlasses() ?: return false
+
+        val configName = configNameFor(profile.id)
+        val version    = versionFor(profile)
+
+        // ── Fast path ──────────────────────────────────────────────────────
+        if (configVersionCache[configName] == version) {
+            Log.i(TAG, "✅ Config '$configName' up-to-date → cfgSet only")
+            glasses.cfgSet(configName)
+            return true
+        }
+
+        Log.i(TAG, "📤 Uploading config '$configName' (v=$version) to glasses…")
+
+        // ── Guard: free space ──────────────────────────────────────────────
+        val freeSpace = withTimeoutOrNull(FREE_SPACE_TIMEOUT_MS) { cfgFreeSpaceAsync(glasses) }
+        if (freeSpace != null) {
+            val freePct = freeSpace.freeSpace * 100 / freeSpace.totalSize.coerceAtLeast(1)
+            Log.d(TAG, "Flash free space: ${freeSpace.freeSpace}B / ${freeSpace.totalSize}B ($freePct%)")
+            if (freePct < MIN_FREE_SPACE_PERCENT) {
+                Log.w(TAG, "⚠️ Low flash ($freePct%) — evicting least-used config")
+                glasses.cfgDeleteLessUsed()
+                delay(1000)
             }
+        }
+
+        // ── Guard: config count ────────────────────────────────────────────
+        val nbConfigs = withTimeoutOrNull(3_000L) { cfgGetNbAsync(glasses) } ?: 0
+        if (nbConfigs >= MAX_USER_CONFIGS) {
+            Log.w(TAG, "⚠️ At config limit ($nbConfigs) — evicting least-used config")
+            glasses.cfgDeleteLessUsed()
+            delay(1000)
+        }
+
+        // ── Open config for writing ────────────────────────────────────────
+        glasses.cfgWrite(configName, version.toInt(), 0)
+        delay(COMMAND_DELAY_MS * 2)
+
+        // ── Save layouts (for first screen) ───────────────────────────────
+        val layoutsOk = saveProfileLayouts(profile)
+
+        // ── Save gauges ────────────────────────────────────────────────────
+        saveProfileGauges(profile)
+
+        // ── Activate the config ────────────────────────────────────────────
+        glasses.cfgSet(configName)
+        delay(COMMAND_DELAY_MS)
+
+        if (layoutsOk) {
+            configVersionCache[configName] = version
+            Log.i(TAG, "✅ Config '$configName' saved and activated")
+        } else {
+            Log.w(TAG, "⚠️ Config '$configName' partially saved (some layouts failed)")
+        }
+        return layoutsOk
+    }
+
+    /**
+     * Populate [configVersionCache] by reading the config list from the glasses.
+     * Call this once after every connection.
+     */
+    suspend fun refreshConfigCache() {
+        val glasses = activeLookService.getConnectedGlasses() ?: run {
+            Log.w(TAG, "refreshConfigCache: glasses not connected")
+            return
+        }
+        try {
+            val configs = withTimeoutOrNull(CFG_LIST_TIMEOUT_MS) { cfgListAsync(glasses) }
+            if (configs == null) {
+                Log.w(TAG, "cfgList timed out — config cache not refreshed")
+                return
+            }
+            configVersionCache.clear()
+            configs
+                .filter { !it.isSystem && it.name.startsWith(CFG_PREFIX) }
+                .forEach { configVersionCache[it.name] = it.version }
+            Log.i(TAG, "📋 Config cache refreshed: ${configVersionCache.size} K2Look config(s) on glasses: ${configVersionCache.keys}")
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not refresh config cache: ${e.message}")
         }
     }
 
     /**
-     * Save a complete profile's layouts to glasses memory
-     * This is done once when profile is selected/modified
+     * Invalidate a profile's entry in the local cache.
+     * Call this when a profile is modified so the next activation triggers a re-upload.
      */
-    suspend fun saveProfileLayouts(profile: DataFieldProfile): Boolean {
-        if (!activeLookService.isConnected) {
-            Log.w(TAG, "Cannot save layouts: No glasses connected")
-            return false
-        }
+    fun invalidateConfig(profileId: String) {
+        val name = configNameFor(profileId)
+        configVersionCache.remove(name)
+        Log.d(TAG, "Invalidated config cache for '$name'")
+    }
 
-        Log.i(TAG, "📋 Saving profile '${profile.name}' layouts to glasses...")
-
+    /**
+     * Display a field value using a pre-saved layout (called at 1 Hz during rides).
+     */
+    fun displayFieldValue(zoneId: String, value: String) {
+        if (!activeLookService.isConnected) return
+        val glasses = activeLookService.getConnectedGlasses() ?: return
+        val layoutId = getLayoutIdForZone(zoneId)
         try {
-            val screen = profile.screens.firstOrNull()
-            if (screen == null) {
-                Log.w(TAG, "Profile has no screens, nothing to save")
-                return false
+            glasses.layoutDisplay(layoutId.toByte(), value)
+            Log.v(TAG, "Layout $layoutId (zone $zoneId): '$value'")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error displaying layout $layoutId: ${e.message}", e)
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Private helpers
+    // ──────────────────────────────────────────────────────────────────────
+
+    /** Save layout definitions for the first screen of [profile]. */
+    private suspend fun saveProfileLayouts(profile: DataFieldProfile): Boolean {
+        val glasses = activeLookService.getConnectedGlasses() ?: return false
+        val screen  = profile.screens.firstOrNull() ?: return false
+
+        val screenLayouts = layoutBuilder.buildScreenLayouts(LAYOUT_ID_BASE, screen)
+        var saved = 0
+        screenLayouts.forEach { (zoneId, layout) ->
+            val id = getLayoutIdForZone(zoneId)
+            val corrected = layout.copy(layoutId = id)
+            if (saveLayout(glasses, corrected)) {
+                saved++
+                delay(COMMAND_DELAY_MS)
             }
+        }
+        val expected = screen.dataFields.size
+        Log.i(TAG, "Layouts saved: $saved / $expected")
+        return saved == expected
+    }
 
-            val glasses = activeLookService.getConnectedGlasses()
-            if (glasses == null) {
-                Log.w(TAG, "Glasses not available")
-                return false
-            }
-
-            // Build and save layouts for each field in the screen
-            val screenLayouts = layoutBuilder.buildScreenLayouts(LAYOUT_ID_BASE, screen)
-            var savedCount = 0
-
-            screenLayouts.forEach { (zoneId, layout) ->
-                val layoutId = getLayoutIdForZone(zoneId)
-                val layoutWithCorrectId = layout.copy(layoutId = layoutId)
-
-                if (saveLayout(glasses, layoutWithCorrectId)) {
-                    savedCount++
-                    delay(COMMAND_DELAY_MS)
+    /** Save gauge definitions for every gauge field across all screens of [profile]. */
+    private suspend fun saveProfileGauges(profile: DataFieldProfile) {
+        profile.screens.forEach { screen ->
+            screen.dataFields.forEach { field ->
+                if ((field.visualizationType ?: VisualizationType.TEXT) == VisualizationType.GAUGE) {
+                    field.gauge?.let { gauge ->
+                        activeLookService.saveGauge(gauge)
+                        delay(COMMAND_DELAY_MS)
+                    }
                 }
             }
-
-            val expectedCount = screen.dataFields.size
-            if (savedCount == expectedCount) {
-                savedProfileId = profile.id
-                savedScreenId = screen.id
-                Log.i(
-                    TAG,
-                    "✅ Successfully saved all $savedCount layouts for profile '${profile.name}'"
-                )
-                return true
-            } else {
-                Log.w(TAG, "⚠️ Only saved $savedCount/$expectedCount layouts")
-                return false
-            }
-
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ Error saving profile layouts: ${e.message}", e)
-            return false
         }
     }
 
-    /**
-     * Save a single layout to glasses memory
-     */
-    private fun saveLayout(
-        glasses: com.activelook.activelooksdk.Glasses,
-        layout: ActiveLookLayout
-    ): Boolean {
+    private fun saveLayout(glasses: Glasses, layout: ActiveLookLayout): Boolean {
         return try {
-            Log.d(TAG, "Converting layout ${layout.layoutId} to LayoutParameters...")
-
-            // Convert our ActiveLookLayout to SDK's LayoutParameters
             val layoutParams = com.activelook.activelooksdk.types.LayoutParameters(
                 layout.layoutId.toByte(),
                 layout.clippingRegion.x.toShort(),
@@ -139,68 +242,27 @@ class ActiveLookLayoutService(
                 layout.foreColor.toByte(),
                 layout.backColor.toByte(),
                 layout.font.toByte(),
-                true, // textValid
+                true,
                 layout.textConfig.x.toShort(),
                 layout.textConfig.y.toByte(),
                 com.activelook.activelooksdk.types.Rotation.TOP_LR,
                 layout.textConfig.opacity
             )
-
-            // Add sub-commands (icons, labels, lines)
             layout.additionalCommands.forEach { cmd ->
                 when (cmd) {
-                    is com.kema.k2look.layout.GraphicCommand.Image -> {
-                        layoutParams.addSubCommandBitmap(
-                            cmd.id.toByte(),
-                            cmd.x.toShort(),
-                            cmd.y.toShort()
-                        )
-                    }
-
-                    is com.kema.k2look.layout.GraphicCommand.Text -> {
-                        layoutParams.addSubCommandText(
-                            cmd.x.toShort(),
-                            cmd.y.toShort(),
-                            cmd.text
-                        )
-                    }
-
-                    is com.kema.k2look.layout.GraphicCommand.Line -> {
-                        layoutParams.addSubCommandLine(
-                            cmd.x0.toShort(),
-                            cmd.y0.toShort(),
-                            cmd.x1.toShort(),
-                            cmd.y1.toShort()
-                        )
-                    }
-
-                    is com.kema.k2look.layout.GraphicCommand.Circle -> {
-                        layoutParams.addSubCommandCirc(
-                            cmd.x.toShort(),
-                            cmd.y.toShort(),
-                            cmd.radius.toShort()
-                        )
-                    }
-
-                    is com.kema.k2look.layout.GraphicCommand.Rect -> {
-                        layoutParams.addSubCommandRect(
-                            cmd.x0.toShort(),
-                            cmd.y0.toShort(),
-                            cmd.x1.toShort(),
-                            cmd.y1.toShort()
-                        )
-                    }
+                    is com.kema.k2look.layout.GraphicCommand.Image ->
+                        layoutParams.addSubCommandBitmap(cmd.id.toByte(), cmd.x.toShort(), cmd.y.toShort())
+                    is com.kema.k2look.layout.GraphicCommand.Text  ->
+                        layoutParams.addSubCommandText(cmd.x.toShort(), cmd.y.toShort(), cmd.text)
+                    is com.kema.k2look.layout.GraphicCommand.Line  ->
+                        layoutParams.addSubCommandLine(cmd.x0.toShort(), cmd.y0.toShort(), cmd.x1.toShort(), cmd.y1.toShort())
+                    is com.kema.k2look.layout.GraphicCommand.Circle ->
+                        layoutParams.addSubCommandCirc(cmd.x.toShort(), cmd.y.toShort(), cmd.radius.toShort())
+                    is com.kema.k2look.layout.GraphicCommand.Rect  ->
+                        layoutParams.addSubCommandRect(cmd.x0.toShort(), cmd.y0.toShort(), cmd.x1.toShort(), cmd.y1.toShort())
                 }
             }
-
-            Log.d(
-                TAG,
-                "Saving layout ${layout.layoutId} with ${layout.additionalCommands.size} sub-commands"
-            )
-
-            // Send layoutSave command
             glasses.layoutSave(layoutParams)
-
             Log.d(TAG, "✓ Layout ${layout.layoutId} saved")
             true
         } catch (e: Exception) {
@@ -209,112 +271,40 @@ class ActiveLookLayoutService(
         }
     }
 
-    /**
-     * Display a field value using pre-saved layout
-     * This is called at 1Hz during rides - much more efficient than Phase 4.1
-     */
-    fun displayFieldValue(zoneId: String, value: String) {
-        if (!activeLookService.isConnected) {
-            Log.v(TAG, "Cannot display: No glasses connected")
-            return
+    // ──────────────────────────────────────────────────────────────────────
+    // Coroutine wrappers for callback-based SDK calls
+    // ──────────────────────────────────────────────────────────────────────
+
+    private suspend fun cfgFreeSpaceAsync(glasses: Glasses): FreeSpace =
+        suspendCancellableCoroutine { cont ->
+            glasses.cfgFreeSpace { fs -> if (cont.isActive) cont.resume(fs) }
         }
 
-        val glasses = activeLookService.getConnectedGlasses() ?: return
-        val layoutId = getLayoutIdForZone(zoneId)
-
-        try {
-            // Single command updates the entire field display!
-            glasses.layoutDisplay(layoutId.toByte(), value)
-            Log.v(TAG, "Layout $layoutId (zone $zoneId): '$value'")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error displaying layout $layoutId: ${e.message}", e)
-        }
-    }
-
-    /**
-     * Clear all custom layouts from glasses
-     */
-    suspend fun clearLayouts() {
-        if (!activeLookService.isConnected) {
-            Log.w(TAG, "Cannot clear layouts: No glasses connected")
-            return
+    private suspend fun cfgGetNbAsync(glasses: Glasses): Int =
+        suspendCancellableCoroutine { cont ->
+            glasses.cfgGetNb { nb -> if (cont.isActive) cont.resume(nb) }
         }
 
-        val glasses = activeLookService.getConnectedGlasses() ?: return
-
-        try {
-            Log.i(TAG, "Clearing layouts...")
-
-            // Delete all our custom zone-based layouts
-            zoneToLayoutId.values.forEach { layoutId ->
-                try {
-                    glasses.layoutDelete(layoutId.toByte())
-                    delay(COMMAND_DELAY_MS)
-                    Log.d(TAG, "Deleted layout $layoutId")
-                } catch (e: Exception) {
-                    Log.w(TAG, "Failed to delete layout $layoutId: ${e.message}")
-                }
-            }
-
-            // Clear our zone mapping
-            zoneToLayoutId.clear()
-            nextLayoutId = LAYOUT_ID_BASE
-
-            savedProfileId = null
-            savedScreenId = null
-
-            Log.i(TAG, "✓ Layouts cleared")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error clearing layouts: ${e.message}", e)
-        }
-    }
-
-    /**
-     * Check if a profile is currently saved in glasses
-     */
-    fun isProfileSaved(profileId: String): Boolean {
-        return savedProfileId == profileId
-    }
-
-    /**
-     * Get currently saved profile ID
-     */
-    fun getSavedProfileId(): String? = savedProfileId
-
-    /**
-     * Save configuration to glasses (persistent across power cycles)
-     * This is advanced - can be implemented later
-     */
-    suspend fun saveConfiguration(profile: DataFieldProfile): Boolean {
-        // Future: cfgWrite for persistent storage across power cycles
-        // See docs/Future-Updates.md
-        Log.i(TAG, "Configuration persistence not yet implemented")
-        return false
-    }
-
-    /**
-     * Load configuration from glasses
-     */
-    suspend fun loadConfiguration(profileId: String): Boolean {
-        // Future: cfgSet to load saved configuration
-        // See docs/Future-Updates.md
-        Log.i(TAG, "Configuration loading not yet implemented")
-        return false
-    }
-
-    /**
-     * Verify layouts are still in glasses memory
-     * Useful after reconnection
-     */
-    suspend fun verifyLayouts(): Boolean {
-        if (!activeLookService.isConnected) {
-            return false
+    private suspend fun cfgListAsync(glasses: Glasses): List<ConfigurationDescription> =
+        suspendCancellableCoroutine { cont ->
+            glasses.cfgList { list -> if (cont.isActive) cont.resume(list) }
         }
 
-        // Future: Query glasses for layout list and verify our IDs exist
-        // For now, re-save on reconnection is the safe approach
-        Log.d(TAG, "Layout verification not implemented - will re-save on reconnection")
-        return false
+    // ──────────────────────────────────────────────────────────────────────
+    // Legacy / compatibility
+    // ──────────────────────────────────────────────────────────────────────
+
+    fun isProfileSaved(profileId: String): Boolean =
+        configVersionCache.containsKey(configNameFor(profileId))
+
+    /**
+     * Clear local layout ID mappings and the config version cache.
+     * Called on disconnect to force a full re-sync on next connection.
+     */
+    fun clearLayouts() {
+        configVersionCache.clear()
+        zoneToLayoutId.clear()
+        nextLayoutId = LAYOUT_ID_BASE
+        Log.i(TAG, "Layout cache cleared")
     }
 }
-

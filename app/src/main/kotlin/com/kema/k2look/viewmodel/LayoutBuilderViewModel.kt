@@ -390,6 +390,9 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
         viewModelScope.launch {
             try {
                 repository.saveProfile(profile)
+                // Invalidate cached config on glasses so next activation re-uploads
+                bridge?.invalidateProfileConfig(profile.id)
+
                 val allProfiles = reloadAllProfiles()
                 val updatedActiveProfile = allProfiles.find { it.id == profile.id } ?: profile
 
