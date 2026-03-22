@@ -1,10 +1,8 @@
 package com.kema.k2look.service
 
 import android.content.Context
-import android.graphics.Point
 import android.util.Log
 import com.activelook.activelooksdk.DiscoveredGlasses
-import com.activelook.activelooksdk.types.Rotation
 import com.kema.k2look.model.VisualizationType
 import com.kema.k2look.util.PreferencesManager
 import io.hammerhead.karooext.models.DataType
@@ -59,10 +57,6 @@ class KarooActiveLookBridge(context: Context) {
 
     // Currently displayed screen ID (updated by gesture cycling / profile selection)
     private var activeScreenId: Int? = null
-
-    // Use efficient layout system (layoutSave/layoutDisplay vs individual txt commands)
-    // Reduces BLE traffic by 80% and improves battery life by 50%
-    private var useEfficientLayouts = true // Can be toggled for testing/fallback
 
     // Auto profile switching on ride start
     private var hasAutoSwitchedProfile = false  // Track if we've auto-switched this ride
@@ -139,22 +133,6 @@ class KarooActiveLookBridge(context: Context) {
     fun invalidateProfileConfig(profileId: String) {
         layoutService.invalidateConfig(profileId)
     }
-
-    /**
-     * Toggle efficient layout mode (for testing/debugging)
-     */
-    fun setUseEfficientLayouts(enabled: Boolean) {
-        useEfficientLayouts = enabled
-        Log.i(
-            TAG,
-            "Efficient layouts: ${if (enabled) "ENABLED (80% less BLE traffic)" else "DISABLED (fallback mode)"}"
-        )
-    }
-
-    /**
-     * Check if efficient layout mode is active
-     */
-    fun isEfficientLayoutsEnabled(): Boolean = useEfficientLayouts
 
     /**
      * Callback to find K2Look profile by name
@@ -825,7 +803,6 @@ class KarooActiveLookBridge(context: Context) {
      * Flush accumulated data to ActiveLook glasses (hold/flush pattern)
      */
     private fun flushToGlasses() {
-        // Only update if data has changed
         if (!currentData.isDirty) {
             val now = System.currentTimeMillis()
             if (now - lastNoDataLogTimeMs >= noDataLogIntervalMs) {
@@ -835,7 +812,6 @@ class KarooActiveLookBridge(context: Context) {
             return
         }
 
-        // Throttle updates
         val currentTime = System.currentTimeMillis()
         if (currentTime - lastUpdateTime < updateIntervalMs) {
             Log.v(TAG, "Throttling update")
@@ -843,129 +819,53 @@ class KarooActiveLookBridge(context: Context) {
         }
 
         try {
-            // Clear display
-            activeLookService.clearDisplay()
-
-            // Use profile-based layout if available, otherwise fallback to legacy
             val profile = activeProfile
-            if (profile != null && profile.screens.isNotEmpty()) {
-                flushWithProfile(profile)
-            } else {
-                Log.v(TAG, "No active profile, using legacy hardcoded layout")
-                flushToGlassesLegacy()
+            if (profile == null || profile.screens.isEmpty()) {
+                Log.v(TAG, "No active profile — skipping flush")
+                return
             }
-
-            // Mark data as flushed
+            flushWithProfile(profile)
             currentData.isDirty = false
             lastUpdateTime = currentTime
-
             Log.d(TAG, "✓ Data flushed to glasses")
         } catch (e: Exception) {
             Log.e(TAG, "Error flushing data to glasses: ${e.message}", e)
         }
     }
 
-    /**
-     * Flush data using configured DataField profile
-     */
     private fun flushWithProfile(profile: com.kema.k2look.model.DataFieldProfile) {
-        // Use the currently selected screen index (driven by gesture cycling)
         val selectedScreenId = activeScreenId
         val screen = if (selectedScreenId != null)
             profile.screens.find { it.id == selectedScreenId } ?: profile.screens.first()
         else
             profile.screens.first()
 
-        Log.v(
-            TAG,
-            "Flushing: profile=${profile.name}, screen=${screen.id}, fields=${screen.dataFields.size}, cfgSaved=${layoutService.isProfileSaved(profile.id)}"
-        )
+        Log.v(TAG, "Flushing: profile=${profile.name}, screen=${screen.id}, fields=${screen.dataFields.size}")
 
-        if (useEfficientLayouts && layoutService.isProfileSaved(profile.id)) {
-            // Efficient mode: Use layoutDisplay (3 commands, 80% less traffic!)
+        if (layoutService.isProfileSaved(profile.id)) {
             flushWithEfficientMode(screen)
         } else {
-            // Basic mode: Use displayField (12 commands, works but less efficient)
-            flushWithBasicMode(screen)
+            // Profile not yet uploaded to glasses (e.g. still in cfgWrite) — skip this frame.
+            Log.d(TAG, "Profile '${profile.name}' not yet saved on glasses, skipping frame")
         }
     }
 
     private fun flushWithEfficientMode(screen: com.kema.k2look.model.LayoutScreen) {
-        screen.dataFields.forEach { field ->
-            val value = currentData.valueFor(field.dataField.id)
-            updateVisualization(field, value)
-        }
-    }
-
-    private fun flushWithBasicMode(screen: com.kema.k2look.model.LayoutScreen) {
-        val template = screen.getTemplate()
+        val fields = mutableMapOf<String, String>()
         screen.dataFields.forEach { field ->
             val value = currentData.valueFor(field.dataField.id)
             when (field.visualizationType ?: VisualizationType.TEXT) {
-                com.kema.k2look.model.VisualizationType.TEXT -> {
-                    val zone = template.zones.find { it.id == field.zoneId }
-                    if (zone == null) {
-                        Log.w(TAG, "Zone ${field.zoneId} not found in template ${template.id}")
-                        return@forEach
-                    }
-                    activeLookService.displayField(field, value, zone.y)
-                }
-                else -> updateVisualization(field, value)
+                com.kema.k2look.model.VisualizationType.TEXT ->
+                    fields[field.zoneId] = value
+                else ->
+                    updateVisualization(field, value)
             }
         }
-    }
-
-    private fun flushToGlassesLegacy() {
-        // Display layout (4 metrics in 2x2 grid with margins)
-        // Using 30px horizontal margins and 25px vertical margins
-        // ActiveLook display is typically 304x256 pixels
-        val leftX = 30
-        val rightX = 160
-        val topY = 30
-        val midY = 100
-        val bottomY = 170
-
-        val glasses = activeLookService.getConnectedGlasses()
-        if (glasses == null) {
-            Log.w(TAG, "No glasses connected during flush")
-            return
+        if (fields.isNotEmpty()) {
+            layoutService.displayAllFieldValues(fields)
         }
-
-        val rotation = Rotation.TOP_LR
-        val labelFont: Byte = 1 // Small font for labels
-        val valueFont: Byte = 3 // Large font for values
-        val color: Byte = 15 // White
-
-        // Top-left: Speed
-        glasses.txt(Point(leftX, topY), rotation, labelFont, color, "SPD")
-        glasses.txt(Point(leftX, topY + 15), rotation, valueFont, color, currentData.speed)
-
-        // Top-right: Heart Rate
-        glasses.txt(Point(rightX, topY), rotation, labelFont, color, "HR")
-        glasses.txt(Point(rightX, topY + 15), rotation, valueFont, color, currentData.heartRate)
-
-        // Mid-left: Power
-        glasses.txt(Point(leftX, midY), rotation, labelFont, color, "PWR")
-        glasses.txt(Point(leftX, midY + 15), rotation, valueFont, color, currentData.power)
-
-        // Mid-right: Cadence
-        glasses.txt(Point(rightX, midY), rotation, labelFont, color, "CAD")
-        glasses.txt(Point(rightX, midY + 15), rotation, valueFont, color, currentData.cadence)
-
-        // Bottom-left: Distance
-        glasses.txt(Point(leftX, bottomY), rotation, labelFont, color, "DIST")
-        glasses.txt(
-            Point(leftX, bottomY + 15),
-            rotation,
-            valueFont,
-            color,
-            currentData.distance
-        )
-
-        // Bottom-right: Time
-        glasses.txt(Point(rightX, bottomY), rotation, labelFont, color, "TIME")
-        glasses.txt(Point(rightX, bottomY + 15), rotation, valueFont, color, currentData.time)
     }
+
 
     // Formatter methods live in BridgeMetricFormatters.kt (package-level functions)
 
@@ -1214,22 +1114,10 @@ class KarooActiveLookBridge(context: Context) {
      */
     private fun updateVisualization(field: com.kema.k2look.model.LayoutDataField, value: String) {
         when (field.visualizationType ?: VisualizationType.TEXT) {
-            com.kema.k2look.model.VisualizationType.GAUGE -> {
-                updateGauge(field, value)
-            }
-
-            com.kema.k2look.model.VisualizationType.BAR -> {
-                updateProgressBar(field, value)
-            }
-
-            com.kema.k2look.model.VisualizationType.ZONED_BAR -> {
-                updateZonedBar(field, value)
-            }
-
-            com.kema.k2look.model.VisualizationType.TEXT -> {
-                // Text handled by existing displayFieldValue
-                layoutService.displayFieldValue(field.zoneId, value)
-            }
+            com.kema.k2look.model.VisualizationType.GAUGE      -> updateGauge(field, value)
+            com.kema.k2look.model.VisualizationType.BAR        -> updateProgressBar(field, value)
+            com.kema.k2look.model.VisualizationType.ZONED_BAR  -> updateZonedBar(field, value)
+            com.kema.k2look.model.VisualizationType.TEXT       -> { /* handled by batch in flushWithEfficientMode */ }
         }
     }
 

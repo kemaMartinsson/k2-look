@@ -55,12 +55,17 @@ class ActiveLookLayoutService(
             zoneToLayoutId.getOrPut(zoneId) { nextLayoutId++ }
 
         /**
-         * Stable 12-char config name derived from [profileId].
-         * Format: "K2L" + first 9 hex chars of UUID (without dashes).
+         * Stable 11-char config name derived from [profileId].
+         * Format: "K2L" (3) + CRC32 hash of profileId as 8 uppercase hex chars (8) = 11 chars.
+         * With NUL terminator = 12 bytes total, fitting the ActiveLook 12-byte field exactly.
+         *
+         * Uses CRC32 hash rather than truncation so that any two distinct profile IDs always
+         * produce distinct config names, regardless of shared prefixes.
          */
         fun configNameFor(profileId: String): String {
-            val hex = profileId.replace("-", "").take(9).uppercase()
-            return "$CFG_PREFIX$hex"
+            val crc = java.util.zip.CRC32().also { it.update(profileId.toByteArray()) }.value
+            val hash = String.format("%08X", crc)  // always exactly 8 uppercase hex chars
+            return "$CFG_PREFIX$hash"  // e.g. "K2LABCD1234" — 11 chars + NUL = 12 bytes ✓
         }
 
         /**
@@ -178,18 +183,29 @@ class ActiveLookLayoutService(
         Log.d(TAG, "Invalidated config cache for '$name'")
     }
 
+
     /**
-     * Display a field value using a pre-saved layout (called at 1 Hz during rides).
+     * Display all field values atomically using holdFlush to prevent flickering.
+     * [fields] maps zoneId → formatted value string.
+     * All layoutClearAndDisplay commands are batched between HOLD and FLUSH so the
+     * glasses update the entire screen in one shot.
      */
-    fun displayFieldValue(zoneId: String, value: String) {
+    fun displayAllFieldValues(fields: Map<String, String>) {
         if (!activeLookService.isConnected) return
         val glasses = activeLookService.getConnectedGlasses() ?: return
-        val layoutId = getLayoutIdForZone(zoneId)
         try {
-            glasses.layoutDisplay(layoutId.toByte(), value)
-            Log.v(TAG, "Layout $layoutId (zone $zoneId): '$value'")
+            glasses.holdFlush(com.activelook.activelooksdk.types.holdFlushAction.HOLD)
+            fields.forEach { (zoneId, value) ->
+                val layoutId = getLayoutIdForZone(zoneId)
+                glasses.layoutClearAndDisplay(layoutId.toByte(), value)
+                Log.v(TAG, "Layout $layoutId (zone $zoneId): '$value'")
+            }
+            glasses.holdFlush(com.activelook.activelooksdk.types.holdFlushAction.FLUSH)
         } catch (e: Exception) {
-            Log.e(TAG, "Error displaying layout $layoutId: ${e.message}", e)
+            Log.e(TAG, "Error in batch display: ${e.message}", e)
+            try {
+                glasses.holdFlush(com.activelook.activelooksdk.types.holdFlushAction.FLUSH)
+            } catch (_: Exception) {}
         }
     }
 

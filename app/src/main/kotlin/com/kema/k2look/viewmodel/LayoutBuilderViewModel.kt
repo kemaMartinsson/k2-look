@@ -76,12 +76,17 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
             profiles.isEmpty() -> {
                 val seed = SeedProfile.build()
                 repository.saveProfile(seed)
+                repository.markSeedMigrationRan()
                 listOf(seed)
             }
-            profiles.none { it.id == SeedProfile.SEED_PROFILE_ID } -> {
-                // Migration: user has custom profiles but the starter profile was never stored
+            // One-time migration: old install had the Default profile hardcoded (never stored).
+            // Only inject it if this migration hasn't run yet — otherwise the user deliberately
+            // deleted it and we must respect that.
+            profiles.none { it.id == SeedProfile.SEED_PROFILE_ID }
+                    && !repository.hasSeedMigrationRun() -> {
                 val seed = SeedProfile.build()
                 repository.saveProfile(seed)
+                repository.markSeedMigrationRan()
                 listOf(seed) + profiles
             }
             else -> profiles
