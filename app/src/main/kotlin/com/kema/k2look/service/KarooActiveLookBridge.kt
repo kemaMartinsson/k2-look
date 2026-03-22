@@ -143,7 +143,9 @@ class KarooActiveLookBridge(context: Context) {
         activeScreenId = profile.screens.firstOrNull()?.id
         Log.i(TAG, "📋 Active profile set: ${profile.name} (${profile.screens.size} screens), active screen: $activeScreenId")
 
-        // Save layouts and gauges to glasses for efficient updates
+        // Save layouts/gauges then flush to glasses — always when connected.
+        // When streaming this shows live values; when idle it shows "--" placeholders
+        // so the user gets immediate visual confirmation of their layout (Build & Send).
         if (activeLookService.isConnected) {
             scope.launch {
                 // Save text layouts (if using efficient mode)
@@ -162,13 +164,14 @@ class KarooActiveLookBridge(context: Context) {
                 if (gaugesSuccess) {
                     Log.i(TAG, "✅ Gauges initialized")
                 }
-            }
-        }
 
-        // If streaming, force immediate update with new layout
-        if (_bridgeState.value == BridgeState.Streaming) {
-            currentData.isDirty = true
-            flushToGlasses()
+                // Force a display update now that layouts are saved.
+                // flushWithProfile falls back to basic mode if efficient layouts aren't
+                // ready yet, so the ordering here is always safe.
+                currentData.isDirty = true
+                flushToGlasses()
+                Log.i(TAG, "✅ Display updated after profile apply")
+            }
         }
     }
 

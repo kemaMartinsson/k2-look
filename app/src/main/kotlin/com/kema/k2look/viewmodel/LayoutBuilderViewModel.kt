@@ -41,6 +41,7 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
         val selectedScreen: Int = 1,
         val isLoading: Boolean = false,
         val error: String? = null,
+        val successMessage: String? = null,
         val showProfileManagement: Boolean = false,
         val isGlassesConnected: Boolean = false,
         val activeRideProfile: RideProfile? = null,
@@ -234,6 +235,9 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
             val bridgeInstance = bridge
             if (bridgeInstance != null) {
                 bridgeInstance.setActiveProfile(targetProfile)
+                _uiState.value = _uiState.value.copy(
+                    successMessage = "Profile '${targetProfile.name}' sent to glasses ✓"
+                )
                 Log.i(TAG, "✅ Profile applied to bridge successfully")
             } else {
                 Log.w(TAG, "⚠️ Bridge not available, profile not applied to glasses")
@@ -717,6 +721,13 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
      */
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
+    }
+
+    /**
+     * Clear success message
+     */
+    fun clearSuccessMessage() {
+        _uiState.value = _uiState.value.copy(successMessage = null)
     }
 
     /**

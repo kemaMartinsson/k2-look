@@ -316,7 +316,7 @@ fun DataFieldBuilderTab(
                     enabled = uiState.isGlassesConnected && uiState.activeProfile != null
                 ) {
                     Text(
-                        if (uiState.isGlassesConnected) "Build & Send" else "Build & Send (glasses not connected)"
+                        if (uiState.isGlassesConnected) "Send to Glasses" else "Send to Glasses (not connected)"
                     )
                 }
             }
@@ -333,6 +333,22 @@ fun DataFieldBuilderTab(
                 }
             ) {
                 Text(error)
+            }
+        }
+
+        // Success message (e.g. after Build & Send)
+        uiState.successMessage?.let { msg ->
+            Snackbar(
+                modifier = Modifier.padding(8.dp),
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                action = {
+                    Button(onClick = { viewModel.clearSuccessMessage() }) {
+                        Text("OK")
+                    }
+                }
+            ) {
+                Text(msg)
             }
         }
     }
