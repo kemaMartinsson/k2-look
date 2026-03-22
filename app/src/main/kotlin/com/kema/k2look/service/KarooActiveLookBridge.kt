@@ -130,9 +130,84 @@ class KarooActiveLookBridge(context: Context) {
         var avgVam: String = "--",
 
         // Radar metrics
-        var radarThreatLevel: String = "--",   // Threat level integer (0 = clear, higher = threat)
-        var radarTargetCount: String = "--",   // Number of detected vehicles (0–8)
-        var radarClosestRange: String = "--",  // Distance to nearest vehicle in metres
+        var radarThreatLevel: String = "--",
+        var radarTargetCount: String = "--",
+        var radarClosestRange: String = "--",
+
+        // General additions
+        var clockTime: String = "--",
+        var temperature: String = "--",
+        var batteryPercent: String = "--",
+        var rideTime: String = "--",
+
+        // Heart Rate additions
+        var percentMaxHr: String = "--",
+        var percentHrr: String = "--",
+
+        // Power additions
+        var powerZone: String = "--",
+        var power5s: String = "--",
+        var power10s: String = "--",
+        var power30s: String = "--",
+        var normalizedPower: String = "--",
+        var percentFtp: String = "--",
+        var intensityFactor: String = "--",
+        var tss: String = "--",
+        var wPerKg: String = "--",
+
+        // Energy
+        var energyOutput: String = "--",
+        var calories: String = "--",
+        var caloriesPerHour: String = "--",
+
+        // Speed / Cadence additions
+        var speed3s: String = "--",
+        var cadence3s: String = "--",
+
+        // Elevation
+        var elevationGrade: String = "--",
+        var elevationGain: String = "--",
+        var elevationLoss: String = "--",
+        var altitude: String = "--",
+        var vam30s: String = "--",
+
+        // Lap
+        var lapNumber: String = "--",
+        var lapTime: String = "--",
+        var lapDistance: String = "--",
+        var lapSpeed: String = "--",
+        var lapHr: String = "--",
+        var lapPower: String = "--",
+        var lapNp: String = "--",
+        var lapCadence: String = "--",
+        var lapAscent: String = "--",
+
+        // Last Lap
+        var lastLapTime: String = "--",
+        var lastLapDistance: String = "--",
+        var lastLapSpeed: String = "--",
+        var lastLapHr: String = "--",
+        var lastLapPower: String = "--",
+        var lastLapNp: String = "--",
+
+        // Shifting
+        var shiftingFrontGear: String = "--",
+        var shiftingRearGear: String = "--",
+        var shiftingBattery: String = "--",
+        var shiftingCount: String = "--",
+
+        // Navigation
+        var distanceToTurn: String = "--",
+        var distanceToDest: String = "--",
+        var timeOfArrival: String = "--",
+        var timeToDest: String = "--",
+        var heading: String = "--",
+
+        // eBike
+        var levBattery: String = "--",
+        var levRange: String = "--",
+        var levAssistMode: String = "--",
+        var levMotorPower: String = "--",
 
         // State
         var rideState: RideState = RideState.Idle,
@@ -780,6 +855,104 @@ class KarooActiveLookBridge(context: Context) {
                 currentData.isDirty = true
             }
         }
+
+        // ── General additions ──────────────────────────────────────────────────
+        scope.launch { karooDataService.clockTimeData.collect      { currentData.clockTime       = formatClockTime(it);            currentData.isDirty = true } }
+        scope.launch { karooDataService.temperatureData.collect    { currentData.temperature     = formatStreamData(it, "°C");     currentData.isDirty = true } }
+        scope.launch { karooDataService.batteryPercentData.collect { currentData.batteryPercent  = formatPercent(it);              currentData.isDirty = true } }
+        scope.launch { karooDataService.rideTimeData.collect       { currentData.rideTime        = formatTimeData(it);             currentData.isDirty = true } }
+
+        // ── Heart Rate additions ───────────────────────────────────────────────
+        scope.launch { karooDataService.percentMaxHrData.collect   { currentData.percentMaxHr    = formatPercent(it);              currentData.isDirty = true } }
+        scope.launch { karooDataService.percentHrrData.collect     { currentData.percentHrr      = formatPercent(it);              currentData.isDirty = true } }
+
+        // ── Power additions ────────────────────────────────────────────────────
+        scope.launch { karooDataService.powerZoneData.collect      { currentData.powerZone       = formatZoneData(it, 7);          currentData.isDirty = true } }
+        scope.launch { karooDataService.smoothed5sPowerData.collect{ currentData.power5s         = formatStreamData(it, "w");      currentData.isDirty = true } }
+        scope.launch { karooDataService.smoothed10sPowerData.collect{currentData.power10s        = formatStreamData(it, "w");      currentData.isDirty = true } }
+        scope.launch { karooDataService.smoothed30sPowerData.collect{currentData.power30s        = formatStreamData(it, "w");      currentData.isDirty = true } }
+        scope.launch { karooDataService.normalizedPowerData.collect{ currentData.normalizedPower = formatStreamData(it, "w");      currentData.isDirty = true } }
+        scope.launch { karooDataService.percentFtpData.collect     { currentData.percentFtp      = formatPercent(it);              currentData.isDirty = true } }
+        scope.launch { karooDataService.intensityFactorData.collect{ currentData.intensityFactor = formatStreamData(it, "");       currentData.isDirty = true } }
+        scope.launch { karooDataService.trainingStressScoreData.collect{ currentData.tss         = formatStreamData(it, "");       currentData.isDirty = true } }
+        scope.launch { karooDataService.powerToWeightData.collect  { currentData.wPerKg          = formatStreamData(it, "w/kg");   currentData.isDirty = true } }
+
+        // ── Energy ────────────────────────────────────────────────────────────
+        scope.launch { karooDataService.energyOutputData.collect   { currentData.energyOutput    = formatStreamData(it, "kJ");     currentData.isDirty = true } }
+        scope.launch { karooDataService.caloriesData.collect       { currentData.calories        = formatStreamData(it, "kcal");   currentData.isDirty = true } }
+        scope.launch { karooDataService.caloriesPerHourData.collect{ currentData.caloriesPerHour = formatStreamData(it, "kcal/h"); currentData.isDirty = true } }
+
+        // ── Speed / Cadence additions ──────────────────────────────────────────
+        scope.launch { karooDataService.smoothed3sSpeedData.collect  { currentData.speed3s    = formatStreamData(it, "km/h"); currentData.isDirty = true } }
+        scope.launch { karooDataService.smoothed3sCadenceData.collect{ currentData.cadence3s  = formatStreamData(it, "rpm");  currentData.isDirty = true } }
+
+        // ── Elevation ─────────────────────────────────────────────────────────
+        scope.launch { karooDataService.elevationGradeData.collect { currentData.elevationGrade = formatGrade(it);                 currentData.isDirty = true } }
+        scope.launch { karooDataService.elevationGainData.collect  { currentData.elevationGain  = formatStreamData(it, "m");       currentData.isDirty = true } }
+        scope.launch { karooDataService.elevationLossData.collect  { currentData.elevationLoss  = formatStreamData(it, "m");       currentData.isDirty = true } }
+        scope.launch { karooDataService.altitudeData.collect       { currentData.altitude        = formatStreamData(it, "m");       currentData.isDirty = true } }
+        scope.launch { karooDataService.vam30sData.collect         { currentData.vam30s          = formatStreamData(it, "m/h");     currentData.isDirty = true } }
+
+        // ── Lap ───────────────────────────────────────────────────────────────
+        scope.launch { karooDataService.lapNumberData.collect   { currentData.lapNumber   = formatInteger(it);          currentData.isDirty = true } }
+        scope.launch { karooDataService.lapTimeData.collect     { currentData.lapTime     = formatLapTime(it);          currentData.isDirty = true } }
+        scope.launch { karooDataService.lapDistanceData.collect { currentData.lapDistance = formatStreamData(it, "km"); currentData.isDirty = true } }
+        scope.launch { karooDataService.lapSpeedData.collect    { currentData.lapSpeed    = formatStreamData(it, "km/h"); currentData.isDirty = true } }
+        scope.launch { karooDataService.lapHrData.collect       { currentData.lapHr       = formatStreamData(it, "bpm"); currentData.isDirty = true } }
+        scope.launch { karooDataService.lapPowerData.collect    { currentData.lapPower    = formatStreamData(it, "w");  currentData.isDirty = true } }
+        scope.launch { karooDataService.lapNpData.collect       { currentData.lapNp       = formatStreamData(it, "w");  currentData.isDirty = true } }
+        scope.launch { karooDataService.lapCadenceData.collect  { currentData.lapCadence  = formatStreamData(it, "rpm"); currentData.isDirty = true } }
+        scope.launch { karooDataService.lapAscentData.collect   { currentData.lapAscent   = formatStreamData(it, "m");  currentData.isDirty = true } }
+
+        // ── Last Lap ──────────────────────────────────────────────────────────
+        scope.launch { karooDataService.lastLapTimeData.collect     { currentData.lastLapTime     = formatLapTime(it);           currentData.isDirty = true } }
+        scope.launch { karooDataService.lastLapDistanceData.collect { currentData.lastLapDistance = formatStreamData(it, "km");  currentData.isDirty = true } }
+        scope.launch { karooDataService.lastLapSpeedData.collect    { currentData.lastLapSpeed    = formatStreamData(it, "km/h"); currentData.isDirty = true } }
+        scope.launch { karooDataService.lastLapHrData.collect       { currentData.lastLapHr       = formatStreamData(it, "bpm"); currentData.isDirty = true } }
+        scope.launch { karooDataService.lastLapPowerData.collect    { currentData.lastLapPower    = formatStreamData(it, "w");   currentData.isDirty = true } }
+        scope.launch { karooDataService.lastLapNpData.collect       { currentData.lastLapNp       = formatStreamData(it, "w");   currentData.isDirty = true } }
+
+        // ── Shifting ──────────────────────────────────────────────────────────
+        scope.launch {
+            karooDataService.shiftingFrontGearData.collect { streamState ->
+                currentData.shiftingFrontGear = formatGear(
+                    streamState,
+                    io.hammerhead.karooext.models.DataType.Field.SHIFTING_FRONT_GEAR,
+                    io.hammerhead.karooext.models.DataType.Field.SHIFTING_FRONT_GEAR_MAX
+                )
+                currentData.isDirty = true
+            }
+        }
+        scope.launch {
+            karooDataService.shiftingRearGearData.collect { streamState ->
+                currentData.shiftingRearGear = formatGear(
+                    streamState,
+                    io.hammerhead.karooext.models.DataType.Field.SHIFTING_REAR_GEAR,
+                    io.hammerhead.karooext.models.DataType.Field.SHIFTING_REAR_GEAR_MAX
+                )
+                currentData.isDirty = true
+            }
+        }
+        scope.launch {
+            karooDataService.shiftingBatteryData.collect { streamState ->
+                currentData.shiftingBattery = formatShiftingBattery(streamState)
+                currentData.isDirty = true
+            }
+        }
+        scope.launch { karooDataService.shiftingCountData.collect { currentData.shiftingCount = formatInteger(it); currentData.isDirty = true } }
+
+        // ── Navigation ────────────────────────────────────────────────────────
+        scope.launch { karooDataService.distanceToTurnData.collect { currentData.distanceToTurn = formatDistanceToTurn(it); currentData.isDirty = true } }
+        scope.launch { karooDataService.distanceToDestData.collect { currentData.distanceToDest = formatStreamData(it, "km"); currentData.isDirty = true } }
+        scope.launch { karooDataService.timeOfArrivalData.collect  { currentData.timeOfArrival  = formatClockTime(it);       currentData.isDirty = true } }
+        scope.launch { karooDataService.timeToDestData.collect     { currentData.timeToDest      = formatDuration(it);        currentData.isDirty = true } }
+        scope.launch { karooDataService.headingData.collect        { currentData.heading          = formatHeading(it);         currentData.isDirty = true } }
+
+        // ── eBike ─────────────────────────────────────────────────────────────
+        scope.launch { karooDataService.levBatteryData.collect    { currentData.levBattery    = formatPercent(it);         currentData.isDirty = true } }
+        scope.launch { karooDataService.levRangeData.collect      { currentData.levRange      = formatStreamData(it, "km"); currentData.isDirty = true } }
+        scope.launch { karooDataService.levAssistModeData.collect { currentData.levAssistMode = formatInteger(it);          currentData.isDirty = true } }
+        scope.launch { karooDataService.levMotorPowerData.collect { currentData.levMotorPower = formatStreamData(it, "w");  currentData.isDirty = true } }
     }
 
     /**
@@ -1044,12 +1217,84 @@ class KarooActiveLookBridge(context: Context) {
             25 -> currentData.avgVam                                 // Avg VAM
 
             // Radar metrics
-            50 -> currentData.radarThreatLevel                       // Threat level (0 = clear)
-            51 -> currentData.radarTargetCount                       // Number of detected vehicles
-            52 -> currentData.radarClosestRange                      // Distance to nearest vehicle
+            50 -> currentData.radarThreatLevel
+            51 -> currentData.radarTargetCount
+            52 -> currentData.radarClosestRange
 
-            // Future metrics (see Future-Updates.md)
-            21, 22, 23 -> "N/A"                                      // Altitude, Ascent, Descent
+            // General additions
+            53 -> currentData.clockTime
+            54 -> currentData.temperature
+            55 -> currentData.batteryPercent
+            56 -> currentData.rideTime
+
+            // Heart Rate additions
+            57 -> currentData.percentMaxHr
+            58 -> currentData.percentHrr
+
+            // Power additions
+            48 -> currentData.powerZone
+            59 -> currentData.power5s
+            60 -> currentData.power10s
+            61 -> currentData.power30s
+            62 -> currentData.normalizedPower
+            63 -> currentData.percentFtp
+            64 -> currentData.intensityFactor
+            65 -> currentData.tss
+            66 -> currentData.wPerKg
+
+            // Energy
+            67 -> currentData.energyOutput
+            68 -> currentData.calories
+            69 -> currentData.caloriesPerHour
+
+            // Speed / Cadence additions
+            70 -> currentData.speed3s
+            71 -> currentData.cadence3s
+
+            // Elevation
+            72 -> currentData.elevationGrade
+            73 -> currentData.elevationGain
+            74 -> currentData.elevationLoss
+            75 -> currentData.altitude
+            76 -> currentData.vam30s
+
+            // Lap
+            77 -> currentData.lapNumber
+            78 -> currentData.lapTime
+            79 -> currentData.lapDistance
+            80 -> currentData.lapSpeed
+            81 -> currentData.lapHr
+            82 -> currentData.lapPower
+            83 -> currentData.lapNp
+            84 -> currentData.lapCadence
+            85 -> currentData.lapAscent
+
+            // Last Lap
+            86 -> currentData.lastLapTime
+            87 -> currentData.lastLapDistance
+            88 -> currentData.lastLapSpeed
+            89 -> currentData.lastLapHr
+            90 -> currentData.lastLapPower
+            91 -> currentData.lastLapNp
+
+            // Shifting
+            92 -> currentData.shiftingFrontGear
+            93 -> currentData.shiftingRearGear
+            94 -> currentData.shiftingBattery
+            95 -> currentData.shiftingCount
+
+            // Navigation
+            96 -> currentData.distanceToTurn
+            97 -> currentData.distanceToDest
+            98 -> currentData.timeOfArrival
+            99 -> currentData.timeToDest
+            100 -> currentData.heading
+
+            // eBike
+            101 -> currentData.levBattery
+            102 -> currentData.levRange
+            103 -> currentData.levAssistMode
+            104 -> currentData.levMotorPower
 
             else -> {
                 Log.w(
@@ -1162,23 +1407,191 @@ class KarooActiveLookBridge(context: Context) {
     }
 
     /**
-     * Format HR zone data (Z1-Z5)
+     * Format HR zone data (Z1-Z5) — delegates to generic formatZoneData
      */
-    private fun formatHRZoneData(streamState: StreamState?): String {
+    private fun formatHRZoneData(streamState: StreamState?): String = formatZoneData(streamState, 5)
+
+    /**
+     * Format zone data generically (Z1..Zmax)
+     */
+    private fun formatZoneData(streamState: StreamState?, max: Int): String {
         return when (streamState) {
             is StreamState.Streaming -> {
                 val zone = streamState.dataPoint.singleValue?.toInt()
-                if (zone != null && zone in 1..5) {
-                    "Z$zone"
-                } else {
-                    "--"
-                }
+                if (zone != null && zone in 1..max) "Z$zone" else "--"
             }
-
             is StreamState.Searching -> "..."
             is StreamState.Idle -> "--"
             is StreamState.NotAvailable -> "N/A"
             null -> "--"
+        }
+    }
+
+    /** Format a percentage value (0–100) as "72%" */
+    private fun formatPercent(streamState: StreamState?): String {
+        return when (streamState) {
+            is StreamState.Streaming -> {
+                val v = streamState.dataPoint.singleValue
+                if (v != null) "%.0f%%".format(v) else "--%"
+            }
+            is StreamState.Searching -> "...%"
+            is StreamState.Idle, null -> "--%"
+            is StreamState.NotAvailable -> "N/A"
+        }
+    }
+
+    /** Format elevation grade with sign: "+5.2%" / "-3.1%" */
+    private fun formatGrade(streamState: StreamState?): String {
+        return when (streamState) {
+            is StreamState.Streaming -> {
+                val v = streamState.dataPoint.singleValue
+                if (v != null) {
+                    val sign = if (v > 0) "+" else ""
+                    "$sign${"%.1f".format(v)}%"
+                } else "--%"
+            }
+            is StreamState.Searching -> "...%"
+            is StreamState.Idle, null -> "--%"
+            is StreamState.NotAvailable -> "N/A"
+        }
+    }
+
+    /** Format an integer metric (lap #, shift count, assist mode) */
+    private fun formatInteger(streamState: StreamState?): String {
+        return when (streamState) {
+            is StreamState.Streaming -> {
+                val v = streamState.dataPoint.singleValue?.toInt()
+                v?.toString() ?: "--"
+            }
+            is StreamState.Searching -> "..."
+            is StreamState.Idle, null -> "--"
+            is StreamState.NotAvailable -> "N/A"
+        }
+    }
+
+    /** Format lap time (ms) as "MM:SS" */
+    private fun formatLapTime(streamState: StreamState?): String {
+        return when (streamState) {
+            is StreamState.Streaming -> {
+                val ms = streamState.dataPoint.singleValue?.toLong()
+                if (ms != null) {
+                    val s = (ms / 1000) % 60
+                    val m = (ms / (1000 * 60)) % 60
+                    val h = ms / (1000 * 60 * 60)
+                    if (h > 0)
+                        String.format(java.util.Locale.US, "%d:%02d:%02d", h, m, s)
+                    else
+                        String.format(java.util.Locale.US, "%02d:%02d", m, s)
+                } else "--:--"
+            }
+            is StreamState.Searching -> "--:--"
+            is StreamState.Idle, null -> "--:--"
+            is StreamState.NotAvailable -> "N/A"
+        }
+    }
+
+    /** Format a clock/arrival time (ms epoch or ms-of-day) as "HH:MM" */
+    private fun formatClockTime(streamState: StreamState?): String {
+        return when (streamState) {
+            is StreamState.Streaming -> {
+                val ms = streamState.dataPoint.singleValue?.toLong()
+                if (ms != null) {
+                    val totalMin = ms / 60000
+                    val h = (totalMin / 60) % 24
+                    val m = totalMin % 60
+                    String.format(java.util.Locale.US, "%02d:%02d", h, m)
+                } else "--:--"
+            }
+            is StreamState.Searching -> "--:--"
+            is StreamState.Idle, null -> "--:--"
+            is StreamState.NotAvailable -> "N/A"
+        }
+    }
+
+    /** Format a duration (seconds) as "H:MM" or "MM:SS" */
+    private fun formatDuration(streamState: StreamState?): String {
+        return when (streamState) {
+            is StreamState.Streaming -> {
+                val sec = streamState.dataPoint.singleValue?.toLong()
+                if (sec != null) {
+                    val h = sec / 3600
+                    val m = (sec % 3600) / 60
+                    if (h > 0)
+                        String.format(java.util.Locale.US, "%d:%02d", h, m)
+                    else
+                        String.format(java.util.Locale.US, "%d min", m)
+                } else "--"
+            }
+            is StreamState.Searching -> "..."
+            is StreamState.Idle, null -> "--"
+            is StreamState.NotAvailable -> "N/A"
+        }
+    }
+
+    /** Format distance-to-next-turn: show metres when < 1 km, else km */
+    private fun formatDistanceToTurn(streamState: StreamState?): String {
+        return when (streamState) {
+            is StreamState.Streaming -> {
+                val m = streamState.dataPoint.singleValue
+                if (m != null) {
+                    if (m < 1000) "%.0f m".format(m) else "%.1f km".format(m / 1000.0)
+                } else "-- m"
+            }
+            is StreamState.Searching -> "..."
+            is StreamState.Idle, null -> "-- m"
+            is StreamState.NotAvailable -> "N/A"
+        }
+    }
+
+    /** Format gear as "current/max" (e.g. "3/11") using multi-field DataPoint */
+    private fun formatGear(streamState: StreamState?, gearField: String, maxField: String): String {
+        return when (streamState) {
+            is StreamState.Streaming -> {
+                val values = streamState.dataPoint.values
+                val gear = values[gearField]?.toInt()
+                val max  = values[maxField]?.toInt()
+                when {
+                    gear == null -> "--"
+                    max  != null -> "$gear/$max"
+                    else         -> "$gear"
+                }
+            }
+            is StreamState.Searching -> "..."
+            is StreamState.Idle, null -> "--"
+            is StreamState.NotAvailable -> "N/A"
+        }
+    }
+
+    /** Format drivetrain battery status (ordinal of BatteryStatus enum) */
+    private fun formatShiftingBattery(streamState: StreamState?): String {
+        // BatteryStatus ordinals: 0=NEW, 1=GOOD, 2=OK, 3=LOW, 4=CRITICAL, 5=INVALID
+        val labels = arrayOf("New", "Good", "OK", "Low", "Critical", "?")
+        return when (streamState) {
+            is StreamState.Streaming -> {
+                val values = streamState.dataPoint.values
+                // Prefer rear derailleur; fall back to overall status
+                val raw = (values[io.hammerhead.karooext.models.DataType.Field.SHIFTING_BATTERY_STATUS_REAR_DERAILLEUR]
+                    ?: values[io.hammerhead.karooext.models.DataType.Field.SHIFTING_BATTERY_STATUS])
+                    ?.toInt()
+                labels.getOrElse(raw ?: 5) { "?" }
+            }
+            is StreamState.Searching -> "..."
+            is StreamState.Idle, null -> "--"
+            is StreamState.NotAvailable -> "N/A"
+        }
+    }
+
+    /** Format compass heading index (0=N, 1=NE … 7=NW) */
+    private fun formatHeading(streamState: StreamState?): String {
+        val dirs = arrayOf("N", "NE", "E", "SE", "S", "SW", "W", "NW")
+        return when (streamState) {
+            is StreamState.Streaming -> {
+                val idx = streamState.dataPoint.singleValue?.toInt()
+                dirs.getOrElse(idx ?: 8) { "--" }
+            }
+            is StreamState.Searching -> "..."
+            is StreamState.Idle, null -> "--"
+            is StreamState.NotAvailable -> "N/A"
         }
     }
 

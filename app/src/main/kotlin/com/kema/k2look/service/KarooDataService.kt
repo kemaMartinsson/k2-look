@@ -107,6 +107,132 @@ class KarooDataService(context: Context) {
     private val _radarData = MutableStateFlow<StreamState?>(null)
     val radarData: StateFlow<StreamState?> = _radarData.asStateFlow()
 
+    // General additions
+    private val _clockTimeData = MutableStateFlow<StreamState?>(null)
+    val clockTimeData: StateFlow<StreamState?> = _clockTimeData.asStateFlow()
+    private val _temperatureData = MutableStateFlow<StreamState?>(null)
+    val temperatureData: StateFlow<StreamState?> = _temperatureData.asStateFlow()
+    private val _batteryPercentData = MutableStateFlow<StreamState?>(null)
+    val batteryPercentData: StateFlow<StreamState?> = _batteryPercentData.asStateFlow()
+    private val _rideTimeData = MutableStateFlow<StreamState?>(null)
+    val rideTimeData: StateFlow<StreamState?> = _rideTimeData.asStateFlow()
+
+    // Heart Rate additions
+    private val _percentMaxHrData = MutableStateFlow<StreamState?>(null)
+    val percentMaxHrData: StateFlow<StreamState?> = _percentMaxHrData.asStateFlow()
+    private val _percentHrrData = MutableStateFlow<StreamState?>(null)
+    val percentHrrData: StateFlow<StreamState?> = _percentHrrData.asStateFlow()
+
+    // Power additions (note: smoothed10s and 30s already exist above)
+    private val _powerZoneData = MutableStateFlow<StreamState?>(null)
+    val powerZoneData: StateFlow<StreamState?> = _powerZoneData.asStateFlow()
+    private val _smoothed5sPowerData = MutableStateFlow<StreamState?>(null)
+    val smoothed5sPowerData: StateFlow<StreamState?> = _smoothed5sPowerData.asStateFlow()
+    private val _normalizedPowerData = MutableStateFlow<StreamState?>(null)
+    val normalizedPowerData: StateFlow<StreamState?> = _normalizedPowerData.asStateFlow()
+    private val _percentFtpData = MutableStateFlow<StreamState?>(null)
+    val percentFtpData: StateFlow<StreamState?> = _percentFtpData.asStateFlow()
+    private val _intensityFactorData = MutableStateFlow<StreamState?>(null)
+    val intensityFactorData: StateFlow<StreamState?> = _intensityFactorData.asStateFlow()
+    private val _trainingStressScoreData = MutableStateFlow<StreamState?>(null)
+    val trainingStressScoreData: StateFlow<StreamState?> = _trainingStressScoreData.asStateFlow()
+    private val _powerToWeightData = MutableStateFlow<StreamState?>(null)
+    val powerToWeightData: StateFlow<StreamState?> = _powerToWeightData.asStateFlow()
+
+    // Energy
+    private val _energyOutputData = MutableStateFlow<StreamState?>(null)
+    val energyOutputData: StateFlow<StreamState?> = _energyOutputData.asStateFlow()
+    private val _caloriesData = MutableStateFlow<StreamState?>(null)
+    val caloriesData: StateFlow<StreamState?> = _caloriesData.asStateFlow()
+    private val _caloriesPerHourData = MutableStateFlow<StreamState?>(null)
+    val caloriesPerHourData: StateFlow<StreamState?> = _caloriesPerHourData.asStateFlow()
+
+    // Speed additions
+    private val _smoothed3sSpeedData = MutableStateFlow<StreamState?>(null)
+    val smoothed3sSpeedData: StateFlow<StreamState?> = _smoothed3sSpeedData.asStateFlow()
+
+    // Cadence additions
+    private val _smoothed3sCadenceData = MutableStateFlow<StreamState?>(null)
+    val smoothed3sCadenceData: StateFlow<StreamState?> = _smoothed3sCadenceData.asStateFlow()
+
+    // Elevation
+    private val _elevationGradeData = MutableStateFlow<StreamState?>(null)
+    val elevationGradeData: StateFlow<StreamState?> = _elevationGradeData.asStateFlow()
+    private val _elevationGainData = MutableStateFlow<StreamState?>(null)
+    val elevationGainData: StateFlow<StreamState?> = _elevationGainData.asStateFlow()
+    private val _elevationLossData = MutableStateFlow<StreamState?>(null)
+    val elevationLossData: StateFlow<StreamState?> = _elevationLossData.asStateFlow()
+    private val _altitudeData = MutableStateFlow<StreamState?>(null)
+    val altitudeData: StateFlow<StreamState?> = _altitudeData.asStateFlow()
+    private val _vam30sData = MutableStateFlow<StreamState?>(null)
+    val vam30sData: StateFlow<StreamState?> = _vam30sData.asStateFlow()
+
+    // Lap
+    private val _lapNumberData = MutableStateFlow<StreamState?>(null)
+    val lapNumberData: StateFlow<StreamState?> = _lapNumberData.asStateFlow()
+    private val _lapTimeData = MutableStateFlow<StreamState?>(null)
+    val lapTimeData: StateFlow<StreamState?> = _lapTimeData.asStateFlow()
+    private val _lapDistanceData = MutableStateFlow<StreamState?>(null)
+    val lapDistanceData: StateFlow<StreamState?> = _lapDistanceData.asStateFlow()
+    private val _lapSpeedData = MutableStateFlow<StreamState?>(null)
+    val lapSpeedData: StateFlow<StreamState?> = _lapSpeedData.asStateFlow()
+    private val _lapHrData = MutableStateFlow<StreamState?>(null)
+    val lapHrData: StateFlow<StreamState?> = _lapHrData.asStateFlow()
+    private val _lapPowerData = MutableStateFlow<StreamState?>(null)
+    val lapPowerData: StateFlow<StreamState?> = _lapPowerData.asStateFlow()
+    private val _lapNpData = MutableStateFlow<StreamState?>(null)
+    val lapNpData: StateFlow<StreamState?> = _lapNpData.asStateFlow()
+    private val _lapCadenceData = MutableStateFlow<StreamState?>(null)
+    val lapCadenceData: StateFlow<StreamState?> = _lapCadenceData.asStateFlow()
+    private val _lapAscentData = MutableStateFlow<StreamState?>(null)
+    val lapAscentData: StateFlow<StreamState?> = _lapAscentData.asStateFlow()
+
+    // Last Lap
+    private val _lastLapTimeData = MutableStateFlow<StreamState?>(null)
+    val lastLapTimeData: StateFlow<StreamState?> = _lastLapTimeData.asStateFlow()
+    private val _lastLapDistanceData = MutableStateFlow<StreamState?>(null)
+    val lastLapDistanceData: StateFlow<StreamState?> = _lastLapDistanceData.asStateFlow()
+    private val _lastLapSpeedData = MutableStateFlow<StreamState?>(null)
+    val lastLapSpeedData: StateFlow<StreamState?> = _lastLapSpeedData.asStateFlow()
+    private val _lastLapHrData = MutableStateFlow<StreamState?>(null)
+    val lastLapHrData: StateFlow<StreamState?> = _lastLapHrData.asStateFlow()
+    private val _lastLapPowerData = MutableStateFlow<StreamState?>(null)
+    val lastLapPowerData: StateFlow<StreamState?> = _lastLapPowerData.asStateFlow()
+    private val _lastLapNpData = MutableStateFlow<StreamState?>(null)
+    val lastLapNpData: StateFlow<StreamState?> = _lastLapNpData.asStateFlow()
+
+    // Shifting
+    private val _shiftingFrontGearData = MutableStateFlow<StreamState?>(null)
+    val shiftingFrontGearData: StateFlow<StreamState?> = _shiftingFrontGearData.asStateFlow()
+    private val _shiftingRearGearData = MutableStateFlow<StreamState?>(null)
+    val shiftingRearGearData: StateFlow<StreamState?> = _shiftingRearGearData.asStateFlow()
+    private val _shiftingBatteryData = MutableStateFlow<StreamState?>(null)
+    val shiftingBatteryData: StateFlow<StreamState?> = _shiftingBatteryData.asStateFlow()
+    private val _shiftingCountData = MutableStateFlow<StreamState?>(null)
+    val shiftingCountData: StateFlow<StreamState?> = _shiftingCountData.asStateFlow()
+
+    // Navigation
+    private val _distanceToTurnData = MutableStateFlow<StreamState?>(null)
+    val distanceToTurnData: StateFlow<StreamState?> = _distanceToTurnData.asStateFlow()
+    private val _distanceToDestData = MutableStateFlow<StreamState?>(null)
+    val distanceToDestData: StateFlow<StreamState?> = _distanceToDestData.asStateFlow()
+    private val _timeOfArrivalData = MutableStateFlow<StreamState?>(null)
+    val timeOfArrivalData: StateFlow<StreamState?> = _timeOfArrivalData.asStateFlow()
+    private val _timeToDestData = MutableStateFlow<StreamState?>(null)
+    val timeToDestData: StateFlow<StreamState?> = _timeToDestData.asStateFlow()
+    private val _headingData = MutableStateFlow<StreamState?>(null)
+    val headingData: StateFlow<StreamState?> = _headingData.asStateFlow()
+
+    // eBike
+    private val _levBatteryData = MutableStateFlow<StreamState?>(null)
+    val levBatteryData: StateFlow<StreamState?> = _levBatteryData.asStateFlow()
+    private val _levRangeData = MutableStateFlow<StreamState?>(null)
+    val levRangeData: StateFlow<StreamState?> = _levRangeData.asStateFlow()
+    private val _levAssistModeData = MutableStateFlow<StreamState?>(null)
+    val levAssistModeData: StateFlow<StreamState?> = _levAssistModeData.asStateFlow()
+    private val _levMotorPowerData = MutableStateFlow<StreamState?>(null)
+    val levMotorPowerData: StateFlow<StreamState?> = _levMotorPowerData.asStateFlow()
+
     // Reconnection management
     private var reconnectAttempts = 0
     private val maxReconnectAttempts = 5
@@ -457,6 +583,59 @@ class KarooDataService(context: Context) {
             }
             consumerIds.add(radarId)
 
+            // Register all remaining streams via helper
+            registerStream(DataType.Type.POWER_ZONE,                   _powerZoneData)
+            registerStream(DataType.Type.CLOCK_TIME,                   _clockTimeData)
+            registerStream(DataType.Type.TEMPERATURE,                  _temperatureData)
+            registerStream(DataType.Type.BATTERY_PERCENT,              _batteryPercentData)
+            registerStream(DataType.Type.RIDE_TIME,                    _rideTimeData)
+            registerStream(DataType.Type.PERCENT_MAX_HR,               _percentMaxHrData)
+            registerStream(DataType.Type.PERCENT_HRR,                  _percentHrrData)
+            registerStream(DataType.Type.SMOOTHED_5S_AVERAGE_POWER,    _smoothed5sPowerData)
+            registerStream(DataType.Type.NORMALIZED_POWER,             _normalizedPowerData)
+            registerStream(DataType.Type.PERCENT_MAX_FTP,              _percentFtpData)
+            registerStream(DataType.Type.INTENSITY_FACTOR,             _intensityFactorData)
+            registerStream(DataType.Type.TRAINING_STRESS_SCORE,        _trainingStressScoreData)
+            registerStream(DataType.Type.POWER_TO_WEIGHT,              _powerToWeightData)
+            registerStream(DataType.Type.ENERGY_OUTPUT,                _energyOutputData)
+            registerStream(DataType.Type.CALORIES,                     _caloriesData)
+            registerStream(DataType.Type.CALORIES_PER_HOUR,            _caloriesPerHourData)
+            registerStream(DataType.Type.SMOOTHED_3S_AVERAGE_SPEED,    _smoothed3sSpeedData)
+            registerStream(DataType.Type.SMOOTHED_3S_AVERAGE_CADENCE,  _smoothed3sCadenceData)
+            registerStream(DataType.Type.ELEVATION_GRADE,              _elevationGradeData)
+            registerStream(DataType.Type.ELEVATION_GAIN,               _elevationGainData)
+            registerStream(DataType.Type.ELEVATION_LOSS,               _elevationLossData)
+            registerStream(DataType.Type.PRESSURE_ELEVATION_CORRECTION,_altitudeData)
+            registerStream(DataType.Type.AVERAGE_VERTICAL_SPEED_30S,   _vam30sData)
+            registerStream(DataType.Type.LAP_NUMBER,                   _lapNumberData)
+            registerStream(DataType.Type.ELAPSED_TIME_LAP,             _lapTimeData)
+            registerStream(DataType.Type.DISTANCE_LAP,                 _lapDistanceData)
+            registerStream(DataType.Type.AVERAGE_SPEED_LAP,            _lapSpeedData)
+            registerStream(DataType.Type.AVERAGE_LAP_HR,               _lapHrData)
+            registerStream(DataType.Type.POWER_LAP,                    _lapPowerData)
+            registerStream(DataType.Type.NORMALIZED_POWER_LAP,         _lapNpData)
+            registerStream(DataType.Type.CADENCE_LAP,                  _lapCadenceData)
+            registerStream(DataType.Type.ELEVATION_GAIN_LAP,           _lapAscentData)
+            registerStream(DataType.Type.ELAPSED_TIME_LAST_LAP,        _lastLapTimeData)
+            registerStream(DataType.Type.DISTANCE_LAP_LAST_LAP,        _lastLapDistanceData)
+            registerStream(DataType.Type.AVERAGE_SPEED_LAST_LAP,       _lastLapSpeedData)
+            registerStream(DataType.Type.AVERAGE_HR_LAST_LAP,          _lastLapHrData)
+            registerStream(DataType.Type.AVERAGE_POWER_LAST_LAP,       _lastLapPowerData)
+            registerStream(DataType.Type.NORMALIZED_POWER_LAST_LAP,    _lastLapNpData)
+            registerStream(DataType.Type.SHIFTING_FRONT_GEAR,          _shiftingFrontGearData)
+            registerStream(DataType.Type.SHIFTING_REAR_GEAR,           _shiftingRearGearData)
+            registerStream(DataType.Type.SHIFTING_BATTERY,             _shiftingBatteryData)
+            registerStream(DataType.Type.SHIFTING_COUNT,               _shiftingCountData)
+            registerStream(DataType.Type.DISTANCE_TO_NEXT_TURN,        _distanceToTurnData)
+            registerStream(DataType.Type.DISTANCE_TO_DESTINATION,      _distanceToDestData)
+            registerStream(DataType.Type.TIME_OF_ARRIVAL,              _timeOfArrivalData)
+            registerStream(DataType.Type.TIME_TO_DESTINATION,          _timeToDestData)
+            registerStream(DataType.Type.HEADING,                      _headingData)
+            registerStream(DataType.Type.LEV_BATTERY_STATUS,           _levBatteryData)
+            registerStream(DataType.Type.LEV_ESTIMATED_RANGE,          _levRangeData)
+            registerStream(DataType.Type.LEV_ASSIST_MODE,              _levAssistModeData)
+            registerStream(DataType.Type.LEV_MOTOR_POWER,              _levMotorPowerData)
+
             Log.i(TAG, "Successfully registered ${consumerIds.size} data consumers")
         } catch (e: Exception) {
             Log.e(TAG, "Error registering consumers: ${e.message}", e)
@@ -505,27 +684,58 @@ class KarooDataService(context: Context) {
      * Clear all metric data
      */
     private fun clearMetricData() {
-        _speedData.value = null
-        _averageSpeedData.value = null
-        _maxSpeedData.value = null
-        _heartRateData.value = null
-        _averageHeartRateData.value = null
-        _maxHeartRateData.value = null
-        _cadenceData.value = null
-        _averageCadenceData.value = null
-        _maxCadenceData.value = null
-        _powerData.value = null
-        _averagePowerData.value = null
-        _maxPowerData.value = null
-        _distanceData.value = null
-        _timeData.value = null
-        _hrZoneData.value = null
-        _smoothed3sPowerData.value = null
-        _smoothed10sPowerData.value = null
-        _smoothed30sPowerData.value = null
-        _vamData.value = null
-        _avgVamData.value = null
-        _radarData.value = null
+        _speedData.value = null; _averageSpeedData.value = null; _maxSpeedData.value = null
+        _heartRateData.value = null; _averageHeartRateData.value = null; _maxHeartRateData.value = null
+        _cadenceData.value = null; _averageCadenceData.value = null; _maxCadenceData.value = null
+        _powerData.value = null; _averagePowerData.value = null; _maxPowerData.value = null
+        _distanceData.value = null; _timeData.value = null; _hrZoneData.value = null
+        _smoothed3sPowerData.value = null; _smoothed10sPowerData.value = null; _smoothed30sPowerData.value = null
+        _vamData.value = null; _avgVamData.value = null; _radarData.value = null
+        // General
+        _clockTimeData.value = null; _temperatureData.value = null
+        _batteryPercentData.value = null; _rideTimeData.value = null
+        // HR
+        _percentMaxHrData.value = null; _percentHrrData.value = null
+        // Power
+        _powerZoneData.value = null; _smoothed5sPowerData.value = null
+        _normalizedPowerData.value = null; _percentFtpData.value = null
+        _intensityFactorData.value = null; _trainingStressScoreData.value = null
+        _powerToWeightData.value = null
+        // Energy
+        _energyOutputData.value = null; _caloriesData.value = null; _caloriesPerHourData.value = null
+        // Speed / Cadence
+        _smoothed3sSpeedData.value = null; _smoothed3sCadenceData.value = null
+        // Elevation
+        _elevationGradeData.value = null; _elevationGainData.value = null
+        _elevationLossData.value = null; _altitudeData.value = null; _vam30sData.value = null
+        // Lap
+        _lapNumberData.value = null; _lapTimeData.value = null; _lapDistanceData.value = null
+        _lapSpeedData.value = null; _lapHrData.value = null; _lapPowerData.value = null
+        _lapNpData.value = null; _lapCadenceData.value = null; _lapAscentData.value = null
+        // Last Lap
+        _lastLapTimeData.value = null; _lastLapDistanceData.value = null
+        _lastLapSpeedData.value = null; _lastLapHrData.value = null
+        _lastLapPowerData.value = null; _lastLapNpData.value = null
+        // Shifting
+        _shiftingFrontGearData.value = null; _shiftingRearGearData.value = null
+        _shiftingBatteryData.value = null; _shiftingCountData.value = null
+        // Navigation
+        _distanceToTurnData.value = null; _distanceToDestData.value = null
+        _timeOfArrivalData.value = null; _timeToDestData.value = null; _headingData.value = null
+        // eBike
+        _levBatteryData.value = null; _levRangeData.value = null
+        _levAssistModeData.value = null; _levMotorPowerData.value = null
+    }
+
+    /**
+     * Registers a standard single-value stream consumer.
+     */
+    private fun registerStream(type: String, flow: MutableStateFlow<StreamState?>) {
+        val id = karooSystem.addConsumer(
+            OnStreamState.StartStreaming(type),
+            onError = { error -> Log.e(TAG, "Stream error [$type]: $error") }
+        ) { event: OnStreamState -> flow.value = event.state }
+        consumerIds.add(id)
     }
 
     /**

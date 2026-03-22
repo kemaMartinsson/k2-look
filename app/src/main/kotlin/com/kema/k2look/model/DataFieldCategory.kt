@@ -12,6 +12,11 @@ enum class DataFieldCategory {
     CLIMBING,
     RADAR,
     ELEVATION,
-    ENERGY
+    ENERGY,
+    LAP,
+    LAST_LAP,
+    SHIFTING,
+    NAVIGATION,
+    EBIKE
 }
 

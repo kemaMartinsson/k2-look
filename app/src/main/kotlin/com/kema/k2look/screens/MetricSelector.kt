@@ -311,5 +311,10 @@ val DataFieldCategory.displayName: String
         DataFieldCategory.RADAR -> "Radar"
         DataFieldCategory.ELEVATION -> "Elevation"
         DataFieldCategory.ENERGY -> "Energy"
+        DataFieldCategory.LAP -> "Lap"
+        DataFieldCategory.LAST_LAP -> "Last Lap"
+        DataFieldCategory.SHIFTING -> "Shifting"
+        DataFieldCategory.NAVIGATION -> "Navigation"
+        DataFieldCategory.EBIKE -> "eBike"
     }
 
