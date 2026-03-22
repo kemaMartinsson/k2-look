@@ -93,39 +93,48 @@ directly on your Karoo 2 - no smartphone app needed!
 
 **✨ What You Can Do:**
 
-- ✅ Choose from **6 professional layout templates** (1-6 data fields)
-- ✅ Select from **23 real-time metrics** from your Karoo 2
+- ✅ Choose from **7 professional layout templates** (1-6 data fields)
+- ✅ Select from **74 real-time metrics** from your Karoo 2
 - ✅ Use **4 visualization styles**: Text, Gauge, Bar, and Zoned Bar
 - ✅ Create **multiple profiles** for different bikes or activities
 - ✅ **Automatic profile switching** based on Karoo ride profile name
 - ✅ Configure everything **without glasses connected** - edit anytime, anywhere
 
-**📊 Supported Metrics (23 total):**
+**📊 Supported Metrics (74 total):**
 
-- **General**: Elapsed Time, Distance
-- **Heart Rate**: HR, Max HR, Avg HR, HR Zone
-- **Power**: Power, Max Power, Avg Power, Power 3s, Power Zone
-- **Speed**: Speed, Max Speed, Avg Speed
-- **Cadence**: Cadence, Max Cadence, Avg Cadence
-- **Climbing**: VAM, Avg VAM
+- **General** (6): Elapsed Time, Ride Time, Distance, Clock, Temperature, Karoo Battery
+- **Heart Rate** (6): HR, Max HR, Avg HR, HR Zone, % Max HR, % HR Reserve
+- **Power** (13): Power, Max Power, Avg Power, Power 3s, Power 5s, Power 10s, Power 30s, Norm. Power, Power Zone, % FTP, Int. Factor, TSS, W/kg
+- **Speed** (4): Speed, Max Speed, Avg Speed, Speed 3s
+- **Cadence** (4): Cadence, Max Cadence, Avg Cadence, Cadence 3s
+- **Climbing** (2): VAM, Avg VAM
+- **Elevation** (5): Grade, Ascent, Descent, Altitude, VAM 30s
+- **Energy** (3): Energy (kJ), Calories, Cal/hr
+- **Lap** (9): Lap #, Lap Time, Lap Dist, Lap Speed, Lap HR, Lap Power, Lap NP, Lap Cadence, Lap Ascent
+- **Last Lap** (6): L.Lap Time, L.Lap Dist, L.Lap Speed, L.Lap HR, L.Lap Power, L.Lap NP
+- **Radar** (3): Radar Threat, Radar Targets, Radar Range *(requires Garmin Varia or compatible)*
+- **Shifting** (4): Front Gear, Rear Gear, Drive Battery, Shift Count *(requires Di2, AXS, or eTap)*
+- **Navigation** (5): To Turn, To Finish, ETA, Time to End, Heading *(requires active route)*
+- **eBike** (4): Bike Battery, Est. Range, Assist Mode, Motor Power *(requires LEV/eBike sensor)*
 
 **🎨 Visualization Styles:**
 
-1. **📝 Text** - Traditional display with label, unit, and icon (all 23 metrics)
-2. **⊙ Gauge** - Circular progress gauge ~270° arc (21 metrics)
-3. **▬ Bar** - Horizontal progress bar (21 metrics)
+1. **📝 Text** - Traditional display with label, unit, and icon (all 74 metrics)
+2. **⊙ Gauge** - Circular progress gauge ~270° arc (numeric/range metrics)
+3. **▬ Bar** - Horizontal progress bar (numeric/range metrics)
 4. **▦ Zoned Bar** - Multi-zone training bars with color coding
     - Heart Rate: 5 zones (Z1-Z5)
     - Power: 7 zones (Z1-Z7) based on FTP
 
-**📐 Layout Templates:**
+**📐 Layout Templates (7):**
 
 - Single Data (1 field) - Focus on one metric
 - Two Data (2 fields) - Two equally important metrics
-- Triangle Layout (3 fields) - One top + two bottom
-- Three Rows (3 fields) - Balanced view ✅ Default
-- Four Data (4 fields) - Multiple key metrics
-- Six Data (6 fields) - Maximum data density
+- Triangle Layout (3 fields) - One large top + two small bottom
+- Three Data Full (3 fields) - Three equal rows ✅ Default
+- Four Data (4 fields) - 2×2 grid
+- Five Data (5 fields) - One top + 2×2 grid below
+- Six Data (6 fields) - Maximum data density, 3×2 grid
 
 **🔄 Real-time Updates:**
 All metrics update at **1Hz** (1 update/second) for optimal Bluetooth performance and battery life.
@@ -137,9 +146,9 @@ glasses, featuring:
 
 - **Hands-Free Gesture & Touch Control** - Wave hand or tap button to control display during rides
 - **Built-in DataField Builder** - Create custom layouts directly on your Karoo 2
-- **23 real-time metrics** - All data you need (HR, Power, Speed, Cadence, VAM, and more)
+- **74 real-time metrics** - All data you need (HR, Power, Speed, Cadence, Elevation, Laps, Navigation, and more)
 - **4 visualization styles** - Text, Gauge, Bar, and Zoned Bar
-- **6 professional templates** - From minimal (1 field) to data-dense (6 fields)
+- **7 professional templates** - From minimal (1 field) to data-dense (6 fields)
 - **Automatic profile switching** - Match your Karoo ride profiles
 - **Training zone support** - HR zones (Z1-Z5) and Power zones (Z1-Z7 based on FTP)
 
@@ -165,7 +174,7 @@ DataField Builder interface. Control your display with hand gestures for safer, 
 *Layout Templates: Choose from 6 layout templates (1-6 data fields).*
 
 ![Metric Selector](docs/images/metric-selector.png)  
-*Metric Selector: Choose from 23 real-time metrics from your Karoo2.*
+*Metric Selector: Choose from 74 real-time metrics from your Karoo2.*
 
 ![Gesture Tab](docs/images/gestures.png)  
 *Gesture Tab: Configure hand gesture and touch button actions for hands-free control.*
@@ -438,7 +447,7 @@ Karoo2 Sensors → KarooSystemService → KarooDataService
 
 - **LayoutBuilderViewModel** - Profile and layout management
 - **DataFieldProfile** - User-defined metrics and visualization configurations
-- **KarooDataService** - Consumes Karoo data streams (23 metrics)
+- **KarooDataService** - Consumes Karoo data streams (74 metrics across 14 categories)
 - **ActiveLookService** - Manages Bluetooth connection and display rendering
 - **KarooActiveLookBridge** - Coordinates both services, transforms data, applies layouts
 - **MainViewModel** - UI state management
