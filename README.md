@@ -97,7 +97,7 @@ directly on your Karoo 2 - no smartphone app needed!
 - ✅ Select from **74 real-time metrics** from your Karoo 2
 - ✅ Use **4 visualization styles**: Text, Gauge, Bar, and Zoned Bar
 - ✅ Create **multiple profiles** for different bikes or activities
-- ✅ **Automatic profile switching** based on Karoo ride profile name
+- ✅ **Karoo Sync** — auto-switch profiles and import layouts from your active Karoo ride profile
 - ✅ Configure everything **without glasses connected** - edit anytime, anywhere
 
 **📊 Supported Metrics (74 total):**
@@ -149,7 +149,7 @@ glasses, featuring:
 - **74 real-time metrics** - All data you need (HR, Power, Speed, Cadence, Elevation, Laps, Navigation, and more)
 - **4 visualization styles** - Text, Gauge, Bar, and Zoned Bar
 - **7 professional templates** - From minimal (1 field) to data-dense (6 fields)
-- **Automatic profile switching** - Match your Karoo ride profiles
+- **Karoo Sync** — auto-switch profiles and import layouts from your active Karoo ride profile
 - **Training zone support** - HR zones (Z1-Z5) and Power zones (Z1-Z7 based on FTP)
 
 **No smartphone app required!**  
@@ -401,8 +401,18 @@ Transfer the APK to your Karoo2 and install it.
 6. **Start a ride** - Your custom layout appears on your glasses automatically!
 7. **During ride** - Wave hand or tap button to control display without touching Karoo!
 
-> **💡 Pro Tip:** Create multiple profiles with different names matching your Karoo ride profiles for
-> automatic switching! Use gestures to switch between screens hands-free.
+> **💡 Karoo Sync — Profile Auto-Switch & Import**
+>
+> K2Look can only see the **currently active** Karoo ride profile — it has no access to other
+> profiles stored on the Karoo. This has two practical consequences:
+>
+> **Auto-switching:** Name your K2Look profiles to match your Karoo ride profiles (e.g. both named
+> "Gravel"). When you switch to that Karoo profile, K2Look switches automatically.
+>
+> **Importing a Karoo layout:** To import the fields from a specific Karoo profile (e.g. "Mtb"),
+> first switch to that profile **in Karoo**, then go to K2Look → Fields → Profiles → **+** and type
+> "Mtb". K2Look will detect the matching active profile and offer **Import from Karoo** to copy its
+> fields automatically.
 
 ## Documentation
 

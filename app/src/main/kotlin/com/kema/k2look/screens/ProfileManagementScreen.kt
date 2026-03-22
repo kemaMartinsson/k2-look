@@ -18,7 +18,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -79,20 +78,18 @@ fun ProfileManagementScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Manage Profiles") },
+                title = { Text("Profiles") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
                     }
+                },
+                actions = {
+                    IconButton(onClick = { showCreateDialog = true }) {
+                        Icon(Icons.Default.Add, "Create Profile")
+                    }
                 }
             )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showCreateDialog = true }
-            ) {
-                Icon(Icons.Default.Add, "Create Profile")
-            }
         }
     ) { paddingValues ->
         LazyColumn(
@@ -183,7 +180,6 @@ fun ProfileManagementScreen(
                 items(profiles) { profile ->
                     ProfileCard(
                         profile = profile,
-                        canDelete = profiles.size > 1,
                         onDuplicate = { showDuplicateDialog = profile.id },
                         onDelete = { showDeleteDialog = profile.id }
                     )
@@ -209,9 +205,14 @@ fun ProfileManagementScreen(
     // Create Profile Dialog
     if (showCreateDialog) {
         CreateProfileDialog(
+            activeRideProfile = activeRideProfile,
             onDismiss = { showCreateDialog = false },
             onCreate = { name ->
                 onCreateProfile(name)
+                showCreateDialog = false
+            },
+            onImport = { rideProfile ->
+                onImportFromKaroo(rideProfile)
                 showCreateDialog = false
             }
         )
@@ -259,7 +260,6 @@ fun ProfileManagementScreen(
 @Composable
 private fun ProfileCard(
     profile: DataFieldProfile,
-    canDelete: Boolean,
     onDuplicate: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
@@ -302,14 +302,12 @@ private fun ProfileCard(
                 }
 
                 IconButton(
-                    onClick = onDelete,
-                    enabled = canDelete
+                    onClick = onDelete
                 ) {
                     Icon(
                         imageVector = Icons.Default.Delete,
                         contentDescription = "Delete Profile",
-                        tint = if (canDelete) MaterialTheme.colorScheme.error
-                               else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                        tint = MaterialTheme.colorScheme.error
                     )
                 }
             }
@@ -319,14 +317,20 @@ private fun ProfileCard(
 
 @Composable
 private fun CreateProfileDialog(
+    activeRideProfile: RideProfile?,
     onDismiss: () -> Unit,
-    onCreate: (name: String) -> Unit
+    onCreate: (name: String) -> Unit,
+    onImport: (RideProfile) -> Unit
 ) {
     var profileName by remember { mutableStateOf("") }
 
+    val nameMatchesKaroo = activeRideProfile != null
+        && profileName.isNotBlank()
+        && profileName.trim().equals(activeRideProfile.name, ignoreCase = true)
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Create New Profile") },
+        title = { Text("New Profile") },
         text = {
             Column {
                 OutlinedTextField(
@@ -339,24 +343,63 @@ private fun CreateProfileDialog(
 
                 Spacer(modifier = Modifier.padding(vertical = 8.dp))
 
-                Text(
-                    text = "Starts with default metrics (Speed, Distance, Time). Customize after creation!",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                )
+                if (nameMatchesKaroo && activeRideProfile != null) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer
+                        )
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = "Karoo profile found",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                            )
+                            Text(
+                                text = "Import fields from your active Karoo profile '${activeRideProfile.name}'?",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                    }
+                } else {
+                    Text(
+                        text = "Starts with default metrics (Speed, Distance, Time). Customize after creation.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                }
             }
         },
         confirmButton = {
-            Button(
-                onClick = { onCreate(profileName) },
-                enabled = profileName.isNotBlank()
-            ) {
-                Text("Create")
+            if (nameMatchesKaroo && activeRideProfile != null) {
+                Button(onClick = { onImport(activeRideProfile) }) {
+                    Text("Import from Karoo")
+                }
+            } else {
+                Button(
+                    onClick = { onCreate(profileName.trim()) },
+                    enabled = profileName.isNotBlank()
+                ) {
+                    Text("Create")
+                }
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
+            if (nameMatchesKaroo && activeRideProfile != null) {
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    TextButton(onClick = { onCreate(profileName.trim()) }) {
+                        Text("Create Empty")
+                    }
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel")
+                    }
+                }
+            } else {
+                TextButton(onClick = onDismiss) {
+                    Text("Cancel")
+                }
             }
         }
     )
@@ -521,4 +564,3 @@ private fun ImportPreviewDialog(
         }
     )
 }
-

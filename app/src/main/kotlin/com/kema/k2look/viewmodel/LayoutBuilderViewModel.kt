@@ -342,15 +342,22 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
     fun deleteProfile(profileId: String) {
         viewModelScope.launch {
             try {
-                if (_uiState.value.profiles.size <= 1) {
-                    Log.w(TAG, "Cannot delete the last profile")
-                    _uiState.value = _uiState.value.copy(error = "Cannot delete the last profile")
-                    return@launch
-                }
 
                 repository.deleteProfile(profileId)
 
-                val allProfiles = reloadAllProfiles()
+                var allProfiles = reloadAllProfiles()
+
+                // If all profiles were deleted, auto-create a fresh Default
+                if (allProfiles.isEmpty()) {
+                    val defaultProfile = SeedProfile.build().copy(
+                        id = java.util.UUID.randomUUID().toString(),
+                        name = "Default",
+                        createdAt = System.currentTimeMillis(),
+                        modifiedAt = System.currentTimeMillis()
+                    )
+                    repository.saveProfile(defaultProfile)
+                    allProfiles = reloadAllProfiles()
+                }
 
                 // If the deleted profile was active, switch to the first remaining profile
                 val activeProfile = if (_uiState.value.activeProfile?.id == profileId) {
