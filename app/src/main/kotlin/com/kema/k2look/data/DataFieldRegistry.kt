@@ -7,6 +7,7 @@ import com.kema.k2look.model.DataFieldCategory.CLIMBING
 import com.kema.k2look.model.DataFieldCategory.GENERAL
 import com.kema.k2look.model.DataFieldCategory.HEART_RATE
 import com.kema.k2look.model.DataFieldCategory.POWER
+import com.kema.k2look.model.DataFieldCategory.RADAR
 import com.kema.k2look.model.DataFieldCategory.SPEED_PACE
 import com.kema.k2look.model.IconSize
 import io.hammerhead.karooext.models.DataType
@@ -194,6 +195,30 @@ object DataFieldRegistry {
             karooStreamType = DataType.Type.AVERAGE_VERTICAL_SPEED,
             icon28 = 29,
             icon40 = 61
+        ),
+
+        // Radar (requires a compatible rear radar, e.g. Garmin Varia)
+        DataField(
+            id = 50,
+            name = "Radar Threat",
+            unit = "",
+            category = RADAR,
+            karooStreamType = DataType.Type.RADAR
+            // No icon — use text/ZonedBar visualization
+        ),
+        DataField(
+            id = 51,
+            name = "Radar Targets",
+            unit = "",
+            category = RADAR,
+            karooStreamType = DataType.Type.RADAR
+        ),
+        DataField(
+            id = 52,
+            name = "Radar Range",
+            unit = "m",
+            category = RADAR,
+            karooStreamType = DataType.Type.RADAR
         )
     )
 

@@ -129,6 +129,11 @@ class KarooActiveLookBridge(context: Context) {
         var vam: String = "--",
         var avgVam: String = "--",
 
+        // Radar metrics
+        var radarThreatLevel: String = "--",   // Threat level integer (0 = clear, higher = threat)
+        var radarTargetCount: String = "--",   // Number of detected vehicles (0–8)
+        var radarClosestRange: String = "--",  // Distance to nearest vehicle in metres
+
         // State
         var rideState: RideState = RideState.Idle,
         var isDirty: Boolean = false // Track if data has changed since last flush
@@ -729,6 +734,52 @@ class KarooActiveLookBridge(context: Context) {
                 currentData.isDirty = true
             }
         }
+
+        // Observe radar — one stream carries threat level + up to 8 target ranges
+        scope.launch {
+            karooDataService.radarData.collect { streamState ->
+                when (streamState) {
+                    is StreamState.Streaming -> {
+                        val values = streamState.dataPoint.values
+
+                        // Threat level (required field — 0 = clear, higher = more threat)
+                        val threat = values[io.hammerhead.karooext.models.DataType.Field.RADAR_THREAT_LEVEL]?.toInt() ?: 0
+                        currentData.radarThreatLevel = threat.toString()
+
+                        // Count detected targets (non-zero ranges)
+                        val ranges = listOfNotNull(
+                            values[io.hammerhead.karooext.models.DataType.Field.RADAR_TARGET_1_RANGE],
+                            values[io.hammerhead.karooext.models.DataType.Field.RADAR_TARGET_2_RANGE],
+                            values[io.hammerhead.karooext.models.DataType.Field.RADAR_TARGET_3_RANGE],
+                            values[io.hammerhead.karooext.models.DataType.Field.RADAR_TARGET_4_RANGE],
+                            values[io.hammerhead.karooext.models.DataType.Field.RADAR_TARGET_5_RANGE],
+                            values[io.hammerhead.karooext.models.DataType.Field.RADAR_TARGET_6_RANGE],
+                            values[io.hammerhead.karooext.models.DataType.Field.RADAR_TARGET_7_RANGE],
+                            values[io.hammerhead.karooext.models.DataType.Field.RADAR_TARGET_8_RANGE]
+                        ).filter { it > 0.0 }
+                        currentData.radarTargetCount = ranges.size.toString()
+
+                        // Distance to closest target
+                        val closest = ranges.minOrNull()
+                        currentData.radarClosestRange = if (closest != null)
+                            "${formatValue(closest)} m" else "--"
+
+                        Log.d(TAG, "Radar: threat=$threat, targets=${ranges.size}, closest=${currentData.radarClosestRange}")
+                    }
+                    is StreamState.Searching -> {
+                        currentData.radarThreatLevel = "..."
+                        currentData.radarTargetCount = "..."
+                        currentData.radarClosestRange = "..."
+                    }
+                    else -> {
+                        currentData.radarThreatLevel = "--"
+                        currentData.radarTargetCount = "--"
+                        currentData.radarClosestRange = "--"
+                    }
+                }
+                currentData.isDirty = true
+            }
+        }
     }
 
     /**
@@ -991,6 +1042,11 @@ class KarooActiveLookBridge(context: Context) {
             // Climbing metrics
             24 -> currentData.vam                                    // VAM (vertical ascent meters)
             25 -> currentData.avgVam                                 // Avg VAM
+
+            // Radar metrics
+            50 -> currentData.radarThreatLevel                       // Threat level (0 = clear)
+            51 -> currentData.radarTargetCount                       // Number of detected vehicles
+            52 -> currentData.radarClosestRange                      // Distance to nearest vehicle
 
             // Future metrics (see Future-Updates.md)
             21, 22, 23 -> "N/A"                                      // Altitude, Ascent, Descent

@@ -308,7 +308,7 @@ val DataFieldCategory.displayName: String
         DataFieldCategory.SPEED_PACE -> "Speed & Pace"
         DataFieldCategory.CADENCE -> "Cadence"
         DataFieldCategory.CLIMBING -> "Climbing"
-        DataFieldCategory.RUNNING_DYNAMICS -> "Running Dynamics"
+        DataFieldCategory.RADAR -> "Radar"
         DataFieldCategory.ELEVATION -> "Elevation"
         DataFieldCategory.ENERGY -> "Energy"
     }

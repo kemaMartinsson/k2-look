@@ -103,6 +103,10 @@ class KarooDataService(context: Context) {
     private val _avgVamData = MutableStateFlow<StreamState?>(null)
     val avgVamData: StateFlow<StreamState?> = _avgVamData.asStateFlow()
 
+    // Radar (threat level, target count, closest range — all come from one multi-field stream)
+    private val _radarData = MutableStateFlow<StreamState?>(null)
+    val radarData: StateFlow<StreamState?> = _radarData.asStateFlow()
+
     // Reconnection management
     private var reconnectAttempts = 0
     private val maxReconnectAttempts = 5
@@ -442,6 +446,17 @@ class KarooDataService(context: Context) {
             }
             consumerIds.add(avgVamId)
 
+            // Register Radar stream (threat level + up to 8 target ranges in one DataPoint)
+            val radarId = karooSystem.addConsumer(
+                OnStreamState.StartStreaming(DataType.Type.RADAR),
+                onError = { error ->
+                    Log.e(TAG, "Radar stream error: $error")
+                }
+            ) { event: OnStreamState ->
+                _radarData.value = event.state
+            }
+            consumerIds.add(radarId)
+
             Log.i(TAG, "Successfully registered ${consumerIds.size} data consumers")
         } catch (e: Exception) {
             Log.e(TAG, "Error registering consumers: ${e.message}", e)
@@ -510,6 +525,7 @@ class KarooDataService(context: Context) {
         _smoothed30sPowerData.value = null
         _vamData.value = null
         _avgVamData.value = null
+        _radarData.value = null
     }
 
     /**
