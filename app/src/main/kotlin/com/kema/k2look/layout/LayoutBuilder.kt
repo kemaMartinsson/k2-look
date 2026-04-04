@@ -1,8 +1,6 @@
 package com.kema.k2look.layout
 
 import android.util.Log
-import com.kema.k2look.model.FontSize
-import com.kema.k2look.model.IconSize
 import com.kema.k2look.model.LayoutDataField
 import com.kema.k2look.model.LayoutScreen
 
@@ -27,9 +25,20 @@ class LayoutBuilder {
         // Text rotation (see ActiveLook API)
         const val ROTATION_TOP_LR = 4  // Top-to-bottom, left-to-right, centered
 
-        // Layout margins
-        const val ICON_MARGIN = 5
-        const val TEXT_MARGIN = 10
+        /**
+         * Official text positions from ActiveLook Visual Assets README.
+         * Key = font ID. Values = (txtX, txtY) relative to clipping region.
+         * With rotation 4 (TOP_LR), txtX is the RIGHT edge of the rendered text.
+         */
+        private data class TextPosition(val txtX: Int, val txtY: Int)
+
+        private val officialTextPositions = mapOf(
+            1 to TextPosition(62, 22),    // Font 1 (24px) — e.g. battery, time
+            2 to TextPosition(87, 38),    // Font 2 (38px) — half-width zones
+            3 to TextPosition(194, 64),   // Font 3 (64px) — full-width zones
+            4 to TextPosition(172, 75),   // Font 4 (75px) — two-data zones
+            5 to TextPosition(187, 106)   // Font 5 (82px) — one-data zones
+        )
     }
 
     /**
@@ -63,12 +72,15 @@ class LayoutBuilder {
             foreColor = COLOR_WHITE,
             backColor = COLOR_BLACK,
             font = zone.font,
-            textConfig = TextConfig(
-                x = zone.width - TEXT_MARGIN,  // Right-aligned
-                y = zone.height / 2,  // Vertically centered
-                rotation = ROTATION_TOP_LR,
-                opacity = true
-            ),
+            textConfig = run {
+                val pos = officialTextPositions[zone.font]
+                if (pos != null) {
+                    TextConfig(x = pos.txtX, y = pos.txtY, rotation = ROTATION_TOP_LR, opacity = true)
+                } else {
+                    Log.w(TAG, "No official text position for font ${zone.font}, using fallback")
+                    TextConfig(x = zone.width - 10, y = zone.height / 2, rotation = ROTATION_TOP_LR, opacity = true)
+                }
+            },
             additionalCommands = buildAdditionalCommands(field, zone)
         )
     }
@@ -92,75 +104,25 @@ class LayoutBuilder {
     }
 
     /**
-     * Build additional graphic commands (icons, labels)
+     * Build additional graphic commands saved with the layout definition.
+     *
+     * Currently returns an empty list. Labels and icons are NOT included as saved
+     * sub-commands because:
+     *  1. Saved sub-commands render BEFORE the main text value on the glasses.
+     *  2. The main text with opacity=true draws a black background behind each
+     *     character, overwriting any previously drawn sub-commands (icons, labels).
+     *  3. Official ActiveLook layouts do not use saved sub-commands for labels.
+     *
+     * TODO: Implement labels/icons via LayoutExtraCmd sent at display time
+     *       (layoutClearAndDisplayExtended). ExtraCmd draws AFTER the main text,
+     *       so labels would remain visible. See reference/android-sdk/debugapp
+     *       DebugActivity.java for the pattern.
      */
     private fun buildAdditionalCommands(
-        field: LayoutDataField,
-        zone: com.kema.k2look.model.LayoutZone
+        @Suppress("UNUSED_PARAMETER") field: LayoutDataField,
+        @Suppress("UNUSED_PARAMETER") zone: com.kema.k2look.model.LayoutZone
     ): List<GraphicCommand> {
-        val commands = mutableListOf<GraphicCommand>()
-
-        var textOffsetX = 0
-
-        // Add icon if enabled
-        if (field.showIcon) {
-            val iconId = when (field.iconSize) {
-                IconSize.SMALL -> field.dataField.icon28
-                IconSize.LARGE -> field.dataField.icon40
-            }
-
-            if (iconId != null) {
-                val iconSize = field.iconSize.pixels
-                val iconX = ICON_MARGIN
-                val iconY = (zone.height - iconSize) / 2  // Vertically center in zone
-
-                Log.d(TAG, "Adding icon $iconId at ($iconX, $iconY), size: ${iconSize}px")
-
-                commands.add(
-                    GraphicCommand.Image(
-                        id = iconId,
-                        x = iconX,
-                        y = iconY
-                    )
-                )
-
-                textOffsetX = iconSize + ICON_MARGIN * 2
-            }
-        }
-
-        // Add label if enabled
-        if (field.showLabel) {
-            val labelText = buildLabelText(field)
-            val labelX = textOffsetX + 5
-            val labelY = 5  // Near top of zone
-
-            Log.d(TAG, "Adding label '$labelText' at ($labelX, $labelY)")
-
-            commands.add(
-                GraphicCommand.Text(
-                    x = labelX,
-                    y = labelY,
-                    rotation = 0,  // Left-aligned
-                    font = FontSize.SMALL.fontId,  // Labels always use small font
-                    text = labelText
-                )
-            )
-        }
-
-        Log.d(TAG, "Built ${commands.size} additional commands for zone ${zone.id}")
-        return commands
-    }
-
-    /**
-     * Build label text (name + optional unit)
-     */
-    private fun buildLabelText(field: LayoutDataField): String {
-        val name = field.dataField.name.uppercase()
-        return if (field.showUnit && field.dataField.unit.isNotEmpty()) {
-            "$name (${field.dataField.unit})"
-        } else {
-            name
-        }
+        return emptyList()
     }
 }
 

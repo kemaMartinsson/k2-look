@@ -203,5 +203,76 @@ class LayoutBuilderTest {
         assertEquals("3D_FULL", template.id)
         assertTrue(template.zones.size >= 3)
     }
-}
 
+    // ──────────────────────────────────────────────────────────────────────
+    // Regression: 3D_FULL zone geometry must match official ActiveLook values
+    // ──────────────────────────────────────────────────────────────────────
+
+    /**
+     * Locks in the official zone coordinates for the 3D_FULL template.
+     *
+     * If LayoutTemplateRegistry or LayoutBuilder.officialTextPositions is edited,
+     * this test will fail — a prompt to also update DisplayDebugService.testThreeFieldLayout.
+     *
+     * Official source: ActiveLook Visual Assets README (full-width layouts):
+     *   width=244, height=50, font=3, txtX=194, txtY=64
+     *
+     * txtY (64) > height (50) is intentional: the top 14 px of SourceSansPro
+     * SemiBold 64 px are ascender headroom above the clip boundary.
+     * Digit bodies are fully visible. Any additional cropping is a bug.
+     *
+     * Zone Y positions (bottom-edge, Y increases upward):
+     *   H (top):    y=153  → absolute clip [153, 203]  — 14-px gap →
+     *   M (middle): y= 89  → absolute clip [ 89, 139]  — 14-px gap →
+     *   L (bottom): y= 25  → absolute clip [ 25,  75]
+     */
+    @Test
+    fun test3DFullZoneGeometryMatchesOfficialValues() {
+        val template = LayoutTemplateRegistry.getTemplate("3D_FULL")
+        assertEquals("3D_FULL", template.id)
+        assertEquals(3, template.zones.size)
+
+        val h = template.zones.first { it.id == "3D_FULL_H" }
+        assertEquals("3D_FULL_H x",       30, h.x)
+        assertEquals("3D_FULL_H y",      153, h.y)
+        assertEquals("3D_FULL_H width",  244, h.width)
+        assertEquals("3D_FULL_H height",  50, h.height)
+        assertEquals("3D_FULL_H font",     3, h.font)
+
+        val m = template.zones.first { it.id == "3D_FULL_M" }
+        assertEquals("3D_FULL_M x",       30, m.x)
+        assertEquals("3D_FULL_M y",       89, m.y)
+        assertEquals("3D_FULL_M width",  244, m.width)
+        assertEquals("3D_FULL_M height",  50, m.height)
+        assertEquals("3D_FULL_M font",     3, m.font)
+
+        val l = template.zones.first { it.id == "3D_FULL_L" }
+        assertEquals("3D_FULL_L x",       30, l.x)
+        assertEquals("3D_FULL_L y",       25, l.y)
+        assertEquals("3D_FULL_L width",  244, l.width)
+        assertEquals("3D_FULL_L height",  50, l.height)
+        assertEquals("3D_FULL_L font",     3, l.font)
+
+        // LayoutBuilder must produce the official text position for font 3
+        val field = LayoutDataField(
+            dataField = DataFieldRegistry.getById(12)!!,
+            zoneId = "3D_FULL_L",
+            visualizationType = VisualizationType.TEXT,
+            showLabel = false,
+            showUnit = false,
+            showIcon = false
+        )
+        val screen = LayoutScreen(id = 1, name = "T", templateId = "3D_FULL", dataFields = listOf(field))
+        val layout = LayoutBuilder().buildLayout(10, field, screen)
+
+        assertEquals("clipping x",       30, layout.clippingRegion.x)
+        assertEquals("clipping y",       25, layout.clippingRegion.y)
+        assertEquals("clipping width",  244, layout.clippingRegion.width)
+        assertEquals("clipping height",  50, layout.clippingRegion.height)
+        assertEquals("font",              3,  layout.font)
+        // Official txtX for font 3 = 194 (right edge of text within clip)
+        assertEquals("txtX", 194, layout.textConfig.x)
+        // Official txtY for font 3 = 64  (top of text, measured upward from clip bottom)
+        assertEquals("txtY",  64, layout.textConfig.y)
+    }
+}

@@ -122,26 +122,26 @@ object LayoutTemplateRegistry {
                     LayoutZone(
                         id = "3D_FULL_H",
                         displayName = "Top",
-                        x = 30, y = 129, width = 244, height = 60,
-                        font = 4, fontSize = FontSize.LARGE,
+                        x = 30, y = 153, width = 244, height = 50,
+                        font = 3, fontSize = FontSize.MEDIUM,
                         isChrono = true,
-                        chronoHourX = 203, chronoHourY = 154
+                        chronoHourX = 211, chronoHourY = 170
                     ),
                     LayoutZone(
                         id = "3D_FULL_M",
                         displayName = "Middle",
-                        x = 30, y = 77, width = 244, height = 35,
-                        font = 2, fontSize = FontSize.MEDIUM,
+                        x = 30, y = 89, width = 244, height = 50,
+                        font = 3, fontSize = FontSize.MEDIUM,
                         isChrono = true,
-                        chronoHourX = 236, chronoHourY = 89
+                        chronoHourX = 211, chronoHourY = 106
                     ),
                     LayoutZone(
                         id = "3D_FULL_L",
                         displayName = "Bottom",
-                        x = 30, y = 25, width = 244, height = 35,
-                        font = 2, fontSize = FontSize.MEDIUM,
+                        x = 30, y = 25, width = 244, height = 50,
+                        font = 3, fontSize = FontSize.MEDIUM,
                         isChrono = true,
-                        chronoHourX = 236, chronoHourY = 37
+                        chronoHourX = 211, chronoHourY = 42
                     )
                 ),
                 maxFields = 3
@@ -154,36 +154,36 @@ object LayoutTemplateRegistry {
                 name = "Four Data",
                 zones = listOf(
                     LayoutZone(
-                        id = "4D_H1",
-                        displayName = "Top Left",
-                        x = 30, y = 129, width = 117, height = 60,
+                        id = "4D_FULL_H",
+                        displayName = "Top",
+                        x = 30, y = 149, width = 244, height = 60,
                         font = 4, fontSize = FontSize.LARGE,
                         isChrono = true,
-                        chronoHourX = 120, chronoHourY = 154
+                        chronoHourX = 203, chronoHourY = 174
                     ),
                     LayoutZone(
-                        id = "4D_H2",
-                        displayName = "Top Right",
-                        x = 157, y = 129, width = 117, height = 60,
+                        id = "4D_FULL_L",
+                        displayName = "Second Row",
+                        x = 30, y = 80, width = 244, height = 60,
                         font = 4, fontSize = FontSize.LARGE,
                         isChrono = true,
-                        chronoHourX = 247, chronoHourY = 154
+                        chronoHourX = 203, chronoHourY = 105
                     ),
                     LayoutZone(
-                        id = "4D_L1",
-                        displayName = "Bottom Left",
-                        x = 30, y = 25, width = 117, height = 60,
-                        font = 4, fontSize = FontSize.LARGE,
-                        isChrono = true,
-                        chronoHourX = 120, chronoHourY = 50
-                    ),
-                    LayoutZone(
-                        id = "4D_L2",
+                        id = "3D_HALF_L1",
                         displayName = "Bottom Right",
-                        x = 157, y = 25, width = 117, height = 60,
-                        font = 4, fontSize = FontSize.LARGE,
+                        x = 157, y = 33, width = 117, height = 35,
+                        font = 2, fontSize = FontSize.MEDIUM,
                         isChrono = true,
-                        chronoHourX = 247, chronoHourY = 50
+                        chronoHourX = 257, chronoHourY = 45
+                    ),
+                    LayoutZone(
+                        id = "3D_HALF_L2",
+                        displayName = "Bottom Left",
+                        x = 30, y = 33, width = 117, height = 35,
+                        font = 2, fontSize = FontSize.MEDIUM,
+                        isChrono = true,
+                        chronoHourX = 130, chronoHourY = 45
                     )
                 ),
                 maxFields = 4
@@ -196,44 +196,44 @@ object LayoutTemplateRegistry {
                 name = "Five Data",
                 zones = listOf(
                     LayoutZone(
-                        id = "5D_H",
+                        id = "4D_FULL_H",
                         displayName = "Top",
-                        x = 30, y = 129, width = 244, height = 60,
+                        x = 30, y = 149, width = 244, height = 60,
                         font = 4, fontSize = FontSize.LARGE,
                         isChrono = true,
-                        chronoHourX = 203, chronoHourY = 154
+                        chronoHourX = 203, chronoHourY = 174
                     ),
                     LayoutZone(
-                        id = "5D_M1",
-                        displayName = "Middle Left",
-                        x = 30, y = 77, width = 117, height = 35,
-                        font = 2, fontSize = FontSize.MEDIUM,
-                        isChrono = true,
-                        chronoHourX = 130, chronoHourY = 89
-                    ),
-                    LayoutZone(
-                        id = "5D_M2",
+                        id = "3D_HALF_M1",
                         displayName = "Middle Right",
-                        x = 157, y = 77, width = 117, height = 35,
+                        x = 157, y = 95, width = 117, height = 35,
                         font = 2, fontSize = FontSize.MEDIUM,
                         isChrono = true,
-                        chronoHourX = 257, chronoHourY = 89
+                        chronoHourX = 257, chronoHourY = 105
                     ),
                     LayoutZone(
-                        id = "5D_L1",
-                        displayName = "Bottom Left",
-                        x = 30, y = 25, width = 117, height = 35,
+                        id = "3D_HALF_M2",
+                        displayName = "Middle Left",
+                        x = 30, y = 95, width = 117, height = 35,
                         font = 2, fontSize = FontSize.MEDIUM,
                         isChrono = true,
-                        chronoHourX = 130, chronoHourY = 37
+                        chronoHourX = 130, chronoHourY = 105
                     ),
                     LayoutZone(
-                        id = "5D_L2",
+                        id = "3D_HALF_L1",
                         displayName = "Bottom Right",
-                        x = 157, y = 25, width = 117, height = 35,
+                        x = 157, y = 33, width = 117, height = 35,
                         font = 2, fontSize = FontSize.MEDIUM,
                         isChrono = true,
-                        chronoHourX = 257, chronoHourY = 37
+                        chronoHourX = 257, chronoHourY = 45
+                    ),
+                    LayoutZone(
+                        id = "3D_HALF_L2",
+                        displayName = "Bottom Left",
+                        x = 30, y = 33, width = 117, height = 35,
+                        font = 2, fontSize = FontSize.MEDIUM,
+                        isChrono = true,
+                        chronoHourX = 130, chronoHourY = 45
                     )
                 ),
                 maxFields = 5
@@ -246,52 +246,52 @@ object LayoutTemplateRegistry {
                 name = "Six Data",
                 zones = listOf(
                     LayoutZone(
-                        id = "6D_H1",
-                        displayName = "Top Left",
-                        x = 30, y = 129, width = 117, height = 35,
-                        font = 2, fontSize = FontSize.MEDIUM,
-                        isChrono = true,
-                        chronoHourX = 130, chronoHourY = 141
-                    ),
-                    LayoutZone(
-                        id = "6D_H2",
+                        id = "3D_HALF_H1",
                         displayName = "Top Right",
-                        x = 157, y = 129, width = 117, height = 35,
+                        x = 157, y = 157, width = 117, height = 35,
                         font = 2, fontSize = FontSize.MEDIUM,
                         isChrono = true,
-                        chronoHourX = 257, chronoHourY = 141
+                        chronoHourX = 257, chronoHourY = 166
                     ),
                     LayoutZone(
-                        id = "6D_M1",
-                        displayName = "Middle Left",
-                        x = 30, y = 77, width = 117, height = 35,
+                        id = "3D_HALF_H2",
+                        displayName = "Top Left",
+                        x = 30, y = 157, width = 117, height = 35,
                         font = 2, fontSize = FontSize.MEDIUM,
                         isChrono = true,
-                        chronoHourX = 130, chronoHourY = 89
+                        chronoHourX = 130, chronoHourY = 166
                     ),
                     LayoutZone(
-                        id = "6D_M2",
+                        id = "3D_HALF_M1",
                         displayName = "Middle Right",
-                        x = 157, y = 77, width = 117, height = 35,
+                        x = 157, y = 95, width = 117, height = 35,
                         font = 2, fontSize = FontSize.MEDIUM,
                         isChrono = true,
-                        chronoHourX = 257, chronoHourY = 89
+                        chronoHourX = 257, chronoHourY = 105
                     ),
                     LayoutZone(
-                        id = "6D_L1",
-                        displayName = "Bottom Left",
-                        x = 30, y = 25, width = 117, height = 35,
+                        id = "3D_HALF_M2",
+                        displayName = "Middle Left",
+                        x = 30, y = 95, width = 117, height = 35,
                         font = 2, fontSize = FontSize.MEDIUM,
                         isChrono = true,
-                        chronoHourX = 130, chronoHourY = 37
+                        chronoHourX = 130, chronoHourY = 105
                     ),
                     LayoutZone(
-                        id = "6D_L2",
+                        id = "3D_HALF_L1",
                         displayName = "Bottom Right",
-                        x = 157, y = 25, width = 117, height = 35,
+                        x = 157, y = 33, width = 117, height = 35,
                         font = 2, fontSize = FontSize.MEDIUM,
                         isChrono = true,
-                        chronoHourX = 257, chronoHourY = 37
+                        chronoHourX = 257, chronoHourY = 45
+                    ),
+                    LayoutZone(
+                        id = "3D_HALF_L2",
+                        displayName = "Bottom Left",
+                        x = 30, y = 33, width = 117, height = 35,
+                        font = 2, fontSize = FontSize.MEDIUM,
+                        isChrono = true,
+                        chronoHourX = 130, chronoHourY = 45
                     )
                 ),
                 maxFields = 6

@@ -73,5 +73,14 @@ sealed class GraphicCommand {
         val x1: Int,
         val y1: Int
     ) : GraphicCommand()
+
+    /**
+     * Change font for subsequent sub-commands in this layout.
+     * Maps to ActiveLook sub-command ID 4 (font).
+     * @param fontId ActiveLook font ID (1-5)
+     */
+    data class FontChange(
+        val fontId: Int
+    ) : GraphicCommand()
 }
 

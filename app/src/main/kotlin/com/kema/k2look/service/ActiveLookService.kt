@@ -221,6 +221,16 @@ class ActiveLookService(private val context: Context) {
                     // Enable gesture sensor on glasses
                     enableGestureSensor(true)
 
+                    // Clear the ActiveLook splash/boot screen after a brief delay
+                    // to allow the firmware to finish its startup sequence.
+                    try {
+                        Thread.sleep(500)
+                        connectedGlasses.clear()
+                        Log.i(TAG, "✓ Display cleared after connect")
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed to clear display after connect: ${e.message}")
+                    }
+
                     Log.i(TAG, "✓ Connection established successfully")
                 },
                 { failedGlasses ->

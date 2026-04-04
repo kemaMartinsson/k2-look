@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.activelook.activelooksdk.DiscoveredGlasses
 import com.kema.k2look.service.ActiveLookService
+import com.kema.k2look.service.DisplayDebugService
 import com.kema.k2look.service.KarooActiveLookBridge
 import com.kema.k2look.service.KarooDataService
 import com.kema.k2look.util.PreferencesManager
@@ -17,14 +18,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/**
- * ViewModel for managing Karoo data, ActiveLook connection, and UI state
- */
+/** ViewModel for managing Karoo data, ActiveLook connection, and UI state */
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val bridge = KarooActiveLookBridge(application)
     private val karooDataService = bridge.getKarooDataService()
     private val activeLookService = bridge.getActiveLookService()
+
+    /** Display debug / calibration test patterns on glasses */
+    val displayDebug = DisplayDebugService(activeLookService)
 
     // Public access to preferences for UI
     val preferencesManager = PreferencesManager(application)
@@ -32,27 +34,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Reference to LayoutBuilderViewModel for gesture actions
     private var layoutBuilderViewModel: LayoutBuilderViewModel? = null
 
-    /**
-     * Set the LayoutBuilderViewModel instance for gesture screen cycling
-     */
+    /** Set the LayoutBuilderViewModel instance for gesture screen cycling */
     fun setLayoutBuilderViewModel(viewModel: LayoutBuilderViewModel) {
         this.layoutBuilderViewModel = viewModel
         Log.i(TAG, "LayoutBuilderViewModel reference set for gesture actions")
     }
 
-    /**
-     * Get the bridge for use by other components (e.g., LayoutBuilderViewModel)
-     */
+    /** Get the bridge for use by other components (e.g., LayoutBuilderViewModel) */
     fun getBridge(): KarooActiveLookBridge = bridge
 
-    /**
-     * Get the layout service for Phase 4.2 operations
-     */
+    /** Get the layout service for Phase 4.2 operations */
     fun getLayoutService() = bridge.getLayoutService()
 
     /**
-     * Find a profile by name (for auto-switching based on Karoo profile)
-     * This will be called by the bridge, which gets the callback from LayoutBuilderViewModel
+     * Find a profile by name (for auto-switching based on Karoo profile) This will be called by the
+     * bridge, which gets the callback from LayoutBuilderViewModel
      */
     fun getProfileByName(name: String): com.kema.k2look.model.DataFieldProfile? {
         // This is a placeholder - actual lookup happens in LayoutBuilderViewModel
@@ -65,44 +61,49 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
     data class UiState(
-        val connectionState: KarooDataService.ConnectionState = KarooDataService.ConnectionState.Disconnected,
-        val bridgeState: KarooActiveLookBridge.BridgeState = KarooActiveLookBridge.BridgeState.Idle,
-        val activeLookState: ActiveLookService.ConnectionState = ActiveLookService.ConnectionState.Disconnected,
-        val discoveredGlasses: List<DiscoveredGlasses> = emptyList(),
-        val isScanning: Boolean = false,
-        val rideState: RideState = RideState.Idle,
-        val userProfile: UserProfile? = null,
-        val useImperialUnits: Boolean = false,
-        val reconnectTimeoutMinutes: Int = 10, // Default 10 minutes
-        val debugModeEnabled: Boolean = false,
-        val speed: String = "--",
-        val avgSpeed: String = "--",
-        val maxSpeed: String = "--",
-        val heartRate: String = "--",
-        val avgHeartRate: String = "--",
-        val maxHeartRate: String = "--",
-        val cadence: String = "--",
-        val avgCadence: String = "--",
-        val maxCadence: String = "--",
-        val power: String = "--",
-        val avgPower: String = "--",
-        val maxPower: String = "--",
-        val distance: String = "--",
-        val time: String = "--",
-        // Advanced metrics
-        val hrZone: String = "--",
-        val power3s: String = "--",
-        val power10s: String = "--",
-        val power30s: String = "--",
-        val vam: String = "--",
-        val avgVam: String = "--",
-        // Gesture/Touch events
-        val gestureEventCount: Int = 0,
-        val touchEventCount: Int = 0,
-        val gestureAction: com.kema.k2look.model.GestureAction = com.kema.k2look.model.GestureAction.CYCLE_SCREENS,
-        val touchAction: com.kema.k2look.model.TouchAction = com.kema.k2look.model.TouchAction.SHOW_HIDE_DISPLAY,
-        // Forget glasses warning dialog
-        val showForgetWarningDialog: Boolean = false,
+            val connectionState: KarooDataService.ConnectionState =
+                    KarooDataService.ConnectionState.Disconnected,
+            val bridgeState: KarooActiveLookBridge.BridgeState =
+                    KarooActiveLookBridge.BridgeState.Idle,
+            val activeLookState: ActiveLookService.ConnectionState =
+                    ActiveLookService.ConnectionState.Disconnected,
+            val discoveredGlasses: List<DiscoveredGlasses> = emptyList(),
+            val isScanning: Boolean = false,
+            val rideState: RideState = RideState.Idle,
+            val userProfile: UserProfile? = null,
+            val useImperialUnits: Boolean = false,
+            val reconnectTimeoutMinutes: Int = 10, // Default 10 minutes
+            val debugModeEnabled: Boolean = false,
+            val speed: String = "--",
+            val avgSpeed: String = "--",
+            val maxSpeed: String = "--",
+            val heartRate: String = "--",
+            val avgHeartRate: String = "--",
+            val maxHeartRate: String = "--",
+            val cadence: String = "--",
+            val avgCadence: String = "--",
+            val maxCadence: String = "--",
+            val power: String = "--",
+            val avgPower: String = "--",
+            val maxPower: String = "--",
+            val distance: String = "--",
+            val time: String = "--",
+            // Advanced metrics
+            val hrZone: String = "--",
+            val power3s: String = "--",
+            val power10s: String = "--",
+            val power30s: String = "--",
+            val vam: String = "--",
+            val avgVam: String = "--",
+            // Gesture/Touch events
+            val gestureEventCount: Int = 0,
+            val touchEventCount: Int = 0,
+            val gestureAction: com.kema.k2look.model.GestureAction =
+                    com.kema.k2look.model.GestureAction.CYCLE_SCREENS,
+            val touchAction: com.kema.k2look.model.TouchAction =
+                    com.kema.k2look.model.TouchAction.SHOW_HIDE_DISPLAY,
+            // Forget glasses warning dialog
+            val showForgetWarningDialog: Boolean = false,
     )
 
     private var simulatorJob: kotlinx.coroutines.Job? = null
@@ -121,80 +122,62 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         observeGesturePreferences()
     }
 
-    /**
-     * Connect to Karoo System
-     */
+    /** Connect to Karoo System */
     fun connectKaroo() {
         Log.i(TAG, "User requested connection to Karoo")
         bridge.connectKaroo()
     }
 
-    /**
-     * Disconnect from Karoo System
-     */
+    /** Disconnect from Karoo System */
     fun disconnectKaroo() {
         Log.i(TAG, "User requested disconnect from Karoo")
         bridge.disconnectKaroo()
     }
 
-    /**
-     * Start scanning for ActiveLook glasses
-     */
+    /** Start scanning for ActiveLook glasses */
     fun startActiveLookScan() {
         Log.i(TAG, "User requested ActiveLook scan")
         bridge.startActiveLookScan()
     }
 
-    /**
-     * Start scanning for glasses (alias for startActiveLookScan)
-     */
+    /** Start scanning for glasses (alias for startActiveLookScan) */
     fun startGlassesScan() {
         startActiveLookScan()
     }
 
-    /**
-     * Stop scanning for ActiveLook glasses
-     */
+    /** Stop scanning for ActiveLook glasses */
     fun stopActiveLookScan() {
         Log.i(TAG, "User requested stop ActiveLook scan")
         bridge.stopActiveLookScan()
     }
 
-    /**
-     * Connect to ActiveLook glasses
-     */
+    /** Connect to ActiveLook glasses */
     fun connectActiveLook(glasses: DiscoveredGlasses) {
         Log.i(TAG, "User requested connection to ActiveLook glasses: ${glasses.name}")
         bridge.connectActiveLook(glasses)
     }
 
-    /**
-     * Disconnect from ActiveLook glasses
-     */
+    /** Disconnect from ActiveLook glasses */
     fun disconnectActiveLook() {
         Log.i(TAG, "User requested disconnect from ActiveLook")
         bridge.disconnectActiveLook()
     }
 
-    /**
-     * Set auto-connect to glasses on startup
-     */
+    /** Set auto-connect to glasses on startup */
     fun setAutoConnectGlasses(enabled: Boolean) {
         Log.i(TAG, "Setting auto-connect glasses to: $enabled")
         preferencesManager.setAutoConnectActiveLook(enabled)
     }
 
-    /**
-     * Set disconnect glasses when ride ends (idle state)
-     */
+    /** Set disconnect glasses when ride ends (idle state) */
     fun setDisconnectWhenIdle(enabled: Boolean) {
         Log.i(TAG, "Setting disconnect when idle to: $enabled")
         preferencesManager.setDisconnectWhenIdle(enabled)
     }
 
     /**
-     * Forget saved glasses and disconnect if connected
-     * Best practice: Clean up resources (layouts, gauges) before disconnecting
+     * Forget saved glasses and disconnect if connected Best practice: Clean up resources (layouts,
+     * gauges) before disconnecting
      */
     fun forgetGlasses() {
         Log.i(TAG, "Forgetting saved glasses")
@@ -231,8 +214,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * Force forget glasses without cleanup (when not connected)
-     * Resources (layouts, gauges) will remain on glasses
+     * Force forget glasses without cleanup (when not connected) Resources (layouts, gauges) will
+     * remain on glasses
      */
     fun forceForgetGlasses() {
         Log.i(TAG, "Force forgetting glasses (not connected, resources may remain on glasses)")
@@ -249,26 +232,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         Log.i(TAG, "Force forget complete (resources not cleaned)")
     }
 
-    /**
-     * Dismiss forget glasses warning dialog
-     */
+    /** Dismiss forget glasses warning dialog */
     fun dismissForgetWarning() {
         Log.d(TAG, "Dismissed forget glasses warning")
         _uiState.value = _uiState.value.copy(showForgetWarningDialog = false)
     }
 
-    /**
-     * Load reconnect timeout from preferences
-     */
+    /** Load reconnect timeout from preferences */
     private fun loadReconnectTimeout() {
         val timeout = preferencesManager.getReconnectTimeoutMinutes()
         _uiState.value = _uiState.value.copy(reconnectTimeoutMinutes = timeout)
         Log.d(TAG, "Loaded reconnect timeout: ${timeout}min")
     }
 
-    /**
-     * Observe gesture/touch events from ActiveLook service
-     */
+    /** Observe gesture/touch events from ActiveLook service */
     private fun observeGestureEvents() {
         viewModelScope.launch {
             activeLookService.gestureEvents.collect { count ->
@@ -291,9 +268,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /**
-     * Observe gesture/touch action preferences
-     */
+    /** Observe gesture/touch action preferences */
     private fun observeGesturePreferences() {
         viewModelScope.launch {
             gesturePreferences.gestureAction.collect { action ->
@@ -309,9 +284,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /**
-     * Execute the configured gesture action
-     */
+    /** Execute the configured gesture action */
     private fun executeGestureAction(action: com.kema.k2look.model.GestureAction) {
         Log.i(TAG, "🖐️ Executing gesture action: ${action.displayName}")
 
@@ -319,20 +292,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             com.kema.k2look.model.GestureAction.CYCLE_SCREENS -> {
                 cycleToNextScreen()
             }
-
             com.kema.k2look.model.GestureAction.ADJUST_BRIGHTNESS -> {
                 adjustBrightness()
             }
-
             com.kema.k2look.model.GestureAction.TOGGLE_DISPLAY -> {
                 toggleDisplay()
             }
         }
     }
 
-    /**
-     * Execute the configured touch action
-     */
+    /** Execute the configured touch action */
     private fun executeTouchAction(action: com.kema.k2look.model.TouchAction) {
         Log.i(TAG, "👆 Executing touch action: ${action.displayName}")
 
@@ -340,11 +309,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             com.kema.k2look.model.TouchAction.SHOW_HIDE_DISPLAY -> {
                 toggleDisplay()
             }
-
             com.kema.k2look.model.TouchAction.CYCLE_SCREENS -> {
                 cycleToNextScreen()
             }
-
             com.kema.k2look.model.TouchAction.ADJUST_BRIGHTNESS -> {
                 adjustBrightness()
             }
@@ -357,9 +324,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Display power state
     private var displayPowerOn = true
 
-    /**
-     * Cycle to the next screen in the current profile
-     */
+    /** Cycle to the next screen in the current profile */
     private fun cycleToNextScreen() {
         val layoutViewModel = layoutBuilderViewModel
         if (layoutViewModel == null) {
@@ -373,29 +338,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /**
-     * Cycle to the next profile (REMOVED - not useful during rides)
-     */
+    /** Cycle to the next profile (REMOVED - not useful during rides) */
     private fun cycleToNextProfile() {
         // Removed - cycling K2Look profiles during a ride doesn't make sense
         Log.d(TAG, "Profile cycling removed - not needed during rides")
     }
 
     /**
-     * Adjust brightness (cycle through levels: 8 -> 12 -> 15 -> 4 -> 8)
-     * Using common brightness levels for cycling
+     * Adjust brightness (cycle through levels: 8 -> 12 -> 15 -> 4 -> 8) Using common brightness
+     * levels for cycling
      */
     private fun adjustBrightness() {
         viewModelScope.launch {
             try {
                 // Cycle through useful brightness levels
-                currentBrightness = when (currentBrightness) {
-                    in 0..7 -> 8    // Low -> Medium
-                    8 -> 12          // Medium -> High
-                    in 9..12 -> 15   // High -> Max
-                    in 13..15 -> 4   // Max -> Low
-                    else -> 8        // Default to medium
-                }
+                currentBrightness =
+                        when (currentBrightness) {
+                            in 0..7 -> 8 // Low -> Medium
+                            8 -> 12 // Medium -> High
+                            in 9..12 -> 15 // High -> Max
+                            in 13..15 -> 4 // Max -> Low
+                            else -> 8 // Default to medium
+                        }
 
                 Log.i(TAG, "✓ Adjusting brightness to level $currentBrightness (0=min, 15=max)")
 
@@ -408,9 +372,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /**
-     * Toggle display on/off
-     */
+    /** Toggle display on/off */
     private fun toggleDisplay() {
         viewModelScope.launch {
             try {
@@ -433,25 +395,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /**
-     * Set gesture action preference
-     */
+    /** Set gesture action preference */
     fun setGestureAction(action: com.kema.k2look.model.GestureAction) {
         Log.i(TAG, "Setting gesture action to: ${action.displayName}")
         gesturePreferences.setGestureAction(action)
     }
 
-    /**
-     * Set touch action preference
-     */
+    /** Set touch action preference */
     fun setTouchAction(action: com.kema.k2look.model.TouchAction) {
         Log.i(TAG, "Setting touch action to: ${action.displayName}")
         gesturePreferences.setTouchAction(action)
     }
 
-    /**
-     * Update reconnect timeout
-     */
+    /** Update reconnect timeout */
     fun setReconnectTimeout(minutes: Int) {
         if (minutes < 1 || minutes > 60) {
             Log.w(TAG, "Invalid reconnect timeout: $minutes (must be 1-60)")
@@ -463,9 +419,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.value = _uiState.value.copy(reconnectTimeoutMinutes = minutes)
     }
 
-    /**
-     * Toggle debug mode on/off
-     */
+    /** Toggle debug mode on/off */
     fun setDebugMode(enabled: Boolean) {
         Log.i(TAG, "Debug mode ${if (enabled) "enabled" else "disabled"}")
         _uiState.value = _uiState.value.copy(debugModeEnabled = enabled)
@@ -480,24 +434,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /**
-     * Start debug logging to file
-     */
+    /** Start debug logging to file */
     private fun startDebugLogging() {
         // TODO: Implement file logging
         Log.i(TAG, "Debug logging started - logs will be written to /sdcard/k2look_debug.log")
     }
 
-    /**
-     * Stop debug logging
-     */
+    /** Stop debug logging */
     private fun stopDebugLogging() {
         Log.i(TAG, "Debug logging stopped")
     }
 
-    /**
-     * Start simulator - sends test data to glasses
-     */
+    /** Start simulator - sends test data to glasses */
     fun startSimulator() {
         Log.i(TAG, "🎮 START SIMULATOR REQUESTED")
         Log.i(TAG, "  Debug mode: ${_uiState.value.debugModeEnabled}")
@@ -515,34 +463,34 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         // Also mirror the same values in the UI for visibility.
         simulatorJob?.cancel()
-        simulatorJob = viewModelScope.launch {
-            var counter = 0
-            Log.i(TAG, "🔁 Simulator UI update loop starting")
-            while (_uiState.value.debugModeEnabled) {
-                counter++
-                _uiState.value = _uiState.value.copy(
-                    speed = "${20 + (counter % 20)} km/h",
-                    heartRate = "${140 + (counter % 30)} bpm",
-                    cadence = "${80 + (counter % 20)} rpm",
-                    power = "${200 + (counter % 100)} w",
-                    distance = "${counter / 10}.${counter % 10} km",
-                    time = formatSimulatedTime(counter * 2)
-                )
-                if (counter % 5 == 0) {
-                    Log.d(
-                        TAG,
-                        "Simulator tick $counter: SPD=${_uiState.value.speed}, HR=${_uiState.value.heartRate}"
-                    )
+        simulatorJob =
+                viewModelScope.launch {
+                    var counter = 0
+                    Log.i(TAG, "🔁 Simulator UI update loop starting")
+                    while (_uiState.value.debugModeEnabled) {
+                        counter++
+                        _uiState.value =
+                                _uiState.value.copy(
+                                        speed = "${20 + (counter % 20)} km/h",
+                                        heartRate = "${140 + (counter % 30)} bpm",
+                                        cadence = "${80 + (counter % 20)} rpm",
+                                        power = "${200 + (counter % 100)} w",
+                                        distance = "${counter / 10}.${counter % 10} km",
+                                        time = formatSimulatedTime(counter * 2)
+                                )
+                        if (counter % 5 == 0) {
+                            Log.d(
+                                    TAG,
+                                    "Simulator tick $counter: SPD=${_uiState.value.speed}, HR=${_uiState.value.heartRate}"
+                            )
+                        }
+                        kotlinx.coroutines.delay(2000)
+                    }
+                    Log.i(TAG, "⏹ Simulator UI update loop stopped")
                 }
-                kotlinx.coroutines.delay(2000)
-            }
-            Log.i(TAG, "⏹ Simulator UI update loop stopped")
-        }
     }
 
-    /**
-     * Stop simulator
-     */
+    /** Stop simulator */
     fun stopSimulator() {
         Log.i(TAG, "Stopping simulator...")
         simulatorJob?.cancel()
@@ -551,8 +499,47 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * Format simulated time
+     * Run a numbered display debug test (1–6) on the connected glasses. Requires debug mode ON and
+     * glasses connected.
+     *
+     * 1 = Display bounds & coordinate grid 2 = Text anchor / rotation behaviour 3 = Clipping region
+     * semantics (width = SIZE vs COORD) 4 = Text X position with rotation 4 5 = K2Look current vs
+     * Official ActiveLook params 6 = Full 3-field layout with official positions 7 =
+     * LayoutExtraCmd: unit text / bitmap icon / label drawn AFTER main value 8 = icon | value |
+     * unit: speed icon (id=26) to the viewer-left of value 9 = imgList: log all stored bitmap ids /
+     * dimensions in ALooK config to find correct icon IDs
      */
+    fun runDisplayDebugTest(testNumber: Int) {
+        if (!_uiState.value.debugModeEnabled) {
+            Log.w(TAG, "Display debug requires debug mode")
+            return
+        }
+        if (_uiState.value.activeLookState !is ActiveLookService.ConnectionState.Connected) {
+            Log.w(TAG, "Display debug requires glasses connected")
+            return
+        }
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            when (testNumber) {
+                1 -> displayDebug.testDisplayBounds()
+                2 -> displayDebug.testTextRotations()
+                3 -> displayDebug.testClippingSemantics()
+                4 -> displayDebug.testTextXPosition()
+                5 -> displayDebug.testK2LookVsOfficial()
+                6 -> displayDebug.testThreeFieldLayout()
+                7 -> displayDebug.testExtraCommands()
+                8 -> displayDebug.testIconValueUnit()
+                9 -> displayDebug.testRealisticLayout()
+                else -> Log.w(TAG, "Unknown debug test: $testNumber")
+            }
+        }
+    }
+
+    /** Clear all debug patterns from the glasses display. */
+    fun clearGlassesDisplay() {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { displayDebug.clearDisplay() }
+    }
+
+    /** Format simulated time */
     private fun formatSimulatedTime(seconds: Int): String {
         val h = seconds / 3600
         val m = (seconds % 3600) / 60
@@ -560,9 +547,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return String.format(java.util.Locale.ROOT, "%02d:%02d:%02d", h, m, s)
     }
 
-    /**
-     * Observe bridge state
-     */
+    /** Observe bridge state */
     private fun observeBridgeState() {
         viewModelScope.launch {
             bridge.bridgeState.collect { state ->
@@ -572,9 +557,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /**
-     * Observe ActiveLook data
-     */
+    /** Observe ActiveLook data */
     private fun observeActiveLookData() {
         // Observe connection state
         viewModelScope.launch {
@@ -601,29 +584,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /**
-     * Observe user profile preferences from Karoo (including unit system)
-     */
+    /** Observe user profile preferences from Karoo (including unit system) */
     private fun observeUserProfile() {
         viewModelScope.launch {
             karooDataService.getKarooSystem().addConsumer<UserProfile> { profile ->
                 Log.d(
-                    TAG,
-                    "User profile updated: distance=${profile.preferredUnit.distance}, elevation=${profile.preferredUnit.elevation}"
+                        TAG,
+                        "User profile updated: distance=${profile.preferredUnit.distance}, elevation=${profile.preferredUnit.elevation}"
                 )
                 val useImperial =
-                    profile.preferredUnit.distance == UserProfile.PreferredUnit.UnitType.IMPERIAL
-                _uiState.value = _uiState.value.copy(
-                    userProfile = profile,
-                    useImperialUnits = useImperial
-                )
+                        profile.preferredUnit.distance ==
+                                UserProfile.PreferredUnit.UnitType.IMPERIAL
+                _uiState.value =
+                        _uiState.value.copy(userProfile = profile, useImperialUnits = useImperial)
             }
         }
     }
 
-    /**
-     * Observe data from KarooDataService and update UI state
-     */
+    /** Observe data from KarooDataService and update UI state */
     private fun observeKarooData() {
         // Observe connection state
         viewModelScope.launch {
@@ -756,14 +734,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // Observe HR zone data
         viewModelScope.launch {
             karooDataService.hrZoneData.collect { streamState ->
-                val zoneStr = when (streamState) {
-                    is StreamState.Streaming -> {
-                        val zoneValue = streamState.dataPoint.singleValue?.toInt()
-                        if (zoneValue != null && zoneValue > 0) "Z$zoneValue" else "--"
-                    }
-
-                    else -> "--"
-                }
+                val zoneStr =
+                        when (streamState) {
+                            is StreamState.Streaming -> {
+                                val zoneValue = streamState.dataPoint.singleValue?.toInt()
+                                if (zoneValue != null && zoneValue > 0) "Z$zoneValue" else "--"
+                            }
+                            else -> "--"
+                        }
                 _uiState.value = _uiState.value.copy(hrZone = zoneStr)
             }
         }
@@ -809,9 +787,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /**
-     * Format stream data for display
-     */
+    /** Format stream data for display */
     private fun formatStreamData(streamState: StreamState?, unit: String): String {
         return when (streamState) {
             is StreamState.Streaming -> {
@@ -822,7 +798,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     "-- $unit"
                 }
             }
-
             is StreamState.Searching -> "Searching..."
             is StreamState.Idle -> "-- $unit"
             is StreamState.NotAvailable -> "N/A"
@@ -830,9 +805,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /**
-     * Format time data (convert ms to HH:MM:SS)
-     */
+    /** Format time data (convert ms to HH:MM:SS) */
     private fun formatTimeData(streamState: StreamState?): String {
         return when (streamState) {
             is StreamState.Streaming -> {
@@ -846,7 +819,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     "--:--:--"
                 }
             }
-
             is StreamState.Searching -> "--:--:--"
             is StreamState.Idle -> "--:--:--"
             is StreamState.NotAvailable -> "N/A"
@@ -854,9 +826,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /**
-     * Format numeric value for display
-     */
+    /** Format numeric value for display */
     private fun formatValue(value: Double): String {
         return when {
             value >= 100 -> "%.0f".format(value)
@@ -875,4 +845,3 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         private const val TAG = "MainViewModel"
     }
 }
-

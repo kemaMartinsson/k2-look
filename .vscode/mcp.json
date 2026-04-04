@@ -2,11 +2,11 @@
     "servers": {
 		"github": {
 			"command": "npx",
-			"args": ["-y", "@modelcontextprotocol/server-github"]
+			"args": ["@modelcontextprotocol/server-github"]
 		},
 		"filesystem": {
 			"command": "npx",
-			"args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspaces/k2-look"]
+			"args": ["@modelcontextprotocol/server-filesystem", "C:\\Project\\k2-look"]
 		}
     }
 }

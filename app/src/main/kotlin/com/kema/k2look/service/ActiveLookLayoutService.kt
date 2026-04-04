@@ -276,6 +276,8 @@ class ActiveLookLayoutService(
                         layoutParams.addSubCommandCirc(cmd.x.toShort(), cmd.y.toShort(), cmd.radius.toShort())
                     is com.kema.k2look.layout.GraphicCommand.Rect  ->
                         layoutParams.addSubCommandRect(cmd.x0.toShort(), cmd.y0.toShort(), cmd.x1.toShort(), cmd.y1.toShort())
+                    is com.kema.k2look.layout.GraphicCommand.FontChange ->
+                        layoutParams.addSubCommandFont(cmd.fontId.toByte())
                 }
             }
             glasses.layoutSave(layoutParams)

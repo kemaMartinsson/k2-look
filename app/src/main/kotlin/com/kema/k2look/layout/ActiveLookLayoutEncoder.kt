@@ -83,6 +83,7 @@ class ActiveLookLayoutEncoder {
                 is GraphicCommand.Circle -> 6                    // CMD + x + y + radius
                 is GraphicCommand.Rect -> 9                      // CMD + x0 + y0 + x1 + y1
                 is GraphicCommand.Image -> 6                     // CMD + id + x + y
+                is GraphicCommand.FontChange -> 2                // CMD + fontId (dead code path)
             }
         }
         return size
@@ -137,6 +138,10 @@ class ActiveLookLayoutEncoder {
                 buffer.putShort(cmd.y.toShort())
                 Log.v(TAG, "  Image: ID ${cmd.id} at (${cmd.x}, ${cmd.y})")
             }
+            is GraphicCommand.FontChange -> {
+                // Dead code path — FontChange is handled via SDK sub-command in ActiveLookLayoutService
+                Log.v(TAG, "  FontChange: font ${cmd.fontId} (no-op in encoder)")
+            }
         }
     }
 
@@ -149,4 +154,3 @@ class ActiveLookLayoutEncoder {
         return layouts.map { encodeLayout(it) }
     }
 }
-
