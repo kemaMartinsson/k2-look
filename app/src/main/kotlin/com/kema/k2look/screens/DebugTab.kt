@@ -287,6 +287,11 @@ fun DebugTab(viewModel: MainViewModel, uiState: MainViewModel.UiState) {
                                                         "9 · Realistic Layout",
                                                         "[speed icon][25.1][km/h] / [power icon][250][W] / [HR icon][150][bpm]"
                                                 ),
+                                                DebugTest(
+                                                        10,
+                                                        "10 · Visual Styles",
+                                                        "GAUGE (power zones) / BAR (effort %) / ZONE VIEW (HR zones)"
+                                                ),
                                         )
 
                                 tests.forEach { t ->

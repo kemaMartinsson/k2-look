@@ -1,0 +1,65 @@
+[
+  {
+    "_vis": "GAUGE — 7 power-zone segments. Active zone (Z3) filled, others dim.",
+    "_design": "Segments x=5..226, 30px wide each, 3px gap. Value 'Z3' at viewer-left (txt_x=235). Viewer sees Z7→Z1 left→right.",
+    "id": 110,
+    "x0": 0, "y0": 190, "width": 304, "height": 40,
+  
+    "extra_cmds": [
+      {"type": "rectf_dim", "x": 5,   "y": 5, "x2": 34,  "y2": 35},
+      {"type": "rectf_dim", "x": 38,  "y": 5, "x2": 67,  "y2": 35},
+      {"type": "rectf",     "x": 71,  "y": 5, "x2": 100, "y2": 35},
+      {"type": "rectf_dim", "x": 104, "y": 5, "x2": 133, "y2": 35},
+      {"type": "rectf_dim", "x": 137, "y": 5, "x2": 166, "y2": 35},
+      {"type": "rectf_dim", "x": 170, "y": 5, "x2": 199, "y2": 35},
+      {"type": "rectf_dim", "x": 203, "y": 5, "x2": 232, "y2": 35},
+      {"type": "font", "font_id": 1},
+      {"type": "text", "x": 5, "y": 8, "text": ""},
+      {"type": "bitmap", "icon_id": 12, "x": 270, "y": 5}
+    ]
+  },
+  {
+    "_vis": "BAR — horizontal effort bar. Border + 68% fill from viewer-left.",
+    "_design": "Bar x=5..298 (293px wide). Fill 68% = 199px from right in display coords (x=99..297). Value '68%' at viewer-left (txt_x=235).",
+    "id": 111,
+    "x0": 0, "y0": 110, "width": 304, "height": 40,
+    "font": 1, "txt_x": 235, "txt_y": 10,
+    "value": "68%",
+    "extra_cmds": [
+      {"type": "rect",  "x": 5,  "y": 6,  "x2": 298, "y2": 34},
+      {"type": "rectf", "x": 99, "y": 7,  "x2": 297, "y2": 33},
+      {"type": "font", "font_id": 1},
+      {"type": "text", "x": 5, "y": 10, "text": "EFF"}
+    ]
+  },
+  {
+    "_vis": "ZONE VIEW — 5 HR zone segments. Active zone Z2 filled, others dim.",
+    "_design": "5 segments × 58px, 3px gap. Active = Z2 (x=63..120). Value 'Z2' at viewer-left (txt_x=235).",
+    "id": 112,
+    "x0": 0, "y0": 25, "width": 304, "height": 40,
+    
+    "extra_cmds": [
+      {"type": "rectf_dim", "x": 2,   "y": 5, "x2": 59,  "y2": 35},
+      {"type": "rectf",     "x": 63,  "y": 5, "x2": 120, "y2": 35},
+      {"type": "rectf_dim", "x": 124, "y": 5, "x2": 181, "y2": 35},
+      {"type": "rectf_dim", "x": 185, "y": 5, "x2": 242, "y2": 35},
+      {"type": "rectf_dim", "x": 246, "y": 5, "x2": 301, "y2": 35},
+      {"type": "bitmap", "icon_id": 19, "x": 270, "y": 8}
+    ]
+  },
+  {
+    "_vis": "ARC GAUGE — 270° tachometer-style arc. Mirrors firmware gaugeSave+gaugeDisplay.",
+    "_design": "Center ~(152,128), r=110, rIn=90 (20px ring). Portions 3→14 = 270° span. 65% filled.",
+    "_note": "Portions: 0=3 o'clock, increase CW, each=22.5°. Portions 3→14: start=67.5°, end=315°.",
+    "id": 113,
+    "x0": 0, "y0": 0, "width": 304, "height": 256,
+    "font": 3, "txt_x": 162, "txt_y": 138,
+    "value": "325",
+    "extra_cmds": [
+      {"type": "gauge", "x": 152, "y": 128, "r": 110, "r_in": 90,
+       "start_portion": 3, "end_portion": 14, "clockwise": true, "value_pct": 65},
+      {"type": "font", "font_id": 1},
+      {"type": "text", "x": 132, "y": 150, "text": "W"}
+    ]
+  }
+]

@@ -1,0 +1,35 @@
+[
+  {
+    "id": 100,
+    "x0": 30, "y0": 170, "width": 250, "height": 40,
+    "font": 1, "txt_x": 150, "txt_y": 22,
+    "value": "25.1",
+    "extra_cmds": [
+      {"type": "bitmap", "icon_id": 26, "x": 20, "y": 0},
+      {"type": "font",   "font_id": 1},
+      {"type": "text",   "x": 150, "y": 22, "text": "km/h"}
+    ]
+  },
+  {
+    "id": 101,
+    "x0": 30, "y0": 89, "width": 244, "height": 35,
+    "font": 2, "txt_x": 170, "txt_y": 28,
+    "value": "250",
+    "extra_cmds": [
+      {"type": "bitmap", "icon_id": 51, "x": 10, "y": 0},
+      {"type": "font",   "font_id": 1, "y": 0},
+      {"type": "text",   "x": 170, "y": 20, "text": "W"}
+    ]
+  },
+  {
+    "id": 102,
+    "x0": 30, "y0": 25, "width": 244, "height": 50,
+    "font": 3, "txt_x": 200, "txt_y": 38,
+    "value": "150",
+    "extra_cmds": [
+        {"type": "bitmap", "icon_id": 44, "x": 10, "y": 0},
+        {"type": "font",   "font_id": 1},
+        {"type": "text",   "x": 200, "y": 10, "text": "bpm"}
+    ]
+  }
+]

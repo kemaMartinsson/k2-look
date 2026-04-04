@@ -88,16 +88,38 @@ class ExtraCmd:
     """One sub-command inside a LayoutExtraCmd chain.
 
     type:
-      "bitmap" — paste icon at (x0+x, y0+y); icon_id selects the image file.
-      "font"   — switch current ExtraCmd font to font_id.
-      "text"   — draw text at (x0+x, y0+y) with left-baseline anchor.
+      "bitmap"    — paste icon at (x0+x, y0+y); icon_id selects the image file.
+      "font"      — switch current ExtraCmd font to font_id.
+      "text"      — draw text at (x0+x, y0+y) with left-baseline anchor.
+      "rect"      — outline rectangle from (x0+x, y0+y) to (x0+x2, y0+y2).
+      "rectf"     — filled rectangle, same corners. Full FG_COLOR brightness.
+      "rectf_dim" — filled rectangle in DIM_COLOR (inactive zone/bar background).
+      "arc"       — thick arc centred at (x0+x, y0+y), radius r, from angle_start
+                    to angle_end (degrees, 0=3 o'clock CW), stroke = thickness px.
+                    Mirrors firmware arc command 0x3C.
+      "gauge"     — arc ring centred at (x0+x, y0+y), outer radius r, inner r_in.
+                    start_portion/end_portion span in 0-15 (22.5°/portion, 0=3 o'clock CW).
+                    value_pct (0-100) draws the bright filled segment; remainder dim.
+                    Mirrors firmware gaugeSave (0x71) + gaugeDisplay (0x70).
     """
     type:    str
     icon_id: int = 0     # "bitmap": icon ID (matches filename prefix in ICONS_DIR)
-    x:       int = 0     # "bitmap"/"text": rel-x from zone x0
-    y:       int = 0     # "bitmap"/"text": rel-y from zone y0
+    x:       int = 0     # "bitmap"/"text"/"rect"/"rectf"/"arc"/"gauge": rel-x from zone x0
+    y:       int = 0     # "bitmap"/"text"/"rect"/"rectf"/"arc"/"gauge": rel-y from zone y0
+    x2:      int = 0     # "rect"/"rectf": rel-x of second corner
+    y2:      int = 0     # "rect"/"rectf": rel-y of second corner
     text:    str = ""    # "text": string to draw
     font_id: int = 1     # "font": font ID to activate
+    # ── arc / gauge fields ────────────────────────────────────────────────
+    r:             int  = 0     # "arc"/"gauge": outer radius in pixels
+    r_in:          int  = 0     # "gauge": inner radius (ring thickness = r - r_in)
+    thickness:     int  = 1     # "arc": stroke thickness in pixels
+    angle_start:   int  = 0     # "arc": start angle degrees (0=3 o'clock, increases CW)
+    angle_end:     int  = 360   # "arc": end angle degrees
+    start_portion: int  = 0     # "gauge": start portion 0-15 (each portion = 22.5°, 0=3 o'clock CW)
+    end_portion:   int  = 15    # "gauge": end portion 0-15
+    clockwise:     bool = True  # "gauge": fill direction — True=CW from start, False=CCW
+    value_pct:     int  = 100   # "gauge": fill 0-100 %; rest of arc drawn dim
 
 
 @dataclass
@@ -306,6 +328,87 @@ def render_layouts(
                 draw.text(cx(abs_x, abs_y), cmd.text,
                           font=font, fill=FG_COLOR, anchor=flip_anchor("ls"))
 
+            elif cmd.type == "rect":
+                # Outline rectangle. Corners are relative to zone (x0, y0).
+                abs_x  = x0 + cmd.x
+                abs_y  = y0 + cmd.y
+                abs_x2 = x0 + cmd.x2
+                abs_y2 = y0 + cmd.y2
+                draw.rectangle(rect_box(abs_x, abs_y, abs_x2, abs_y2), outline=FG_COLOR)
+
+            elif cmd.type == "rectf":
+                # Filled rectangle. Same coordinate convention as "rect".
+                abs_x  = x0 + cmd.x
+                abs_y  = y0 + cmd.y
+                abs_x2 = x0 + cmd.x2
+                abs_y2 = y0 + cmd.y2
+                draw.rectangle(rect_box(abs_x, abs_y, abs_x2, abs_y2), fill=FG_COLOR)
+
+            elif cmd.type == "rectf_dim":
+                # Dim filled rectangle — for inactive zone segments / bar background.
+                abs_x  = x0 + cmd.x
+                abs_y  = y0 + cmd.y
+                abs_x2 = x0 + cmd.x2
+                abs_y2 = y0 + cmd.y2
+                draw.rectangle(rect_box(abs_x, abs_y, abs_x2, abs_y2), fill=DIM_COLOR)
+
+            elif cmd.type == "arc":
+                # Mirrors firmware arc command (0x3C).
+                # x,y = center relative to zone; r = radius; angle_start/angle_end
+                # in degrees (0=3 o'clock, increases CW — same as firmware);
+                # thickness = stroke width in pixels.
+                abs_cx = x0 + cmd.x
+                abs_cy = y0 + cmd.y
+                a_s = cmd.angle_start
+                a_e = cmd.angle_end
+                if vp:
+                    abs_cx = DISPLAY_W - 1 - abs_cx
+                    abs_cy = DISPLAY_H - 1 - abs_cy
+                    a_s = (a_s + 90) % 360
+                    a_e = (a_e + 90) % 360
+                for dr in range(max(cmd.thickness, 1)):
+                    rr = cmd.r - dr
+                    if rr <= 0:
+                        break
+                    bb = [abs_cx - rr, abs_cy - rr, abs_cx + rr, abs_cy + rr]
+                    draw.arc(bb, start=a_s, end=a_e, fill=FG_COLOR)
+
+            elif cmd.type == "gauge":
+                # Mirrors firmware gaugeSave (0x71) + gaugeDisplay (0x70).
+                # x,y = center relative to zone; r = outer radius; r_in = inner radius.
+                # start_portion/end_portion: 0-15, each = 22.5°, 0 = 3 o'clock CW.
+                # value_pct: 0-100 — filled (bright) region; remainder drawn dim.
+                # clockwise: fill direction from start_portion.
+                abs_cx = x0 + cmd.x
+                abs_cy = y0 + cmd.y
+                portion_deg = 22.5
+                a_start = cmd.start_portion * portion_deg
+                span    = ((cmd.end_portion - cmd.start_portion) % 16) * portion_deg
+                if span == 0:
+                    span = 360.0  # full circle
+                if cmd.clockwise:
+                    a_filled_end = a_start + span * cmd.value_pct / 100.0
+                    a_dim_end    = a_start + span
+                else:
+                    a_filled_end = a_start - span * cmd.value_pct / 100.0
+                    a_dim_end    = a_start - span
+                if vp:
+                    abs_cx       = DISPLAY_W - 1 - abs_cx
+                    abs_cy       = DISPLAY_H - 1 - abs_cy
+                    a_start      = (a_start      + 90) % 360
+                    a_filled_end = (a_filled_end + 90) % 360
+                    a_dim_end    = (a_dim_end    + 90) % 360
+                ring_px = max(cmd.r - cmd.r_in, 1)
+                for dr in range(ring_px):
+                    rr = cmd.r - dr
+                    if rr <= 0:
+                        break
+                    bb = [abs_cx - rr, abs_cy - rr, abs_cx + rr, abs_cy + rr]
+                    if cmd.value_pct > 0:
+                        draw.arc(bb, start=a_start,      end=a_filled_end, fill=FG_COLOR)
+                    if cmd.value_pct < 100:
+                        draw.arc(bb, start=a_filled_end, end=a_dim_end,    fill=DIM_COLOR)
+
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
     canvas.save(output_path)
     print(f"Saved → {output_path}")
@@ -390,12 +493,23 @@ def load_layouts_from_json(path: str) -> List[Layout]:
         cmds = []
         for c in d.get("extra_cmds", []):
             cmds.append(ExtraCmd(
-                type    = c["type"],
-                icon_id = c.get("icon_id", 0),
-                x       = c.get("x", 0),
-                y       = c.get("y", 0),
-                text    = c.get("text", ""),
-                font_id = c.get("font_id", 1),
+                type          = c["type"],
+                icon_id       = c.get("icon_id", 0),
+                x             = c.get("x", 0),
+                y             = c.get("y", 0),
+                x2            = c.get("x2", 0),
+                y2            = c.get("y2", 0),
+                text          = c.get("text", ""),
+                font_id       = c.get("font_id", 1),
+                r             = c.get("r", 0),
+                r_in          = c.get("r_in", 0),
+                thickness     = c.get("thickness", 1),
+                angle_start   = c.get("angle_start", 0),
+                angle_end     = c.get("angle_end", 360),
+                start_portion = c.get("start_portion", 0),
+                end_portion   = c.get("end_portion", 15),
+                clockwise     = c.get("clockwise", True),
+                value_pct     = c.get("value_pct", 100),
             ))
         layouts.append(Layout(
             id     = d.get("id", 0),

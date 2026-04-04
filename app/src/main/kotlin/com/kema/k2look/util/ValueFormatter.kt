@@ -5,9 +5,9 @@ import io.hammerhead.karooext.models.StreamState
 /**
  * Utility class for formatting metric values for display on glasses
  *
- * Note: Karoo data streams already provide values in the user's preferred units
- * (metric/imperial) based on their Karoo profile settings. This formatter is
- * mainly for future use or custom formatting needs.
+ * Note: Karoo data streams already provide values in the user's preferred units (metric/imperial)
+ * based on their Karoo profile settings. This formatter is mainly for future use or custom
+ * formatting needs.
  *
  * Handles:
  * - Number formatting (decimal places based on magnitude)
@@ -16,26 +16,19 @@ import io.hammerhead.karooext.models.StreamState
  */
 object ValueFormatter {
 
-    /**
-     * Format a numeric value with appropriate precision
-     */
+    /** Format a numeric value with appropriate precision */
     fun formatValue(value: Double, decimals: Int = -1): String {
         return when {
-            value >= 1000 -> "%.0f".format(value)          // 1234
-            value >= 100 -> "%.0f".format(value)           // 234
+            value >= 1000 -> "%.0f".format(value) // 1234
+            value >= 100 -> "%.0f".format(value) // 234
             value >= 10 -> {
-                if (decimals >= 0) "%.${decimals}f".format(value)
-                else "%.1f".format(value)                   // 23.5
+                if (decimals >= 0) "%.${decimals}f".format(value) else "%.1f".format(value) // 23.5
             }
-
             value >= 1 -> {
-                if (decimals >= 0) "%.${decimals}f".format(value)
-                else "%.1f".format(value)                   // 2.5
+                if (decimals >= 0) "%.${decimals}f".format(value) else "%.1f".format(value) // 2.5
             }
-
             else -> {
-                if (decimals >= 0) "%.${decimals}f".format(value)
-                else "%.2f".format(value)                   // 0.25
+                if (decimals >= 0) "%.${decimals}f".format(value) else "%.2f".format(value) // 0.25
             }
         }
     }
@@ -104,9 +97,7 @@ object ValueFormatter {
         }
     }
 
-    /**
-     * Format time from milliseconds to HH:MM:SS
-     */
+    /** Format time from milliseconds to HH:MM:SS */
     fun formatTime(milliseconds: Long?): String {
         if (milliseconds == null) return "--:--:--"
 
@@ -118,9 +109,7 @@ object ValueFormatter {
         return String.format(java.util.Locale.ROOT, "%02d:%02d:%02d", hours, minutes, seconds)
     }
 
-    /**
-     * Format time from milliseconds to MM:SS (for shorter durations)
-     */
+    /** Format time from milliseconds to MM:SS (for shorter durations) */
     fun formatTimeShort(milliseconds: Long?): String {
         if (milliseconds == null) return "--:--"
 
@@ -131,51 +120,37 @@ object ValueFormatter {
         return String.format(java.util.Locale.ROOT, "%02d:%02d", minutes, seconds)
     }
 
-    /**
-     * Format heart rate
-     */
+    /** Format heart rate */
     fun formatHeartRate(bpm: Double?): String {
         if (bpm == null) return "--"
         return "%.0f".format(bpm)
     }
 
-    /**
-     * Format power
-     */
+    /** Format power */
     fun formatPower(watts: Double?): String {
         if (watts == null) return "--"
         return "%.0f".format(watts)
     }
 
-    /**
-     * Format cadence
-     */
+    /** Format cadence */
     fun formatCadence(rpm: Double?): String {
         if (rpm == null) return "--"
         return "%.0f".format(rpm)
     }
 
-    /**
-     * Format gradient/slope
-     */
+    /** Format gradient/slope */
     fun formatGradient(percent: Double?): String {
         if (percent == null) return "--"
         return formatValue(percent, 1)
     }
 
-    /**
-     * Format stream state to display value
-     */
-    fun formatStreamState(
-        streamState: StreamState?,
-        formatFunc: (Double) -> String
-    ): String {
+    /** Format stream state to display value */
+    fun formatStreamState(streamState: StreamState?, formatFunc: (Double) -> String): String {
         return when (streamState) {
             is StreamState.Streaming -> {
                 val value = streamState.dataPoint.singleValue
                 if (value != null) formatFunc(value) else "--"
             }
-
             is StreamState.Searching -> "..."
             is StreamState.Idle -> "--"
             is StreamState.NotAvailable -> "N/A"
@@ -183,20 +158,37 @@ object ValueFormatter {
         }
     }
 
-    /**
-     * Format percentage (0-100)
-     */
+    /** Format percentage (0-100) */
     fun formatPercentage(value: Double?): String {
         if (value == null) return "--"
         return "%.0f".format(value)
     }
 
-    /**
-     * Format zone (1-5 typically)
-     */
+    /** Format zone (1-5 typically) */
     fun formatZone(zone: Double?): String {
         if (zone == null) return "--"
         return "Z%.0f".format(zone)
     }
-}
 
+    /**
+     * Pad a formatted value string with ActiveLook ghost characters so the decimal point (or the
+     * last digit for integer values) always lands at the same display x position regardless of the
+     * number of digits.
+     *
+     * Ghost chars (invisible, fixed width): '$' — same width as digit '0' '&' — same width as '.'
+     * or ':'
+     *
+     * Examples (intDigits=3): "25.1" → "$25.1" (1 ghost prepended → 3 integer digits) "125.1" →
+     * "125.1" (no padding needed) "78" → "$78" (integer-only: 2 digits → 1 ghost) "5" → "$$5"
+     * (integer-only: 1 digit → 2 ghosts) "--" → returned unchanged
+     *
+     * @param intDigits target integer-part width (default 3 covers values up to 999)
+     */
+    fun padGhost(value: String, intDigits: Int = 3): String {
+        if (value == "--" || value == "..." || value == "N/A") return value
+        val dotIndex = value.indexOfFirst { it == '.' || it == ':' }
+        val intPart = if (dotIndex >= 0) value.substring(0, dotIndex) else value
+        val padding = (intDigits - intPart.length).coerceAtLeast(0)
+        return "$".repeat(padding) + value
+    }
+}

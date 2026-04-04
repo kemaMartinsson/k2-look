@@ -53,3 +53,4 @@ reference/karoo-ext/**/build/
 /build_output.txt
 
 /calibration/*
+/tools/preview/*

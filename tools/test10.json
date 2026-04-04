@@ -1,0 +1,49 @@
+[
+  {
+    "_vis": "GAUGE — 7 power-zone segments. Active zone (Z3) filled, others dim.",
+    "_design": "Segments x=2..230, 30px wide each, 3px gap. Viewer sees Z1→Z7 left→right.",
+    "id": 110,
+    "x0": 0, "y0": 190, "width": 264, "height": 40,
+  
+    "extra_cmds": [
+      {"type": "rectf_dim", "x": 2,  "x2": 32,  "y": 5, "y2": 35},
+      {"type": "rectf_dim", "x": 35, "x2": 65,  "y": 5, "y2": 35},
+      {"type": "rectf_dim", "x": 68, "x2": 98,  "y": 5, "y2": 35},
+      {"type": "rectf_dim", "x": 101,"x2": 131, "y": 5, "y2": 35},
+      {"type": "rectf",     "x": 134,"x2": 164, "y": 5, "y2": 35},
+      {"type": "rectf_dim", "x": 167,"x2": 197, "y": 5, "y2": 35},
+      {"type": "rectf_dim", "x": 200,"x2": 230, "y": 5, "y2": 35},
+      {"type": "font", "font_id": 1},
+      {"type": "text", "x": 5, "y": 8, "text": ""},
+      {"type": "bitmap", "icon_id": 19, "x": 270, "y": 5}
+    ]
+  },
+  {
+    "_vis": "BAR — horizontal effort bar. Border + 68% fill from viewer-left.",
+    "_design": "Bar x=5..298 (293px wide). Fill 68% = 199px from right in display coords (x=99..297). Value '68%' at viewer-left (txt_x=235).",
+    "id": 111,
+    "x0": 0, "y0": 110, "width": 264, "height": 40,
+    "font": 1, "txt_x": 260, "txt_y": 35,
+    "value": "68%",
+    "extra_cmds": [
+      {"type": "rect",  "x": 5,  "y": 6,  "x2": 260, "y2": 34},
+      {"type": "rectf", "x": 99, "y": 7,  "x2": 260, "y2": 33},
+      {"type": "bitmap", "icon_id": 46, "x": 264, "y": 2}
+    ]
+  },
+  {
+    "_vis": "ZONE VIEW — 5 HR zone segments. Active zone Z2 filled, others dim.",
+    "_design": "5 segments × 50px, 3px gap. Active = Z2 (x=158..208). Viewer sees Z1→Z5 left→right.",
+    "id": 112,
+    "x0": 0, "y0": 25, "width": 264, "height": 40,
+    
+    "extra_cmds": [
+      {"type": "rectf_dim", "x": 2,   "x2": 50,  "y": 5, "y2": 35},
+      {"type": "rectf_dim", "x": 53,  "x2": 103, "y": 5, "y2": 35},
+      {"type": "rectf_dim", "x": 105, "x2": 155, "y": 5, "y2": 35},
+      {"type": "rectf",     "x": 158, "x2": 208, "y": 5, "y2": 35},
+      {"type": "rectf_dim", "x": 211, "x2": 261, "y": 5, "y2": 35},
+      {"type": "bitmap",    "icon_id": 44, "x": 264, "y": 2}
+    ]
+  }
+]

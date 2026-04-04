@@ -1090,165 +1090,167 @@ class DisplayDebugService(private val activeLookService: ActiveLookService) {
                         g.holdFlush(holdFlushAction.HOLD)
                         g.clear()
 
-                        // — Outer display border (reference frame, same as test 1) —
                         g.color(DIM)
                         g.rect(0, 0, (DISPLAY_W - 1).toShort(), (DISPLAY_H - 1).toShort())
 
-                        // Layouts saved to ALooK config so icons are accessible
-                        g.cfgSet("ALooK")
+                        // FIX: use cfgWrite to create a writable config for layout saves.
+                        // cfgSet("ALooK") is the SYSTEM config — layoutSave there is silently
+                        // ignored (read-only). Saves must go into a user-owned config (K2LDBG).
+                        // IDs 53/54/55 — distinct from test 8's 50/51/52 to avoid stale cache.
+                        g.cfgWrite("K2LDBG", 4, 0)
                         Thread.sleep(100)
 
-                        // Top zone (font1, y=153, h=30) — speed: [icon=26]["25.1"]["km/h"]
+                        // ZONE GEOMETRY — identical to Test 7 (hardware-verified):
+                        //   x0=30, width=244 (official safe-area margins)
+                        //   Top y=153 h=30 font1 | Mid y=89 h=35 font2 | Bot y=25 h=50 font3
+                        //
+                        // LAYOUT MATH (Session 6 analytics, now applied against hw-verified zones):
+                        //   Icon 28×28 right-flush to zone width:  x_rel = 244-28 = 216
+                        //   Value txtX = 208  (8px gap from icon left edge at 216)
+                        //   Unit  x_rel = 5   (viewer-RIGHT, safely left of any value text)
+                        //   Icon  y_rel = (h-28)/2  — centred vertically in zone
+                        //   Unit  y_rel = txtY       — top-aligns with value baseline (font1 unit)
+                        //   Power icon (id=19): +1 to y_rel for 2px internal drawable offset
+
+                        val T9_TOP = (DBG_LAYOUT_BASE + 3).toByte() // 53
+                        val T9_MID = (DBG_LAYOUT_BASE + 4).toByte() // 54
+                        val T9_BOT = (DBG_LAYOUT_BASE + 5).toByte() // 55
+
+                        // Top zone (font1, y=153, h=30) — speed
                         val topLayout =
                                 LayoutParameters(
-                                        DBG_LAYOUT_BASE.toByte(),
-                                        30.toShort(),
-                                        153.toByte(),
-                                        250.toShort(),
-                                        40.toByte(),
+                                        T9_TOP,
+                                        30.toShort(), // x0 (safe area left)
+                                        153.toByte(), // y0
+                                        244.toShort(), // width
+                                        30.toByte(), // height
                                         WHITE,
                                         0.toByte(),
-                                        1.toByte(),
+                                        1.toByte(), // font1
                                         true,
-                                        200.toShort(), // txtX: 16px gap from 28px icon (216-16=200)
-                                        22.toByte(), // txtY: calibrated center for font1
+                                        208.toShort(), // txtX: right-anchor, leaves room for icon
+                                        22.toByte(), // txtY: official font1 position
                                         Rotation.TOP_LR,
                                         true
                                 )
                         g.layoutSave(topLayout)
                         Thread.sleep(80)
 
-                        // Mid zone (font2, y=89, h=35) — power: [icon=51 (40×40)]["250"]["W"]
+                        // Mid zone (font2, y=89, h=35) — power
                         val midLayout =
                                 LayoutParameters(
-                                        (DBG_LAYOUT_BASE + 1).toByte(),
-                                        30.toShort(),
-                                        89.toByte(),
-                                        244.toShort(),
-                                        35.toByte(),
+                                        T9_MID,
+                                        30.toShort(), // x0
+                                        89.toByte(), // y0
+                                        244.toShort(), // width
+                                        35.toByte(), // height
                                         WHITE,
                                         0.toByte(),
-                                        2.toByte(),
+                                        2.toByte(), // font2
                                         true,
-                                        196.toShort(), // txtX: 8px gap from 40px icon left edge
-                                        // (204)
-                                        38.toByte(), // txtY: calibrated center for font2
+                                        208.toShort(), // txtX
+                                        38.toByte(), // txtY: official font2 position
                                         Rotation.TOP_LR,
                                         true
                                 )
                         g.layoutSave(midLayout)
                         Thread.sleep(80)
 
-                        // Bot zone (font3, y=25, h=50) — heartrate: [icon=12]["150"]["bpm"]
+                        // Bot zone (font3, y=25, h=50) — heartrate
                         val botLayout =
                                 LayoutParameters(
-                                        (DBG_LAYOUT_BASE + 2).toByte(),
-                                        30.toShort(),
-                                        25.toByte(),
-                                        244.toShort(),
-                                        50.toByte(),
+                                        T9_BOT,
+                                        30.toShort(), // x0
+                                        25.toByte(), // y0
+                                        244.toShort(), // width
+                                        50.toByte(), // height
                                         WHITE,
                                         0.toByte(),
-                                        3.toByte(),
+                                        3.toByte(), // font3
                                         true,
-                                        200.toShort(), // txtX: 16px gap from 28px icon (216-16=200)
-                                        38.toByte(), // txtY: calibrated center for font3
+                                        208.toShort(), // txtX
+                                        38.toByte(), // txtY: calibrated (test 6 hw-verified)
                                         Rotation.TOP_LR,
                                         true
                                 )
                         g.layoutSave(botLayout)
                         Thread.sleep(80)
 
-                        // Draw zone boundary rectangles (dim) for reference
-                        g.color(DIM)
-                        // g.rect(
-                        //         30.toShort(),
-                        //         153.toShort(),
-                        //         273.toShort(),
-                        //         182.toShort()
-                        // ) // font1 zone
-                        // g.rect(
-                        //         30.toShort(),
-                        //         89.toShort(),
-                        //         273.toShort(),
-                        //         123.toShort()
-                        // ) // font2 zone
-                        // g.rect(
-                        //         30.toShort(),
-                        //         25.toShort(),
-                        //         273.toShort(),
-                        //         74.toShort()
-                        // ) // font3 zone
+                        // Switch to ALooK for rendering — icons only resolve in this context.
+                        // Layouts 53/54/55 were saved in K2LDBG; if they are global (not
+                        // per-config) they will still be found here and icons will also appear.
+                        // If values disappear, layout IDs are per-config → need a different
+                        // approach.
+                        g.cfgSet("ALooK")
+                        Thread.sleep(100)
 
-                        // Top (font1, h=30): speed icon(id=26) + "25.1" + "km/h"
-                        //   icon rel-y = (30-28)/2 = 1  |  unit rel-y = (30-24)/2 = 3
-                        //   unit at rel-x=30: 30px from zone wall, text flows toward viewer-left
+                        // Draw zone boundaries for reference
+                        g.color(DIM)
+                        g.rect(30.toShort(), 153.toShort(), 273.toShort(), 182.toShort())
+                        g.rect(30.toShort(), 89.toShort(), 273.toShort(), 123.toShort())
+                        g.rect(30.toShort(), 25.toShort(), 273.toShort(), 74.toShort())
+
+                        // Top (font1, h=30): icon id=26 (hwtest: shows "power" — IDs need
+                        // re-verify)
+                        //   icon y_rel = (30-28)/2 = 1
+                        //   unit: RIGHT-anchor at x=80 → text spans ~32-80 abs → viewer's right
                         val topExtra =
                                 LayoutExtraCmd()
                                         .addSubCommandBitmap(
                                                 26.toByte(),
-                                                235.toShort(),
-                                                0.toShort()
+                                                216.toShort(),
+                                                1.toShort()
                                         )
                                         .addSubCommandFont(1.toByte())
-                                        .addSubCommandText(
-                                                10.toShort(),
-                                                22.toShort(),
-                                                "km/h"
-                                        ) // rel-y=txtY=22 → top-aligned with value
+                                        .addSubCommandText(80.toShort(), 22.toShort(), "km/h")
                         g.layoutClearAndDisplayExtended(
-                                DBG_LAYOUT_BASE.toByte(),
-                                30.toShort(), // zone x0
-                                153.toByte(), // zone y0
+                                T9_TOP,
+                                30.toShort(), // must match saved x0
+                                153.toByte(), // must match saved y0
                                 "25.1",
                                 topExtra
                         )
 
-                        // Mid (font2, h=35): power icon large (id=51, 40×40) + "250" + "W"
-                        //   40px icon right-edge flush at zone wall: rel-x=204 (204+40=244)
-                        //   rel-y = 0  (icon overflows 5px at bottom — same as text by design)
-                        //   unit at rel-x=30: 30px from zone wall
+                        // Mid (font2, h=35): icon id=19 (hwtest: shows "calories" — IDs need
+                        // re-verify)
+                        //   icon y_rel = (35-28)/2 = 3, +1 for power drawable offset = 4
+                        //   unit: RIGHT-anchor at x=50 → "W" (~16px) spans ~34-50 abs → viewer's
+                        // right
                         val midExtra =
                                 LayoutExtraCmd()
                                         .addSubCommandBitmap(
-                                                51.toByte(), // power 40×40 (19+32)
-                                                235.toShort(),
-                                                0.toShort()
+                                                19.toByte(),
+                                                216.toShort(),
+                                                4.toShort()
                                         )
                                         .addSubCommandFont(1.toByte())
-                                        .addSubCommandText(
-                                                20.toShort(),
-                                                38.toShort(),
-                                                "W"
-                                        ) // rel-y=txtY=38 → top-aligned with value
+                                        .addSubCommandText(50.toShort(), 38.toShort(), "W")
                         g.layoutClearAndDisplayExtended(
-                                (DBG_LAYOUT_BASE + 1).toByte(),
-                                30.toShort(), // zone x0
-                                89.toByte(), // zone y0
+                                T9_MID,
+                                30.toShort(), // must match saved x0
+                                89.toByte(), // must match saved y0
                                 "250",
                                 midExtra
                         )
 
-                        // Bot (font3, h=50): heartrate icon(id=12) + "150" + "bpm"
-                        //   icon rel-y = (50-28)/2 = 11  |  unit rel-y = (50-24)/2 = 13
-                        //   unit at rel-x=30: 30px from zone wall
+                        // Bot (font3, h=50): icon id=12 (hwtest: shows "cadence" — IDs need
+                        // re-verify)
+                        //   icon y_rel = (50-28)/2 = 11
+                        //   unit: RIGHT-anchor at x=75 → "bpm" (~45px) spans ~30-75 abs → viewer's
+                        // right
                         val botExtra =
                                 LayoutExtraCmd()
                                         .addSubCommandBitmap(
                                                 12.toByte(),
-                                                235.toShort(),
-                                                0.toShort()
+                                                216.toShort(),
+                                                11.toShort()
                                         )
                                         .addSubCommandFont(1.toByte())
-                                        .addSubCommandText(
-                                                20.toShort(),
-                                                38.toShort(),
-                                                "bpm"
-                                        ) // rel-y=txtY=38 → top-aligned with value
+                                        .addSubCommandText(75.toShort(), 38.toShort(), "bpm")
                         g.layoutClearAndDisplayExtended(
-                                (DBG_LAYOUT_BASE + 2).toByte(),
-                                30.toShort(), // zone x0
-                                25.toByte(), // zone y0
+                                T9_BOT,
+                                30.toShort(), // must match saved x0
+                                25.toByte(), // must match saved y0
                                 "150",
                                 botExtra
                         )
@@ -1260,6 +1262,256 @@ class DisplayDebugService(private val activeLookService: ActiveLookService) {
                         )
                 } catch (e: Exception) {
                         Log.e(TAG, "Test 9 failed: ${e.message}", e)
+                        safeFlush(g)
+                }
+        }
+
+        // ════════════════════════════════════════════════════════════════════
+        //  Test 10 — Visual styles: GAUGE / BAR / ZONE VIEW
+        // ════════════════════════════════════════════════════════════════════
+
+        /**
+         * Three visual styles using rect/rectf ExtraCmd primitives:
+         * - Top (y=190, h=40): GAUGE — 7 power-zone segments. Z5 active (filled), rest dim.
+         * - Mid (y=110, h=40): BAR — horizontal effort % progress bar. "68%" text + border + fill.
+         * - Bot (y= 25, h=40): ZONE VIEW — 5 HR-zone segments. Z4 active, rest dim.
+         *
+         * All zones use width=264 to leave 40px on the right for an icon. Segment colors set via
+         * addSubCommandColor (WHITE=active, DIM=inactive).
+         *
+         * Translated from tools/test10.json.
+         */
+        fun testVisualStyles() {
+                val g = activeLookService.getConnectedGlasses() ?: return logNoGlasses()
+                Log.i(TAG, "▶ Test 10: visual styles — GAUGE (top) / BAR (mid) / ZONE VIEW (bot)")
+
+                try {
+                        g.holdFlush(holdFlushAction.HOLD)
+                        g.clear()
+
+                        g.color(DIM)
+                        g.rect(0, 0, (DISPLAY_W - 1).toShort(), (DISPLAY_H - 1).toShort())
+
+                        // ALooK config required for icon bitmaps
+                        g.cfgSet("ALooK")
+                        Thread.sleep(100)
+
+                        // GAUGE — top zone (y=190, h=40). No main value text.
+                        val gaugeLayout =
+                                LayoutParameters(
+                                        DBG_LAYOUT_BASE.toByte(),
+                                        0.toShort(),
+                                        190.toByte(),
+                                        264.toShort(),
+                                        40.toByte(),
+                                        WHITE,
+                                        0.toByte(),
+                                        1.toByte(), // font 1 (required param; no main text
+                                        // displayed)
+                                        true,
+                                        0.toShort(), // txtX — unused
+                                        0.toByte(), // txtY — unused
+                                        Rotation.TOP_LR,
+                                        true
+                                )
+                        g.layoutSave(gaugeLayout)
+                        Thread.sleep(80)
+
+                        // BAR — mid zone (y=110, h=40). Shows effort % as text + filled bar.
+                        val barLayout =
+                                LayoutParameters(
+                                        (DBG_LAYOUT_BASE + 1).toByte(),
+                                        0.toShort(),
+                                        110.toByte(),
+                                        264.toShort(),
+                                        40.toByte(),
+                                        WHITE,
+                                        0.toByte(),
+                                        1.toByte(), // font 1
+                                        true,
+                                        260.toShort(), // txtX — viewer-right side (text "68%")
+                                        35.toByte(), // txtY
+                                        Rotation.TOP_LR,
+                                        true
+                                )
+                        g.layoutSave(barLayout)
+                        Thread.sleep(80)
+
+                        // ZONE VIEW — bot zone (y=25, h=40). No main value text.
+                        val zoneLayout =
+                                LayoutParameters(
+                                        (DBG_LAYOUT_BASE + 2).toByte(),
+                                        0.toShort(),
+                                        25.toByte(),
+                                        264.toShort(),
+                                        40.toByte(),
+                                        WHITE,
+                                        0.toByte(),
+                                        1.toByte(), // font 1 (required param; no main text)
+                                        true,
+                                        0.toShort(), // txtX — unused
+                                        0.toByte(), // txtY — unused
+                                        Rotation.TOP_LR,
+                                        true
+                                )
+                        g.layoutSave(zoneLayout)
+                        Thread.sleep(80)
+
+                        // ── GAUGE: 7 power-zone segments, Z5 active ──
+                        // Segments at x=2..230 (30px each, 3px gap). Z5 = x=134..164 = active.
+                        // Power small icon (id=19, 28×28) at x=270 (right of zone, in display
+                        // space).
+                        val gaugeExtra =
+                                LayoutExtraCmd()
+                                        .addSubCommandColor(DIM)
+                                        .addSubCommandRectf(
+                                                2.toShort(),
+                                                5.toShort(),
+                                                32.toShort(),
+                                                35.toShort()
+                                        ) // Z1
+                                        .addSubCommandRectf(
+                                                35.toShort(),
+                                                5.toShort(),
+                                                65.toShort(),
+                                                35.toShort()
+                                        ) // Z2
+                                        .addSubCommandRectf(
+                                                68.toShort(),
+                                                5.toShort(),
+                                                98.toShort(),
+                                                35.toShort()
+                                        ) // Z3
+                                        .addSubCommandRectf(
+                                                101.toShort(),
+                                                5.toShort(),
+                                                131.toShort(),
+                                                35.toShort()
+                                        ) // Z4
+                                        .addSubCommandColor(WHITE)
+                                        .addSubCommandRectf(
+                                                134.toShort(),
+                                                5.toShort(),
+                                                164.toShort(),
+                                                35.toShort()
+                                        ) // Z5 active
+                                        .addSubCommandColor(DIM)
+                                        .addSubCommandRectf(
+                                                167.toShort(),
+                                                5.toShort(),
+                                                197.toShort(),
+                                                35.toShort()
+                                        ) // Z6
+                                        .addSubCommandRectf(
+                                                200.toShort(),
+                                                5.toShort(),
+                                                230.toShort(),
+                                                35.toShort()
+                                        ) // Z7
+                                        .addSubCommandColor(WHITE)
+                                        .addSubCommandBitmap(
+                                                19.toByte(),
+                                                270.toShort(),
+                                                5.toShort()
+                                        ) // power icon
+                        g.layoutClearAndDisplayExtended(
+                                DBG_LAYOUT_BASE.toByte(),
+                                0.toShort(),
+                                190.toByte(),
+                                " ",
+                                gaugeExtra
+                        )
+
+                        // ── BAR: border + 68% fill from viewer-left, effort icon ──
+                        // Bar spans x=5..260 (255px). Fill = 68% = ~173px from right in display
+                        // coords → fill x=87..260. Icon id=46 (large effort) at x=264.
+                        val barExtra =
+                                LayoutExtraCmd()
+                                        .addSubCommandColor(WHITE)
+                                        .addSubCommandRect(
+                                                5.toShort(),
+                                                6.toShort(),
+                                                260.toShort(),
+                                                34.toShort()
+                                        ) // border
+                                        .addSubCommandRectf(
+                                                99.toShort(),
+                                                7.toShort(),
+                                                260.toShort(),
+                                                33.toShort()
+                                        ) // fill (68%)
+                                        .addSubCommandBitmap(
+                                                46.toByte(),
+                                                264.toShort(),
+                                                2.toShort()
+                                        ) // effort icon
+                        g.layoutClearAndDisplayExtended(
+                                (DBG_LAYOUT_BASE + 1).toByte(),
+                                0.toShort(),
+                                110.toByte(),
+                                "68%",
+                                barExtra
+                        )
+
+                        // ── ZONE VIEW: 5 HR-zone segments, Z4 active ──
+                        // 5 segments × ~50px (2..261), 3px gap. Active = Z4 at x=158..208.
+                        // Heartbeat large icon (id=44) at x=264.
+                        val zoneExtra =
+                                LayoutExtraCmd()
+                                        .addSubCommandColor(DIM)
+                                        .addSubCommandRectf(
+                                                2.toShort(),
+                                                5.toShort(),
+                                                50.toShort(),
+                                                35.toShort()
+                                        ) // Z1
+                                        .addSubCommandRectf(
+                                                53.toShort(),
+                                                5.toShort(),
+                                                103.toShort(),
+                                                35.toShort()
+                                        ) // Z2
+                                        .addSubCommandRectf(
+                                                105.toShort(),
+                                                5.toShort(),
+                                                155.toShort(),
+                                                35.toShort()
+                                        ) // Z3
+                                        .addSubCommandColor(WHITE)
+                                        .addSubCommandRectf(
+                                                158.toShort(),
+                                                5.toShort(),
+                                                208.toShort(),
+                                                35.toShort()
+                                        ) // Z4 active
+                                        .addSubCommandColor(DIM)
+                                        .addSubCommandRectf(
+                                                211.toShort(),
+                                                5.toShort(),
+                                                261.toShort(),
+                                                35.toShort()
+                                        ) // Z5
+                                        .addSubCommandColor(WHITE)
+                                        .addSubCommandBitmap(
+                                                44.toByte(),
+                                                264.toShort(),
+                                                2.toShort()
+                                        ) // heartbeat icon
+                        g.layoutClearAndDisplayExtended(
+                                (DBG_LAYOUT_BASE + 2).toByte(),
+                                0.toShort(),
+                                25.toByte(),
+                                " ",
+                                zoneExtra
+                        )
+
+                        g.holdFlush(holdFlushAction.FLUSH)
+                        Log.i(
+                                TAG,
+                                "✓ Test 10 complete — GAUGE (Z5 active/7 zones) / BAR (68%) / ZONE VIEW (Z4 active/5 zones)"
+                        )
+                } catch (e: Exception) {
+                        Log.e(TAG, "Test 10 failed: ${e.message}", e)
                         safeFlush(g)
                 }
         }

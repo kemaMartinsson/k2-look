@@ -529,6 +529,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 7 -> displayDebug.testExtraCommands()
                 8 -> displayDebug.testIconValueUnit()
                 9 -> displayDebug.testRealisticLayout()
+                10 -> displayDebug.testVisualStyles()
                 else -> Log.w(TAG, "Unknown debug test: $testNumber")
             }
         }

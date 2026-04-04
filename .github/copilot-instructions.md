@@ -452,6 +452,66 @@ A **Karoo Sync** on/off toggle (default: on). Stored as `karoo_sync_enabled` boo
 - Power icon (id=19) clips ~2px at top — drawable has internal offset; use rel-y + 1.
 - `cfgSet("ALooK")` requirement confirmed: must be called before any bitmap commands.
 
+### Session 9 — Config Context Fix + Test 9 Hardware Calibration
+- **Root cause of "no visible change" found**: `cfgSet("ALooK")` activates the **system config**.
+  `layoutSave` calls made while in that context are **silently ignored** (no error, no visual
+  feedback). All prior test 9 coordinate edits had zero effect because every `layoutSave` was
+  discarded. This is a fundamental firmware rule — not a bug in the app code.
+- **Fix**: Restructured test 9 to call `cfgWrite("K2LDBG", 4, 0)` before all `layoutSave`
+  calls, then `cfgSet("ALooK")` immediately before the render calls (needed for icon bitmaps).
+- **Layout IDs are global across configs**: Layouts saved while in a user config (K2LDBG)
+  are accessible when rendering under `cfgSet("ALooK")` context. IDs 53/54/55 used for
+  T9_TOP/T9_MID/T9_BOT (replaced old 50/51/52 which caused stale-layout issues vs test 8).
+- **Values confirmed**: 25.1 / 250 / 150 render correctly in three zones.
+- **Icons confirmed**: id=26 (speed), id=19 (power), id=12 (heart-beat) render at x=216.
+  Test 8 (direct `imgDisplay` grid) confirms Visual Assets README IDs match firmware — the
+  momentary "wrong icon" impression in test 9 was a misidentification on the small green OLED.
+- **ExtraCmd text is right-anchored**: Unit at rel-x=5 appeared almost entirely outside the
+  clipping region (text spans leftward from anchor). Updated unit x positions: 80 (km/h),
+  50 (W), 75 (bpm). Not yet hardware-verified.
+- **Test 10 button added** to `DebugTab.kt`.
+- **Production impact**: `ActiveLookLayoutService.saveLayout()` must also use `cfgWrite` (not
+  `cfgSet("ALooK")`) before calling `layoutSave`. Check this before shipping label/icon support.
+
+### Session 8 — Test 9 Calibration Applied + Vis-Style Preview Extension
+- **Test 9 fully calibrated**: All coordinates from `tools/test9.json` translated into
+  `testRealisticLayout()` in `DisplayDebugService.kt`. Three evenly-spaced rows using
+  `x0=0, width=304` (full display width, no 30px margin). Calibrated values:
+  - Top (font1, y=190): txtX=235, txtY=10 | icon=26 at (250,5) | unit "km/h" at (135,10)
+  - Mid (font2, y=110): txtX=235, txtY=7  | icon=51 at (244,0) | unit "W" at (150,15)
+  - Bot (font3, y=25):  txtX=230, txtY=0  | icon=44 at (236,0) | unit "bpm" at (80,25)
+- **`tools/test10.json` created**: Calibration scratchpad for three new visual styles:
+  - GAUGE: 7 power-zone segments (Z1–Z7), active zone filled, others dim
+  - BAR: horizontal effort % progress bar with border + fill
+  - ZONE VIEW: 5 HR zone segments, active zone filled, others dim
+- **`preview_layout.py` extended** with rect/rectf/rectf_dim primitive support:
+  - `"rect"` — outline rectangle at (x0+x, y0+y)→(x0+x2, y0+y2)
+  - `"rectf"` — filled rectangle, full FG_COLOR
+  - `"rectf_dim"` — filled rectangle, DIM_COLOR (inactive segments/background)
+  - All three auto-flip in `--viewer` mode via existing `rect_box()` helper
+  - `ExtraCmd` dataclass gained `x2: int` and `y2: int` fields
+  - JSON loader updated to parse `x2`/`y2`
+
+### Session 7 — ExtraCmd Coordinate Bug Fix + Layout Preview Tool
+- **Bug fixed**: `layoutClearAndDisplayExtended` was called with `x=170, y=190` instead of zone
+  origins `x=30, y=153/89/25`. With x=170, value "25.1" placed at abs-x=370 (off right edge of
+  304px display); unit floated at abs-x=180 with no value visible nearby.
+- **Fix**: All three render calls in `testRealisticLayout()` corrected to use zone origins.
+- **Key rule confirmed**: The `x0/y0` saved in `LayoutParameters` is a default that is **never
+  used at render time**. The firmware uses the `x, y` from the `layoutClearAndDisplayExtended`
+  call. ExtraCmd positions are relative to those call-time coordinates, not the saved defaults.
+- **Unit vertical alignment**: `unit rel-y = txtY` from LayoutParameters → unit baseline
+  top-aligns with value baseline. top=22, mid=38, bot=38.
+- **Built `tools/preview_layout.py`**: Python desktop layout previewer. Renders 304×256 PNG
+  in ~1 second. Replaces the 50-second build+install+glasses cycle for coordinate calibration.
+  Uses real SourceSansPro font + real icon PNGs. `--viewer` flag renders in rider perspective
+  (coordinate-transform approach — elements repositioned, text anchors swapped, icons rotated
+  180° so they stay readable — NOT a raw pixel flip).
+- **`tools/test9.json`**: Reference JSON mirroring `testRealisticLayout()`. Edit → render → copy
+  confirmed values to Kotlin.
+- **`tools/preview/.gitignore`**: Output PNGs ignored from git.
+- **`tools/README.md`**: Full docs for the preview tool.
+
 ---
 
 ## DisplayDebugService.kt — Test Reference
@@ -467,6 +527,7 @@ A **Karoo Sync** on/off toggle (default: on). Stored as `karoo_sync_enabled` boo
 | 7 | txtY=38 center calibration | Is font 3 vertically centered at txtY=38? |
 | 8 | Icon grid (IDs 0–5, 12, 19, 26 across 3 rows) | Do icon IDs match README? Correct positions? |
 | 9 | Realistic layout — [icon][value][unit] with cycling data (speed/power/HR) | Does the full production layout render correctly across all three zones? |
+| 10 | Visual styles: gauge (7 zones), bar (effort %), zone view (5 HR zones) | Do rect/rectf primitives render? Do segment positions look right? |
 
 ---
 
@@ -503,8 +564,21 @@ A **Karoo Sync** on/off toggle (default: on). Stored as `karoo_sync_enabled` boo
 10. **Icon IDs in `docs/ActiveLook-Icon-Reference.md` are WRONG.** Do not use. Correct IDs are
     in `docs/Activelook-Visual-Assets/README.md` Image table only. Verified empirically against firmware.
 
-11. **`cfgSet("ALooK")` is required before any bitmap commands.** Without it, `imgDisplay` and
-    `layoutSave` with bitmap sub-commands silently do nothing. No error is returned.
+11. **`cfgSet("ALooK")` is required before `imgDisplay` and bitmap ExtraCmd render calls.**
+    Without it, icon bitmaps are silently skipped. No error is returned.
+
+12. **`cfgSet("ALooK")` makes `layoutSave` a silent no-op.** The ALooK config is a read-only
+    system config — `layoutSave` calls while in that context are discarded without any error or
+    feedback. ALL layout saves MUST happen in a user-owned config created with
+    `cfgWrite("name", n, 0)`. Pattern: `cfgWrite("K2LDBG", 4, 0)` → `layoutSave(...)×N` →
+    `cfgSet("ALooK")` → `layoutClearAndDisplayExtended(...)`. Layout IDs are global across
+    configs — save in K2LDBG, render under ALooK context, firmware still finds the layouts.
+
+13. **`layoutClearAndDisplayExtended` x/y are the zone origin for that render call** — they
+    override whatever `x0/y0` was saved in `LayoutParameters`. The saved `x0/y0` is a default
+    that is never used at render time. ExtraCmd bitmap/text positions are all relative to the
+    call-time x/y. If these don't match the saved `x0/y0`, sub-command elements appear detached
+    from the main value text.
 
 ---
 
@@ -517,3 +591,10 @@ A **Karoo Sync** on/off toggle (default: on). Stored as `karoo_sync_enabled` boo
 - **ADB**: Device `KAROO20ALA091101299` visible on host (Windows). Container cannot reach it
   directly — use host PowerShell for `adb logcat`
 - **debugBuild.bat**: `c:\Project\k2-look\debugBuild.bat` — runs `.\gradlew.bat installDebug -x test -x testDebugUnitTest -x lintDebug`. ~50s incremental, skips all tests.
+- **Layout preview tool**: `tools/preview_layout.py` — Python 3 + Pillow. ~1s per run.
+  `pip install Pillow` required once. Output folder (`tools/preview/`) is gitignored.
+  - `tools/test9.json` — calibrated 3-row [icon][value][unit] layout (speed/power/HR)
+  - `tools/test10.json` — vis-style scratchpad: gauge / bar / zone view
+  - Run: `python tools/preview_layout.py --config tools/test9.json --viewer`
+  - Run from tools/: `python preview_layout.py --conf=test9.json --viewer`
+  - Supported `extra_cmds` types: `bitmap`, `font`, `text`, `rect`, `rectf`, `rectf_dim`
