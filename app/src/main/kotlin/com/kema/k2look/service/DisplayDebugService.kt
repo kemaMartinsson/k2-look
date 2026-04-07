@@ -1116,19 +1116,19 @@ class DisplayDebugService(private val activeLookService: ActiveLookService) {
                         val T9_MID = (DBG_LAYOUT_BASE + 4).toByte() // 54
                         val T9_BOT = (DBG_LAYOUT_BASE + 5).toByte() // 55
 
-                        // Top zone (font1, y=153, h=30) — speed
+                        // Top zone (font1, y=163, h=30) — speed
                         val topLayout =
                                 LayoutParameters(
                                         T9_TOP,
                                         30.toShort(), // x0 (safe area left)
-                                        153.toByte(), // y0
-                                        244.toShort(), // width
+                                        216.toByte(), // y0 (shifted up from 153 for viewer)
+                                        244.toShort(), // width (official safe area)
                                         30.toByte(), // height
                                         WHITE,
                                         0.toByte(),
                                         1.toByte(), // font1
                                         true,
-                                        208.toShort(), // txtX: right-anchor, leaves room for icon
+                                        208.toShort(), // txtX: right-anchor (high x = viewer LEFT)
                                         22.toByte(), // txtY: official font1 position
                                         Rotation.TOP_LR,
                                         true
@@ -1148,7 +1148,7 @@ class DisplayDebugService(private val activeLookService: ActiveLookService) {
                                         0.toByte(),
                                         2.toByte(), // font2
                                         true,
-                                        208.toShort(), // txtX
+                                        208.toShort(), // txtX: right-anchor (high x = viewer LEFT)
                                         38.toByte(), // txtY: official font2 position
                                         Rotation.TOP_LR,
                                         true
@@ -1161,99 +1161,85 @@ class DisplayDebugService(private val activeLookService: ActiveLookService) {
                                 LayoutParameters(
                                         T9_BOT,
                                         30.toShort(), // x0
-                                        25.toByte(), // y0
+                                        0.toByte(), // y0
                                         244.toShort(), // width
                                         50.toByte(), // height
                                         WHITE,
                                         0.toByte(),
                                         3.toByte(), // font3
                                         true,
-                                        208.toShort(), // txtX
-                                        38.toByte(), // txtY: calibrated (test 6 hw-verified)
-                                        Rotation.TOP_LR,
+                                        208.toShort(), // txtX: right-anchor (high x = viewer LEFT)
+                                        55.toByte(), // txtY: official font3 position
+                                        Rotation.TOP_RL,
                                         true
                                 )
                         g.layoutSave(botLayout)
                         Thread.sleep(80)
 
-                        // Switch to ALooK for rendering — icons only resolve in this context.
-                        // Layouts 53/54/55 were saved in K2LDBG; if they are global (not
-                        // per-config) they will still be found here and icons will also appear.
-                        // If values disappear, layout IDs are per-config → need a different
-                        // approach.
-                        g.cfgSet("ALooK")
+                        // Render under the SAME config where layouts were saved.
+                        // cfgSet("ALooK") caused stale layouts — IDs are per-config.
+                        g.cfgSet("K2LDBG")
                         Thread.sleep(100)
 
                         // Draw zone boundaries for reference
                         g.color(DIM)
-                        g.rect(30.toShort(), 153.toShort(), 273.toShort(), 182.toShort())
-                        g.rect(30.toShort(), 89.toShort(), 273.toShort(), 123.toShort())
-                        g.rect(30.toShort(), 25.toShort(), 273.toShort(), 74.toShort())
+                        // g.rect(30.toShort(), 216.toShort(), 273.toShort(), 245.toShort())
+                        // g.rect(30.toShort(), 89.toShort(), 273.toShort(), 123.toShort())
+                        // g.rect(30.toShort(), 25.toShort(), 273.toShort(), 74.toShort())
 
-                        // Top (font1, h=30): icon id=26 (hwtest: shows "power" — IDs need
-                        // re-verify)
-                        //   icon y_rel = (30-28)/2 = 1
-                        //   unit: RIGHT-anchor at x=80 → text spans ~32-80 abs → viewer's right
+                        // === PASS 1: Layouts + values + units under K2LDBG ===
+                        // (No bitmap sub-commands — icons only render under ALooK)
+
+                        // Top (font1, h=30): speed value + "km/h" unit
                         val topExtra =
                                 LayoutExtraCmd()
-                                        .addSubCommandBitmap(
-                                                26.toByte(),
-                                                216.toShort(),
-                                                1.toShort()
-                                        )
                                         .addSubCommandFont(1.toByte())
-                                        .addSubCommandText(80.toShort(), 22.toShort(), "km/h")
+                                        .addSubCommandText(160.toShort(), 23.toShort(), "km/h")
                         g.layoutClearAndDisplayExtended(
                                 T9_TOP,
-                                30.toShort(), // must match saved x0
-                                153.toByte(), // must match saved y0
+                                30.toShort(),
+                                216.toByte(),
                                 "25.1",
                                 topExtra
                         )
 
-                        // Mid (font2, h=35): icon id=19 (hwtest: shows "calories" — IDs need
-                        // re-verify)
-                        //   icon y_rel = (35-28)/2 = 3, +1 for power drawable offset = 4
-                        //   unit: RIGHT-anchor at x=50 → "W" (~16px) spans ~34-50 abs → viewer's
-                        // right
+                        // Mid (font2, h=35): power value + "W" unit
                         val midExtra =
                                 LayoutExtraCmd()
-                                        .addSubCommandBitmap(
-                                                19.toByte(),
-                                                216.toShort(),
-                                                4.toShort()
-                                        )
                                         .addSubCommandFont(1.toByte())
                                         .addSubCommandText(50.toShort(), 38.toShort(), "W")
                         g.layoutClearAndDisplayExtended(
                                 T9_MID,
-                                30.toShort(), // must match saved x0
-                                89.toByte(), // must match saved y0
+                                30.toShort(),
+                                89.toByte(),
                                 "250",
                                 midExtra
                         )
 
-                        // Bot (font3, h=50): icon id=12 (hwtest: shows "cadence" — IDs need
-                        // re-verify)
-                        //   icon y_rel = (50-28)/2 = 11
-                        //   unit: RIGHT-anchor at x=75 → "bpm" (~45px) spans ~30-75 abs → viewer's
-                        // right
+                        // Bot (font3, h=50): HR value + "bpm" unit
                         val botExtra =
                                 LayoutExtraCmd()
-                                        .addSubCommandBitmap(
-                                                12.toByte(),
-                                                216.toShort(),
-                                                11.toShort()
-                                        )
                                         .addSubCommandFont(1.toByte())
-                                        .addSubCommandText(75.toShort(), 38.toShort(), "bpm")
+                                        .addSubCommandText(130.toShort(), 50.toShort(), "bpm")
                         g.layoutClearAndDisplayExtended(
                                 T9_BOT,
-                                30.toShort(), // must match saved x0
-                                25.toByte(), // must match saved y0
+                                30.toShort(),
+                                0.toByte(),
                                 "150",
                                 botExtra
                         )
+
+                        // === PASS 2: Icons via imgDisplay under ALooK ===
+                        // Bitmaps are stored in the ALooK system config.
+                        // imgDisplay uses ABSOLUTE display coordinates.
+                        // abs-x = x0 + icon_rel_x = 30 + 216 = 246
+                        // abs-y = y0 + icon_rel_y
+                        g.cfgSet("ALooK")
+                        Thread.sleep(50)
+
+                        g.imgDisplay(26.toByte(), 260.toShort(), 216.toShort()) // speed: y=216+1
+                        g.imgDisplay(19.toByte(), 260.toShort(), 93.toShort()) // power: y=89+4
+                        g.imgDisplay(44.toByte(), 260.toShort(), 15.toShort()) // heart: y=25+11
 
                         g.holdFlush(holdFlushAction.FLUSH)
                         Log.i(
@@ -1520,12 +1506,18 @@ class DisplayDebugService(private val activeLookService: ActiveLookService) {
         //  Utilities
         // ════════════════════════════════════════════════════════════════════
 
-        /** Clears everything the debug tests may have left on the display. */
+        /** Clears everything the debug tests may have left on the display and glasses storage. */
         fun clearDisplay() {
                 val g = activeLookService.getConnectedGlasses() ?: return logNoGlasses()
                 try {
                         g.clear()
-                        Log.i(TAG, "Display cleared")
+                        g.layoutDeleteAll()
+                        g.pageDeleteAll()
+                        g.gaugeDeleteAll()
+                        try {
+                                g.cfgDelete("K2LDBG")
+                        } catch (_: Exception) {}
+                        Log.i(TAG, "Display cleared + all layouts/pages/gauges/config deleted")
                 } catch (e: Exception) {
                         Log.e(TAG, "Clear failed: ${e.message}", e)
                 }
