@@ -34,10 +34,112 @@ class DisplayDebugService(private val activeLookService: ActiveLookService) {
                 // Debug layout IDs (high range to avoid conflicts)
                 const val DBG_LAYOUT_BASE = 50
 
+                // Config name used by all debug tests
+                const val DBG_CFG = "K2Look"
+
                 // Colors
                 const val WHITE: Byte = 15
                 const val MID_GREY: Byte = 8
                 const val DIM: Byte = 4
+
+                // Dynamic layout constants
+                const val AVAILABLE_HEIGHT = 246 // y=0 to y=246 (top row y0=216 + h=30 from Test 9)
+                const val MIN_GAP = 2 // minimum pixels between rows
+                const val ZONE_X0 = 30 // safe area left
+                const val ZONE_WIDTH = 244 // safe area width
+                const val ICON_ABS_X: Short = 260 // absolute x for icon rendering (from Test 9)
+        }
+
+        // ════════════════════════════════════════════════════════════════════
+        //  Dynamic Layout Data Structures
+        // ════════════════════════════════════════════════════════════════════
+
+        data class RowConfig(val layoutId: Byte, val y0: Int, val height: Int, val size: String)
+
+        data class PendingIcon(val iconId: Int, val absX: Short, val absY: Short)
+
+        data class FontParams(
+                val fontId: Byte,
+                val txtY: Byte,
+                val rotation: Rotation,
+                val unitY: Short,
+                val refHeight: Int, // zone height where txtY/unitY were calibrated
+                val txtXWithIcon: Short // txtX when icon is present (font-specific)
+        )
+
+        enum class DebugMetric(
+                val displayValue: String,
+                val unit: String,
+                val icon28: Int?,
+                val icon40: Int?,
+                val maxChars: Int // max expected display length for ghost-char padding
+        ) {
+                SPEED("25.1", "km/h", 26, 58, 5), // up to "125.1"
+                POWER("1250", "w", 19, 51, 4), // up to "1500"
+                HEARTRATE("150", "bpm", 12, 44, 3), // up to "220"
+                CADENCE("185", "rpm", 4, 36, 3), // up to "200"
+                DISTANCE("42.5", "km", 9, 41, 5), // up to "999.9"
+                ELAPSED_TIME("1:23:45", "HH:MM:SS", 8, 40, 7) // "H:MM:SS"
+        }
+
+        private val fontParams =
+                mapOf(
+                        1 to
+                                FontParams(
+                                        1.toByte(),
+                                        25.toByte(),
+                                        Rotation.TOP_LR,
+                                        25.toShort(),
+                                        30,
+                                        208
+                                ),
+                        2 to
+                                FontParams(
+                                        2.toByte(),
+                                        35.toByte(),
+                                        Rotation.TOP_LR,
+                                        38.toShort(),
+                                        35,
+                                        208
+                                ),
+                        3 to
+                                FontParams(
+                                        3.toByte(),
+                                        48.toByte(),
+                                        Rotation.TOP_LR,
+                                        50.toShort(),
+                                        50,
+                                        220
+                                )
+                )
+
+        private val unitXLookup =
+                mapOf(
+                        "km/h" to 160.toShort(),
+                        "w" to 50.toShort(),
+                        "bpm" to 170.toShort(),
+                        "rpm" to 150.toShort(),
+                        "km" to 100.toShort(),
+                        "m" to 60.toShort(),
+                        "HH:MM:SS" to 130.toShort()
+                )
+        private val defaultUnitX: Short = 100
+
+        private var rowConfigs: List<RowConfig> = emptyList()
+        private val pendingIcons = mutableListOf<PendingIcon>()
+
+        /**
+         * Left-pads a display value with ActiveLook ghost characters to [maxChars] length. Only
+         * effective for fonts 4/5 (digit-only). Fonts 1-3 render '$' as a visible dollar sign.
+         * - `$` = invisible character with the width of digit `0`
+         * - `&` = invisible character with the width of `:` or `.`
+         */
+        private fun ghostPad(value: String, maxChars: Int, font: Int): String {
+                // Ghost chars only work with fonts 4 and 5 (digit-only charset)
+                if (font < 4) return value
+                if (value.length >= maxChars) return value
+                val padCount = maxChars - value.length
+                return "$".repeat(padCount) + value
         }
 
         // ════════════════════════════════════════════════════════════════════
@@ -1170,7 +1272,7 @@ class DisplayDebugService(private val activeLookService: ActiveLookService) {
                                         true,
                                         208.toShort(), // txtX: right-anchor (high x = viewer LEFT)
                                         55.toByte(), // txtY: official font3 position
-                                        Rotation.TOP_RL,
+                                        Rotation.TOP_LR,
                                         true
                                 )
                         g.layoutSave(botLayout)
@@ -1253,23 +1355,270 @@ class DisplayDebugService(private val activeLookService: ActiveLookService) {
         }
 
         // ════════════════════════════════════════════════════════════════════
-        //  Test 10 — Visual styles: GAUGE / BAR / ZONE VIEW
+        //  Dynamic Layout Helpers
         // ════════════════════════════════════════════════════════════════════
 
         /**
-         * Three visual styles using rect/rectf ExtraCmd primitives:
-         * - Top (y=190, h=40): GAUGE — 7 power-zone segments. Z5 active (filled), rest dim.
-         * - Mid (y=110, h=40): BAR — horizontal effort % progress bar. "68%" text + border + fill.
-         * - Bot (y= 25, h=40): ZONE VIEW — 5 HR-zone segments. Z4 active, rest dim.
+         * Computes row geometry for N rows of given sizes, evenly spaced vertically.
          *
-         * All zones use width=264 to leave 40px on the right for an icon. Segment colors set via
-         * addSubCommandColor (WHITE=active, DIM=inactive).
-         *
-         * Translated from tools/test10.json.
+         * @param rows list of "large" (50px) or "small" (30px) row sizes, ordered viewer-top first
+         * @return list of [RowConfig] with computed y0 positions and layout IDs.
+         * ```
+         *         Trailing rows are dropped if they don't fit within [AVAILABLE_HEIGHT].
+         *         Returns empty list if even a single row can't fit.
+         * ```
          */
-        fun testVisualStyles() {
+        fun createLayouts(rows: List<String>): List<RowConfig> {
+                pendingIcons.clear()
+
+                val heights =
+                        rows
+                                .map {
+                                        when (it) {
+                                                "large" -> 50
+                                                "medium" -> 35
+                                                else -> 30
+                                        }
+                                }
+                                .toMutableList()
+
+                // Drop trailing rows until they fit
+                while (heights.isNotEmpty()) {
+                        val totalH = heights.sum()
+                        val gaps = if (heights.size > 1) (heights.size - 1) * MIN_GAP else 0
+                        if (totalH + gaps <= AVAILABLE_HEIGHT) break
+                        heights.removeAt(heights.lastIndex)
+                }
+
+                if (heights.isEmpty()) {
+                        rowConfigs = emptyList()
+                        return emptyList()
+                }
+
+                val n = heights.size
+                val totalH = heights.sum()
+                val configs = mutableListOf<RowConfig>()
+
+                if (n == 1) {
+                        // Center the single row
+                        val y0 = (AVAILABLE_HEIGHT - heights[0]) / 2
+                        configs.add(
+                                RowConfig(
+                                        layoutId = (DBG_LAYOUT_BASE + 3).toByte(),
+                                        y0 = y0,
+                                        height = heights[0],
+                                        size = rows[0]
+                                )
+                        )
+                } else {
+                        // Edge-to-edge distribution: row 0 at top (high y), row N-1 at bottom (low
+                        // y)
+                        val gap = (AVAILABLE_HEIGHT - totalH) / (n - 1)
+                        var currentY = AVAILABLE_HEIGHT - heights[0]
+                        for (i in 0 until n) {
+                                if (i > 0) {
+                                        currentY = currentY - gap - heights[i]
+                                }
+                                configs.add(
+                                        RowConfig(
+                                                layoutId = (DBG_LAYOUT_BASE + 3 + i).toByte(),
+                                                y0 = currentY,
+                                                height = heights[i],
+                                                size = rows[i]
+                                        )
+                                )
+                                if (i == 0) {
+                                        // After first row, set up for next iteration
+                                        currentY = AVAILABLE_HEIGHT - heights[0]
+                                }
+                        }
+                }
+
+                rowConfigs = configs
+                Log.i(
+                        TAG,
+                        "createLayouts: ${configs.size} rows — ${configs.map { "y0=${it.y0} h=${it.height}" }}"
+                )
+                return configs
+        }
+
+        /**
+         * Saves a layout and renders a metric value (with optional icon and unit) for one row.
+         *
+         * Must be called AFTER [createLayouts] and while in a writable config context (cfgWrite).
+         * Icons are queued for batch rendering in PASS 2 (under ALooK config).
+         *
+         * @param g connected glasses instance
+         * @param rowIndex 1-based row index (1 = viewer-top)
+         * @param font font number: 1 (24px), 2 (38px), or 3 (64px)
+         * @param metric the [DebugMetric] to display
+         * @param iconSize "small" (28px), "large" (40px), or null for no icon
+         * @param showUnit whether to render the unit string via ExtraCmd
+         */
+        fun populateLayout(
+                g: Glasses,
+                rowIndex: Int,
+                font: Int,
+                metric: DebugMetric,
+                iconSize: String?,
+                showUnit: Boolean
+        ) {
+                val row =
+                        rowConfigs.getOrNull(rowIndex - 1)
+                                ?: run {
+                                        Log.w(TAG, "populateLayout: invalid rowIndex=$rowIndex")
+                                        return
+                                }
+
+                val fp =
+                        fontParams[font]
+                                ?: run {
+                                        Log.w(TAG, "populateLayout: invalid font=$font")
+                                        return
+                                }
+
+                val hasIcon = iconSize != null
+                val txtX: Short = if (hasIcon) fp.txtXWithIcon else 244
+
+                // Ghost-pad the value to maxChars so the rightmost digit stays
+                // at a fixed position regardless of actual value length.
+                // Only effective for fonts 4/5; fonts 1-3 don't support ghost chars.
+                val paddedValue = ghostPad(metric.displayValue, metric.maxChars, font)
+
+                // Adjust txtY/unitY to vertically center text with icon when zone
+                // height differs from the font's calibrated reference height.
+                val yAdjust = (row.height - fp.refHeight) / 2
+                val adjustedTxtY = (fp.txtY + yAdjust).toByte()
+                val adjustedUnitY = (fp.unitY + yAdjust).toShort()
+
+                // Save layout for this row
+                val params =
+                        LayoutParameters(
+                                row.layoutId,
+                                ZONE_X0.toShort(),
+                                row.y0.toByte(),
+                                ZONE_WIDTH.toShort(),
+                                row.height.toByte(),
+                                WHITE,
+                                0.toByte(),
+                                fp.fontId,
+                                true,
+                                txtX,
+                                adjustedTxtY,
+                                fp.rotation,
+                                true
+                        )
+                g.layoutSave(params)
+                Thread.sleep(80)
+
+                // Build ExtraCmd for unit text and/or elapsed time seconds
+                val extra = LayoutExtraCmd()
+                var hasExtra = false
+
+                // Elapsed time special handling: split seconds into font 1, top-aligned
+                // Normalize MM:SS → 0:MM:SS so alignment is consistent with H:MM:SS
+                if (metric == DebugMetric.ELAPSED_TIME && font >= 2) {
+                        val normalized =
+                                metric.displayValue.let {
+                                        val p = it.split(":")
+                                        if (p.size == 2) "0:$it" else it
+                                }
+                        val parts = normalized.split(":")
+                        if (parts.size == 3) {
+                                // Seconds ":SS" rendered in font 1, top-aligned with main value
+                                val secondsStr = ":${parts[2]}"
+                                // Position: viewer-right of main value text
+                                val secondsX: Short = if (font == 3) 145 else 153
+                                extra.addSubCommandFont(1.toByte())
+                                extra.addSubCommandText(
+                                        secondsX,
+                                        adjustedTxtY.toShort(),
+                                        secondsStr
+                                )
+                                hasExtra = true
+                        }
+                }
+
+                if (showUnit) {
+                        val unitX = unitXLookup[metric.unit] ?: defaultUnitX
+                        if (!hasExtra) extra.addSubCommandFont(1.toByte())
+                        extra.addSubCommandText(unitX, adjustedUnitY, metric.unit)
+                        hasExtra = true
+                }
+
+                // Determine the display value — strip seconds for elapsed time split rendering
+                val renderValue =
+                        if (metric == DebugMetric.ELAPSED_TIME && font >= 2) {
+                                val normalized =
+                                        paddedValue.let {
+                                                val p = it.split(":")
+                                                if (p.size == 2) "0:$it" else it
+                                        }
+                                val parts = normalized.split(":")
+                                if (parts.size == 3) "${parts[0]}:${parts[1]}" else paddedValue
+                        } else {
+                                paddedValue
+                        }
+
+                // Render value + optional extras
+                g.layoutClearAndDisplayExtended(
+                        row.layoutId,
+                        ZONE_X0.toShort(),
+                        row.y0.toByte(),
+                        renderValue,
+                        extra
+                )
+
+                // Queue icon for PASS 2 (imgDisplay under ALooK)
+                if (hasIcon) {
+                        val iconPx = if (iconSize == "large") 40 else 28
+                        val iconId = if (iconSize == "large") metric.icon40 else metric.icon28
+                        if (iconId != null) {
+                                // Center icon in row, with +4px offset for small icons in medium
+                                // rows
+                                val baseY = row.y0 + (row.height - iconPx) / 2
+                                val iconYOffset =
+                                        if (iconSize == "small" && row.size == "medium") 6 else 0
+                                val absY = (baseY + iconYOffset).toShort()
+                                pendingIcons.add(PendingIcon(iconId, ICON_ABS_X, absY))
+                        }
+                }
+
+                Log.i(
+                        TAG,
+                        "populateLayout: row=$rowIndex font=$font metric=${metric.name} " +
+                                "icon=$iconSize unit=$showUnit y0=${row.y0} h=${row.height}"
+                )
+        }
+
+        /**
+         * Renders all queued icons under ALooK config. Must be called after all [populateLayout]
+         * calls and after switching to ALooK config.
+         */
+        fun renderPendingIcons(g: Glasses) {
+                for (icon in pendingIcons) {
+                        g.imgDisplay(icon.iconId.toByte(), icon.absX, icon.absY)
+                }
+                Log.i(TAG, "renderPendingIcons: ${pendingIcons.size} icons rendered")
+                pendingIcons.clear()
+        }
+
+        // ════════════════════════════════════════════════════════════════════
+        //  Test 10 — Dynamic layout demo
+        // ════════════════════════════════════════════════════════════════════
+
+        /**
+         * Demonstrates the dynamic layout system with 4 rows:
+         * - Row 1 (viewer-top, large): speed, font1, small icon, unit
+         * - Row 2 (medium): cadence, font2, no icon, unit
+         * - Row 3 (small): heartrate, font1, small icon, unit
+         * - Row 4 (viewer-bottom, large): power, font3, large icon, no unit
+         *
+         * Uses [createLayouts] for geometry and [populateLayout] for rendering.
+         */
+        fun testDynamicLayout() {
                 val g = activeLookService.getConnectedGlasses() ?: return logNoGlasses()
-                Log.i(TAG, "▶ Test 10: visual styles — GAUGE (top) / BAR (mid) / ZONE VIEW (bot)")
+                Log.i(TAG, "▶ Test 10: dynamic layout — 4 rows [large, medium, small, large]")
 
                 try {
                         g.holdFlush(holdFlushAction.HOLD)
@@ -1278,224 +1627,31 @@ class DisplayDebugService(private val activeLookService: ActiveLookService) {
                         g.color(DIM)
                         g.rect(0, 0, (DISPLAY_W - 1).toShort(), (DISPLAY_H - 1).toShort())
 
-                        // ALooK config required for icon bitmaps
-                        g.cfgSet("ALooK")
+                        // Writable config for layout saves
+                        g.cfgWrite("K2LDBG", 4, 0)
                         Thread.sleep(100)
 
-                        // GAUGE — top zone (y=190, h=40). No main value text.
-                        val gaugeLayout =
-                                LayoutParameters(
-                                        DBG_LAYOUT_BASE.toByte(),
-                                        0.toShort(),
-                                        190.toByte(),
-                                        264.toShort(),
-                                        40.toByte(),
-                                        WHITE,
-                                        0.toByte(),
-                                        1.toByte(), // font 1 (required param; no main text
-                                        // displayed)
-                                        true,
-                                        0.toShort(), // txtX — unused
-                                        0.toByte(), // txtY — unused
-                                        Rotation.TOP_LR,
-                                        true
-                                )
-                        g.layoutSave(gaugeLayout)
-                        Thread.sleep(80)
+                        // Phase 1: Compute geometry
+                        val rows = createLayouts(listOf("large", "medium", "small", "large"))
+                        if (rows.isEmpty()) {
+                                Log.w(TAG, "Test 10: no rows fit — aborting")
+                                g.holdFlush(holdFlushAction.FLUSH)
+                                return
+                        }
 
-                        // BAR — mid zone (y=110, h=40). Shows effort % as text + filled bar.
-                        val barLayout =
-                                LayoutParameters(
-                                        (DBG_LAYOUT_BASE + 1).toByte(),
-                                        0.toShort(),
-                                        110.toByte(),
-                                        264.toShort(),
-                                        40.toByte(),
-                                        WHITE,
-                                        0.toByte(),
-                                        1.toByte(), // font 1
-                                        true,
-                                        260.toShort(), // txtX — viewer-right side (text "68%")
-                                        35.toByte(), // txtY
-                                        Rotation.TOP_LR,
-                                        true
-                                )
-                        g.layoutSave(barLayout)
-                        Thread.sleep(80)
+                        // Phase 2: Save + render each row under K2LDBG
+                        populateLayout(g, 1, 1, DebugMetric.SPEED, "small", true)
+                        populateLayout(g, 2, 2, DebugMetric.ELAPSED_TIME, "small", false)
+                        populateLayout(g, 3, 1, DebugMetric.HEARTRATE, "small", true)
+                        populateLayout(g, 4, 3, DebugMetric.POWER, "large", false)
 
-                        // ZONE VIEW — bot zone (y=25, h=40). No main value text.
-                        val zoneLayout =
-                                LayoutParameters(
-                                        (DBG_LAYOUT_BASE + 2).toByte(),
-                                        0.toShort(),
-                                        25.toByte(),
-                                        264.toShort(),
-                                        40.toByte(),
-                                        WHITE,
-                                        0.toByte(),
-                                        1.toByte(), // font 1 (required param; no main text)
-                                        true,
-                                        0.toShort(), // txtX — unused
-                                        0.toByte(), // txtY — unused
-                                        Rotation.TOP_LR,
-                                        true
-                                )
-                        g.layoutSave(zoneLayout)
-                        Thread.sleep(80)
-
-                        // ── GAUGE: 7 power-zone segments, Z5 active ──
-                        // Segments at x=2..230 (30px each, 3px gap). Z5 = x=134..164 = active.
-                        // Power small icon (id=19, 28×28) at x=270 (right of zone, in display
-                        // space).
-                        val gaugeExtra =
-                                LayoutExtraCmd()
-                                        .addSubCommandColor(DIM)
-                                        .addSubCommandRectf(
-                                                2.toShort(),
-                                                5.toShort(),
-                                                32.toShort(),
-                                                35.toShort()
-                                        ) // Z1
-                                        .addSubCommandRectf(
-                                                35.toShort(),
-                                                5.toShort(),
-                                                65.toShort(),
-                                                35.toShort()
-                                        ) // Z2
-                                        .addSubCommandRectf(
-                                                68.toShort(),
-                                                5.toShort(),
-                                                98.toShort(),
-                                                35.toShort()
-                                        ) // Z3
-                                        .addSubCommandRectf(
-                                                101.toShort(),
-                                                5.toShort(),
-                                                131.toShort(),
-                                                35.toShort()
-                                        ) // Z4
-                                        .addSubCommandColor(WHITE)
-                                        .addSubCommandRectf(
-                                                134.toShort(),
-                                                5.toShort(),
-                                                164.toShort(),
-                                                35.toShort()
-                                        ) // Z5 active
-                                        .addSubCommandColor(DIM)
-                                        .addSubCommandRectf(
-                                                167.toShort(),
-                                                5.toShort(),
-                                                197.toShort(),
-                                                35.toShort()
-                                        ) // Z6
-                                        .addSubCommandRectf(
-                                                200.toShort(),
-                                                5.toShort(),
-                                                230.toShort(),
-                                                35.toShort()
-                                        ) // Z7
-                                        .addSubCommandColor(WHITE)
-                                        .addSubCommandBitmap(
-                                                19.toByte(),
-                                                270.toShort(),
-                                                5.toShort()
-                                        ) // power icon
-                        g.layoutClearAndDisplayExtended(
-                                DBG_LAYOUT_BASE.toByte(),
-                                0.toShort(),
-                                190.toByte(),
-                                " ",
-                                gaugeExtra
-                        )
-
-                        // ── BAR: border + 68% fill from viewer-left, effort icon ──
-                        // Bar spans x=5..260 (255px). Fill = 68% = ~173px from right in display
-                        // coords → fill x=87..260. Icon id=46 (large effort) at x=264.
-                        val barExtra =
-                                LayoutExtraCmd()
-                                        .addSubCommandColor(WHITE)
-                                        .addSubCommandRect(
-                                                5.toShort(),
-                                                6.toShort(),
-                                                260.toShort(),
-                                                34.toShort()
-                                        ) // border
-                                        .addSubCommandRectf(
-                                                99.toShort(),
-                                                7.toShort(),
-                                                260.toShort(),
-                                                33.toShort()
-                                        ) // fill (68%)
-                                        .addSubCommandBitmap(
-                                                46.toByte(),
-                                                264.toShort(),
-                                                2.toShort()
-                                        ) // effort icon
-                        g.layoutClearAndDisplayExtended(
-                                (DBG_LAYOUT_BASE + 1).toByte(),
-                                0.toShort(),
-                                110.toByte(),
-                                "68%",
-                                barExtra
-                        )
-
-                        // ── ZONE VIEW: 5 HR-zone segments, Z4 active ──
-                        // 5 segments × ~50px (2..261), 3px gap. Active = Z4 at x=158..208.
-                        // Heartbeat large icon (id=44) at x=264.
-                        val zoneExtra =
-                                LayoutExtraCmd()
-                                        .addSubCommandColor(DIM)
-                                        .addSubCommandRectf(
-                                                2.toShort(),
-                                                5.toShort(),
-                                                50.toShort(),
-                                                35.toShort()
-                                        ) // Z1
-                                        .addSubCommandRectf(
-                                                53.toShort(),
-                                                5.toShort(),
-                                                103.toShort(),
-                                                35.toShort()
-                                        ) // Z2
-                                        .addSubCommandRectf(
-                                                105.toShort(),
-                                                5.toShort(),
-                                                155.toShort(),
-                                                35.toShort()
-                                        ) // Z3
-                                        .addSubCommandColor(WHITE)
-                                        .addSubCommandRectf(
-                                                158.toShort(),
-                                                5.toShort(),
-                                                208.toShort(),
-                                                35.toShort()
-                                        ) // Z4 active
-                                        .addSubCommandColor(DIM)
-                                        .addSubCommandRectf(
-                                                211.toShort(),
-                                                5.toShort(),
-                                                261.toShort(),
-                                                35.toShort()
-                                        ) // Z5
-                                        .addSubCommandColor(WHITE)
-                                        .addSubCommandBitmap(
-                                                44.toByte(),
-                                                264.toShort(),
-                                                2.toShort()
-                                        ) // heartbeat icon
-                        g.layoutClearAndDisplayExtended(
-                                (DBG_LAYOUT_BASE + 2).toByte(),
-                                0.toShort(),
-                                25.toByte(),
-                                " ",
-                                zoneExtra
-                        )
+                        // Phase 3: Render icons under ALooK
+                        g.cfgSet("ALooK")
+                        Thread.sleep(50)
+                        renderPendingIcons(g)
 
                         g.holdFlush(holdFlushAction.FLUSH)
-                        Log.i(
-                                TAG,
-                                "✓ Test 10 complete — GAUGE (Z5 active/7 zones) / BAR (68%) / ZONE VIEW (Z4 active/5 zones)"
-                        )
+                        Log.i(TAG, "✓ Test 10 complete — 4 dynamic rows: speed/cadence/HR/power")
                 } catch (e: Exception) {
                         Log.e(TAG, "Test 10 failed: ${e.message}", e)
                         safeFlush(g)
