@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.activelook.activelooksdk.DiscoveredGlasses
+import com.kema.k2look.K2LookApplication
 import com.kema.k2look.service.ActiveLookService
 import com.kema.k2look.service.DisplayDebugService
 import com.kema.k2look.service.KarooActiveLookBridge
@@ -21,7 +22,9 @@ import kotlinx.coroutines.launch
 /** ViewModel for managing Karoo data, ActiveLook connection, and UI state */
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val bridge = KarooActiveLookBridge(application)
+    // Bridge is owned by K2LookApplication — shared with K2LookExtension.
+    // The UI observes the live connection; closing the UI never tears it down.
+    private val bridge = (application as K2LookApplication).bridge
     private val karooDataService = bridge.getKarooDataService()
     private val activeLookService = bridge.getActiveLookService()
 
@@ -111,8 +114,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val gesturePreferences = com.kema.k2look.data.GesturePreferencesRepository(application)
 
     init {
-        Log.i(TAG, "MainViewModel initialized")
-        bridge.initialize()
+        Log.i(TAG, "MainViewModel initialized — attaching to application-scoped bridge")
+        // Bridge already initialized by K2LookApplication — do NOT call bridge.initialize() here.
         observeKarooData()
         observeActiveLookData()
         observeBridgeState()
@@ -530,6 +533,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 8 -> displayDebug.testIconValueUnit()
                 9 -> displayDebug.testRealisticLayout()
                 10 -> displayDebug.testDynamicLayout()
+                11 -> displayDebug.testGauge270()
+                12 -> displayDebug.testProductionLayout()
+                13 -> displayDebug.testZoneBar()
                 else -> Log.w(TAG, "Unknown debug test: $testNumber")
             }
         }
@@ -838,8 +844,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     override fun onCleared() {
         super.onCleared()
-        Log.i(TAG, "MainViewModel cleared, cleaning up bridge")
-        bridge.cleanup()
+        // Bridge is owned by K2LookApplication — do NOT call cleanup here.
+        // The glasses connection stays alive when the user closes the UI.
+        Log.i(TAG, "MainViewModel cleared (bridge kept alive in background)")
     }
 
     companion object {

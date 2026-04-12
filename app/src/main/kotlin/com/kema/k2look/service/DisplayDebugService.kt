@@ -6,6 +6,14 @@ import com.activelook.activelooksdk.types.LayoutExtraCmd
 import com.activelook.activelooksdk.types.LayoutParameters
 import com.activelook.activelooksdk.types.Rotation
 import com.activelook.activelooksdk.types.holdFlushAction
+import com.kema.k2look.layout.DynamicLayoutEngine
+import com.kema.k2look.layout.DynamicLayoutRenderer
+import com.kema.k2look.layout.LayoutPositionDefaults
+
+// File-level aliases so debug tests can refer to the shared types without qualification
+private typealias RowConfig = DynamicLayoutEngine.RowConfig
+
+private typealias PendingIcon = DynamicLayoutRenderer.PendingIcon
 
 /**
  * Renders calibration / diagnostic patterns directly on the ActiveLook glasses using low-level
@@ -42,30 +50,22 @@ class DisplayDebugService(private val activeLookService: ActiveLookService) {
                 const val MID_GREY: Byte = 8
                 const val DIM: Byte = 4
 
-                // Dynamic layout constants
-                const val AVAILABLE_HEIGHT = 246 // y=0 to y=246 (top row y0=216 + h=30 from Test 9)
-                const val MIN_GAP = 2 // minimum pixels between rows
-                const val ZONE_X0 = 30 // safe area left
-                const val ZONE_WIDTH = 244 // safe area width
-                const val ICON_ABS_X: Short = 260 // absolute x for icon rendering (from Test 9)
+                // Dynamic layout geometry — delegated to LayoutPositionDefaults
+                val AVAILABLE_HEIGHT
+                        get() = LayoutPositionDefaults.AVAILABLE_HEIGHT
+                val MIN_GAP
+                        get() = LayoutPositionDefaults.MIN_GAP
+                val ZONE_X0
+                        get() = LayoutPositionDefaults.ZONE_X0
+                val ZONE_WIDTH
+                        get() = LayoutPositionDefaults.ZONE_WIDTH
+                val ICON_ABS_X
+                        get() = LayoutPositionDefaults.ICON_ABS_X
         }
 
         // ════════════════════════════════════════════════════════════════════
         //  Dynamic Layout Data Structures
         // ════════════════════════════════════════════════════════════════════
-
-        data class RowConfig(val layoutId: Byte, val y0: Int, val height: Int, val size: String)
-
-        data class PendingIcon(val iconId: Int, val absX: Short, val absY: Short)
-
-        data class FontParams(
-                val fontId: Byte,
-                val txtY: Byte,
-                val rotation: Rotation,
-                val unitY: Short,
-                val refHeight: Int, // zone height where txtY/unitY were calibrated
-                val txtXWithIcon: Short // txtX when icon is present (font-specific)
-        )
 
         enum class DebugMetric(
                 val displayValue: String,
@@ -81,49 +81,6 @@ class DisplayDebugService(private val activeLookService: ActiveLookService) {
                 DISTANCE("42.5", "km", 9, 41, 5), // up to "999.9"
                 ELAPSED_TIME("1:23:45", "HH:MM:SS", 8, 40, 7) // "H:MM:SS"
         }
-
-        private val fontParams =
-                mapOf(
-                        1 to
-                                FontParams(
-                                        1.toByte(),
-                                        25.toByte(),
-                                        Rotation.TOP_LR,
-                                        25.toShort(),
-                                        30,
-                                        208
-                                ),
-                        2 to
-                                FontParams(
-                                        2.toByte(),
-                                        35.toByte(),
-                                        Rotation.TOP_LR,
-                                        38.toShort(),
-                                        35,
-                                        208
-                                ),
-                        3 to
-                                FontParams(
-                                        3.toByte(),
-                                        48.toByte(),
-                                        Rotation.TOP_LR,
-                                        50.toShort(),
-                                        50,
-                                        220
-                                )
-                )
-
-        private val unitXLookup =
-                mapOf(
-                        "km/h" to 160.toShort(),
-                        "w" to 50.toShort(),
-                        "bpm" to 170.toShort(),
-                        "rpm" to 150.toShort(),
-                        "km" to 100.toShort(),
-                        "m" to 60.toShort(),
-                        "HH:MM:SS" to 130.toShort()
-                )
-        private val defaultUnitX: Short = 100
 
         private var rowConfigs: List<RowConfig> = emptyList()
         private val pendingIcons = mutableListOf<PendingIcon>()
@@ -1370,75 +1327,12 @@ class DisplayDebugService(private val activeLookService: ActiveLookService) {
          */
         fun createLayouts(rows: List<String>): List<RowConfig> {
                 pendingIcons.clear()
-
-                val heights =
-                        rows
-                                .map {
-                                        when (it) {
-                                                "large" -> 50
-                                                "medium" -> 35
-                                                else -> 30
-                                        }
-                                }
-                                .toMutableList()
-
-                // Drop trailing rows until they fit
-                while (heights.isNotEmpty()) {
-                        val totalH = heights.sum()
-                        val gaps = if (heights.size > 1) (heights.size - 1) * MIN_GAP else 0
-                        if (totalH + gaps <= AVAILABLE_HEIGHT) break
-                        heights.removeAt(heights.lastIndex)
-                }
-
-                if (heights.isEmpty()) {
-                        rowConfigs = emptyList()
-                        return emptyList()
-                }
-
-                val n = heights.size
-                val totalH = heights.sum()
-                val configs = mutableListOf<RowConfig>()
-
-                if (n == 1) {
-                        // Center the single row
-                        val y0 = (AVAILABLE_HEIGHT - heights[0]) / 2
-                        configs.add(
-                                RowConfig(
-                                        layoutId = (DBG_LAYOUT_BASE + 3).toByte(),
-                                        y0 = y0,
-                                        height = heights[0],
-                                        size = rows[0]
-                                )
+                val configs =
+                        DynamicLayoutEngine.createRowLayouts(
+                                rows,
+                                startLayoutId = DBG_LAYOUT_BASE + 3
                         )
-                } else {
-                        // Edge-to-edge distribution: row 0 at top (high y), row N-1 at bottom (low
-                        // y)
-                        val gap = (AVAILABLE_HEIGHT - totalH) / (n - 1)
-                        var currentY = AVAILABLE_HEIGHT - heights[0]
-                        for (i in 0 until n) {
-                                if (i > 0) {
-                                        currentY = currentY - gap - heights[i]
-                                }
-                                configs.add(
-                                        RowConfig(
-                                                layoutId = (DBG_LAYOUT_BASE + 3 + i).toByte(),
-                                                y0 = currentY,
-                                                height = heights[i],
-                                                size = rows[i]
-                                        )
-                                )
-                                if (i == 0) {
-                                        // After first row, set up for next iteration
-                                        currentY = AVAILABLE_HEIGHT - heights[0]
-                                }
-                        }
-                }
-
                 rowConfigs = configs
-                Log.i(
-                        TAG,
-                        "createLayouts: ${configs.size} rows — ${configs.map { "y0=${it.y0} h=${it.height}" }}"
-                )
                 return configs
         }
 
@@ -1470,118 +1364,57 @@ class DisplayDebugService(private val activeLookService: ActiveLookService) {
                                         return
                                 }
 
-                val fp =
-                        fontParams[font]
-                                ?: run {
-                                        Log.w(TAG, "populateLayout: invalid font=$font")
-                                        return
-                                }
+                val iconPx = if (iconSize == "large") 40 else 28
+                val iconId =
+                        if (iconSize != null) {
+                                if (iconSize == "large") metric.icon40 else metric.icon28
+                        } else null
+                val hasIcon = iconId != null
 
-                val hasIcon = iconSize != null
-                val txtX: Short = if (hasIcon) fp.txtXWithIcon else 244
-
-                // Ghost-pad the value to maxChars so the rightmost digit stays
-                // at a fixed position regardless of actual value length.
-                // Only effective for fonts 4/5; fonts 1-3 don't support ghost chars.
-                val paddedValue = ghostPad(metric.displayValue, metric.maxChars, font)
-
-                // Adjust txtY/unitY to vertically center text with icon when zone
-                // height differs from the font's calibrated reference height.
-                val yAdjust = (row.height - fp.refHeight) / 2
-                val adjustedTxtY = (fp.txtY + yAdjust).toByte()
-                val adjustedUnitY = (fp.unitY + yAdjust).toShort()
-
-                // Save layout for this row
+                // Build LayoutParameters using calibrated shared helper
                 val params =
-                        LayoutParameters(
-                                row.layoutId,
-                                ZONE_X0.toShort(),
-                                row.y0.toByte(),
-                                ZONE_WIDTH.toShort(),
-                                row.height.toByte(),
-                                WHITE,
-                                0.toByte(),
-                                fp.fontId,
-                                true,
-                                txtX,
-                                adjustedTxtY,
-                                fp.rotation,
-                                true
+                        DynamicLayoutRenderer.buildLayoutParams(
+                                layoutId = row.layoutId,
+                                x0 = ZONE_X0,
+                                y0 = row.y0,
+                                width = ZONE_WIDTH,
+                                zoneHeight = row.height,
+                                font = font,
+                                hasIcon = hasIcon,
                         )
                 g.layoutSave(params)
                 Thread.sleep(80)
 
-                // Build ExtraCmd for unit text and/or elapsed time seconds
-                val extra = LayoutExtraCmd()
-                var hasExtra = false
+                // Ghost-pad the value (no-op for fonts 1–3, effective only for 4–5)
+                val paddedValue = ghostPad(metric.displayValue, metric.maxChars, font)
 
-                // Elapsed time special handling: split seconds into font 1, top-aligned
-                // Normalize MM:SS → 0:MM:SS so alignment is consistent with H:MM:SS
-                if (metric == DebugMetric.ELAPSED_TIME && font >= 2) {
-                        val normalized =
-                                metric.displayValue.let {
-                                        val p = it.split(":")
-                                        if (p.size == 2) "0:$it" else it
-                                }
-                        val parts = normalized.split(":")
-                        if (parts.size == 3) {
-                                // Seconds ":SS" rendered in font 1, top-aligned with main value
-                                val secondsStr = ":${parts[2]}"
-                                // Position: viewer-right of main value text
-                                val secondsX: Short = if (font == 3) 145 else 153
-                                extra.addSubCommandFont(1.toByte())
-                                extra.addSubCommandText(
-                                        secondsX,
-                                        adjustedTxtY.toShort(),
-                                        secondsStr
-                                )
-                                hasExtra = true
-                        }
-                }
+                // Build ExtraCmd (unit label and/or elapsed-time seconds) via shared helper
+                val (extra, renderValue) =
+                        DynamicLayoutRenderer.buildExtraCmd(
+                                value = paddedValue,
+                                unit = metric.unit,
+                                font = font,
+                                zoneHeight = row.height,
+                                showUnit = showUnit,
+                        )
 
-                if (showUnit) {
-                        val unitX = unitXLookup[metric.unit] ?: defaultUnitX
-                        if (!hasExtra) extra.addSubCommandFont(1.toByte())
-                        extra.addSubCommandText(unitX, adjustedUnitY, metric.unit)
-                        hasExtra = true
-                }
-
-                // Determine the display value — strip seconds for elapsed time split rendering
-                val renderValue =
-                        if (metric == DebugMetric.ELAPSED_TIME && font >= 2) {
-                                val normalized =
-                                        paddedValue.let {
-                                                val p = it.split(":")
-                                                if (p.size == 2) "0:$it" else it
-                                        }
-                                val parts = normalized.split(":")
-                                if (parts.size == 3) "${parts[0]}:${parts[1]}" else paddedValue
-                        } else {
-                                paddedValue
-                        }
-
-                // Render value + optional extras
                 g.layoutClearAndDisplayExtended(
-                        row.layoutId,
+                        row.layoutId.toByte(),
                         ZONE_X0.toShort(),
                         row.y0.toByte(),
                         renderValue,
-                        extra
+                        extra,
                 )
 
-                // Queue icon for PASS 2 (imgDisplay under ALooK)
+                // Queue icon for PASS 2 (rendered under ALooK config)
                 if (hasIcon) {
-                        val iconPx = if (iconSize == "large") 40 else 28
-                        val iconId = if (iconSize == "large") metric.icon40 else metric.icon28
-                        if (iconId != null) {
-                                // Center icon in row, with +4px offset for small icons in medium
-                                // rows
-                                val baseY = row.y0 + (row.height - iconPx) / 2
-                                val iconYOffset =
-                                        if (iconSize == "small" && row.size == "medium") 6 else 0
-                                val absY = (baseY + iconYOffset).toShort()
-                                pendingIcons.add(PendingIcon(iconId, ICON_ABS_X, absY))
-                        }
+                        DynamicLayoutRenderer.queueIcon(
+                                pendingIcons,
+                                iconId!!,
+                                iconPx,
+                                row.y0,
+                                row.height
+                        )
                 }
 
                 Log.i(
@@ -1596,10 +1429,7 @@ class DisplayDebugService(private val activeLookService: ActiveLookService) {
          * calls and after switching to ALooK config.
          */
         fun renderPendingIcons(g: Glasses) {
-                for (icon in pendingIcons) {
-                        g.imgDisplay(icon.iconId.toByte(), icon.absX, icon.absY)
-                }
-                Log.i(TAG, "renderPendingIcons: ${pendingIcons.size} icons rendered")
+                DynamicLayoutRenderer.renderPendingIcons(g, pendingIcons)
                 pendingIcons.clear()
         }
 
@@ -1656,6 +1486,327 @@ class DisplayDebugService(private val activeLookService: ActiveLookService) {
                         Log.e(TAG, "Test 10 failed: ${e.message}", e)
                         safeFlush(g)
                 }
+        }
+
+        // ════════════════════════════════════════════════════════════════════
+        //  Test 11 — 270° gauge: save + animate fill levels
+        // ════════════════════════════════════════════════════════════════════
+
+        /**
+         * Saves a 270° arc gauge at the display centre and steps through four fill levels: 0 % → 33
+         * % → 66 % → 100 % with 1.5 s between each frame.
+         *
+         * Gauge geometry (matches DefaultVisualizations.kt power-gauge defaults):
+         * - Centre: (152, 128) — display centre
+         * - Outer radius: 70 px, inner radius: 55 px (15 px thick arc)
+         * - start=3, end=14, clockwise=true → 270° arc with gap at top (portion 0 = 3 o'clock;
+         * portion 3 = ~12 o'clock; each portion = 22.5°)
+         *
+         * After each gaugeDisplay call a font-2 value label is drawn at the centre so the viewer
+         * can confirm gauge fill AND text overlay work together.
+         *
+         * Answers: Does the firmware render the gauge arc? Is the fill direction correct? Is a text
+         * label readable on top of the gauge?
+         */
+        fun testGauge270() {
+                val g = activeLookService.getConnectedGlasses() ?: return logNoGlasses()
+                Log.i(TAG, "▶ Test 11: 180° gauge — 4 fill levels (0/33/66/100 %)")
+
+                val gaugeId: Byte = 1
+                val cx: Short = 152
+                val cy: Short = 128
+                val txtCy: Short =
+                        (cy + 25).toShort() // value label y, centred within the gauge arc gap
+                val rOuter: Char = 70.toChar() // u16 via char
+                val rInner: Char = 45.toChar()
+                val startPortion: Byte = 5 // display 6-o'clock → viewer 12-o'clock
+                val endPortion: Byte =
+                        12 // display 12-o'clock → viewer 6-o'clock (~67.5° CW from prior)
+
+                val steps = listOf(0, 20, 40, 60, 80, 100)
+
+                try {
+                        // 1. Save gauge definition inside a writable config
+                        g.cfgWrite("K2LDBG", 4, 0)
+                        Thread.sleep(100)
+                        g.gaugeSave(gaugeId, cx, cy, rOuter, rInner, startPortion, endPortion, true)
+                        Thread.sleep(100)
+
+                        for (pct in steps) {
+                                g.holdFlush(holdFlushAction.HOLD)
+
+                                // Clear only the gauge area (full display is simplest for a debug
+                                // test)
+                                g.clear()
+
+                                // Draw a dim border so the display frame is visible at 0 %
+                                g.color(DIM)
+                                g.rect(0, 0, (DISPLAY_W - 1).toShort(), (DISPLAY_H - 1).toShort())
+
+                                // Render the gauge arc
+                                g.gaugeDisplay(gaugeId, pct.toByte())
+
+                                // Overlay a centred percentage label using font 2 (38 px), rotation
+                                // 4 (TOP_LR)
+                                g.color(WHITE)
+                                g.txt(187, txtCy, Rotation.TOP_LR, 2.toByte(), WHITE, "$pct%")
+
+                                g.holdFlush(holdFlushAction.FLUSH)
+                                Log.i(TAG, "  Gauge @ $pct%")
+                                Thread.sleep(1500)
+                        }
+
+                        Log.i(TAG, "✓ Test 11 complete — 180° gauge animated at 0/33/66/100 %")
+                } catch (e: Exception) {
+                        Log.e(TAG, "Test 11 failed: ${e.message}", e)
+                        safeFlush(g)
+                }
+        }
+
+        // ════════════════════════════════════════════════════════════════════
+        //  Test 12 — 3-field production layout via DynamicLayoutEngine
+        // ════════════════════════════════════════════════════════════════════
+
+        /**
+         * Renders a 3-field cycling layout using the same [DynamicLayoutEngine] + [sizeToFont]
+         * mapping that the production [ActiveLookLayoutService.saveProfileLayouts] path uses. This
+         * test validates that the wired pipeline produces correctly positioned rows on hardware.
+         *
+         * Layout (matches production large→font3 / medium→font2 / small→font1 mapping):
+         * - Row 1 (viewer-top, large, font 3): speed + icon + unit
+         * - Row 2 (viewer-mid, medium, font 2): heart-rate + icon + unit
+         * - Row 3 (viewer-bot, small, font 1): cadence + icon + unit
+         *
+         * Expected DynamicLayoutEngine geometry (AVAILABLE_HEIGHT=246, heights 50+35+30=115): gap =
+         * (246 - 115) / 2 = 65 Row 0: y0 = 246 - 50 = 196 (viewer-top) Row 1: y0 = 196 - 65 - 35 =
+         * 96 Row 2: y0 = 96 - 65 - 30 = 1 (viewer-bottom)
+         */
+        fun testProductionLayout() {
+                val g = activeLookService.getConnectedGlasses() ?: return logNoGlasses()
+                Log.i(
+                        TAG,
+                        "▶ Test 12: 3-field production layout — speed(font3)/HR(font2)/cadence(font1)"
+                )
+
+                try {
+                        g.holdFlush(holdFlushAction.HOLD)
+                        g.clear()
+
+                        g.color(DIM)
+                        g.rect(0, 0, (DISPLAY_W - 1).toShort(), (DISPLAY_H - 1).toShort())
+
+                        g.cfgWrite("K2LDBG", 4, 0)
+                        Thread.sleep(100)
+
+                        // Compute geometry — same logic as
+                        // ActiveLookLayoutService.saveProfileLayouts
+                        // large→font3, medium→font2, small→font1
+                        val rows = createLayouts(listOf("large", "medium", "small"))
+                        if (rows.isEmpty()) {
+                                Log.w(TAG, "Test 12: no rows fit — aborting")
+                                g.holdFlush(holdFlushAction.FLUSH)
+                                return
+                        }
+
+                        // Save + render each row; fonts match the production sizeToFont() mapping
+                        populateLayout(g, 1, 3, DebugMetric.SPEED, "small", true) // large → font 3
+                        populateLayout(
+                                g,
+                                2,
+                                2,
+                                DebugMetric.HEARTRATE,
+                                "small",
+                                true
+                        ) // medium → font 2
+                        populateLayout(
+                                g,
+                                3,
+                                1,
+                                DebugMetric.CADENCE,
+                                "small",
+                                true
+                        ) // small → font 1
+
+                        // Icon pass under ALooK
+                        g.cfgSet("ALooK")
+                        Thread.sleep(50)
+                        renderPendingIcons(g)
+
+                        g.holdFlush(holdFlushAction.FLUSH)
+                        Log.i(
+                                TAG,
+                                "✓ Test 12 complete — speed(25.1 km/h) / HR(150 bpm) / cadence(185 rpm)"
+                        )
+                } catch (e: Exception) {
+                        Log.e(TAG, "Test 12 failed: ${e.message}", e)
+                        safeFlush(g)
+                }
+        }
+
+        // ════════════════════════════════════════════════════════════════════
+        //  Test 13 — HR Zone circles
+        // ════════════════════════════════════════════════════════════════════
+
+        /**
+         * Renders 5 horizontally spaced circles representing HR zones.
+         *
+         * **Fill progression** (like a gauge): all zones ≤ active are filled bright; zones above
+         * are dim outlines. This gives an immediate "how high am I" reading.
+         *
+         * **Viewer mapping** (high display-x = viewer-LEFT):
+         * - Z5 (max effort) → viewer-LEFT (display-x ≈ 50)
+         * - Z1 (recovery) → viewer-RIGHT (display-x ≈ 254)
+         *
+         * **SDK note**: the ActiveLook SDK has no native circle primitive, so:
+         * - Filled circle → horizontal scan-lines via `line`
+         * - Outline circle → `polyline` approximation with 24 vertices
+         *
+         * **Zone label**: "Zn" drawn inside the circle. Filled circles use black text (off-pixels =
+         * contrast). Dim circles use dim text so the label is subtle.
+         *
+         * Test cycles: no zone → Z1 → Z2 → Z3 → Z4 → Z5 with 1.5 s per step.
+         */
+        fun testZoneBar() {
+                val g = activeLookService.getConnectedGlasses() ?: return logNoGlasses()
+                Log.i(TAG, "▶ Test 13: Zone circles — row 1: 7 zones (power), row 2: 5 zones (HR)")
+
+                data class ZoneRow(val numZones: Int, val cy: Int, val iconId: Byte)
+
+                // Two rows: 7-zone at top, 5-zone at bottom.
+                // cy chosen so circles + label below fit within the safe area.
+                val rows =
+                        listOf(
+                                ZoneRow(numZones = 7, cy = 75, iconId = 19), // power icon
+                                ZoneRow(numZones = 5, cy = 175, iconId = 12), // heart-beat icon
+                        )
+
+                val iconSize = 28
+                val iconX: Short = (SAFE_RIGHT - iconSize).toShort() // = 246, viewer-LEFT
+
+                // Circle area: ZONE_X0(30) to iconX-6(240) = 210 px shared by all rows.
+                val circleAreaWidth = (iconX - 6) - ZONE_X0 // = 210
+
+                // Color for inactive (above-active) zones — much dimmer than DIM(4) so the
+                // difference vs achieved zones (MID_GREY=8 fill) is clearly visible.
+                val INACTIVE: Byte = 2
+
+                val maxZones = rows.maxOf { it.numZones }
+
+                try {
+                        for (activeZone in 0..maxZones) {
+                                g.holdFlush(holdFlushAction.HOLD)
+                                g.clear()
+
+                                g.color(DIM)
+                                g.rect(0, 0, (DISPLAY_W - 1).toShort(), (DISPLAY_H - 1).toShort())
+
+                                for (row in rows) {
+                                        val slot = circleAreaWidth / row.numZones
+                                        // r = slot/2 - 1: slightly larger than -2 gives ~5% more
+                                        // radius
+                                        val r = slot / 2 - 1
+                                        val txtHalfW = slot / 2
+                                        // y-axis is mirrored for viewer: higher display-y =
+                                        // viewer-UP.
+                                        // Text top at cy - fontHeight(24) puts it viewer-BELOW the
+                                        // circle. 7-zone circles are smaller → +1px compensation.
+                                        val txtYAdjust = if (row.numZones == 7) 3 else 0
+                                        val txtY = (row.cy - 24 + txtYAdjust).toShort()
+                                        // Reduce txtX (right-edge anchor) to nudge text
+                                        // viewer-right.
+                                        // Calibrated per zone count: 7-zone → -2, 5-zone → -8.
+                                        val txtXAdjust = if (row.numZones == 7) -2 else -8
+                                        // Cap activeZone at this row's zone count
+                                        val rowActive = activeZone.coerceAtMost(row.numZones)
+
+                                        fun zoneCx(z: Int) =
+                                                ZONE_X0 + slot / 2 + (row.numZones - z) * slot
+
+                                        for (z in 1..row.numZones) {
+                                                val cx = zoneCx(z)
+                                                when {
+                                                        z < rowActive -> {
+                                                                // Achieved (below active): dim fill
+                                                                g.color(DIM)
+                                                                filledCircle(g, cx, row.cy, r)
+                                                        }
+                                                        z == rowActive -> {
+                                                                // Active: bright fill + label below
+                                                                g.color(WHITE)
+                                                                filledCircle(g, cx, row.cy, r)
+                                                                g.txt(
+                                                                        (cx + txtHalfW + txtXAdjust)
+                                                                                .toShort(),
+                                                                        txtY,
+                                                                        Rotation.TOP_LR,
+                                                                        1.toByte(),
+                                                                        WHITE,
+                                                                        "Z$z"
+                                                                )
+                                                        }
+                                                        else -> {
+                                                                // Not yet (above active): nothing
+                                                                // drawn = black
+                                                        }
+                                                }
+                                        }
+                                }
+
+                                // Icons need ALooK config; draw after all circles.
+                                g.cfgSet("ALooK")
+                                for (row in rows) {
+                                        g.imgDisplay(
+                                                row.iconId,
+                                                iconX,
+                                                (row.cy - iconSize / 2).toShort()
+                                        )
+                                }
+
+                                val label = if (activeZone == 0) "no zone" else "Z$activeZone"
+                                g.holdFlush(holdFlushAction.FLUSH)
+                                Log.i(TAG, "  active=$label")
+                                Thread.sleep(1500)
+                        }
+
+                        Log.i(TAG, "✓ Test 13 complete")
+                } catch (e: Exception) {
+                        Log.e(TAG, "Test 13 failed: ${e.message}", e)
+                        safeFlush(g)
+                }
+        }
+
+        /**
+         * Draws a filled circle at ([cx], [cy]) with radius [r] using horizontal scan-lines.
+         *
+         * The caller must set the desired colour via `g.color()` before calling this. Each scan
+         * line is a single `line` command, so a circle of radius 20 costs 41 BLE commands.
+         */
+        private fun filledCircle(g: Glasses, cx: Int, cy: Int, r: Int) {
+                for (dy in -r..r) {
+                        val dx = Math.sqrt((r * r - dy * dy).toDouble()).toInt()
+                        if (dx == 0) continue
+                        g.line(
+                                (cx - dx).toShort(),
+                                (cy + dy).toShort(),
+                                (cx + dx).toShort(),
+                                (cy + dy).toShort()
+                        )
+                }
+        }
+
+        /**
+         * Draws an outline circle at ([cx], [cy]) with radius [r] using a [steps]-vertex polyline.
+         *
+         * The caller must set the desired colour via `g.color()` before calling this.
+         */
+        private fun outlineCircle(g: Glasses, cx: Int, cy: Int, r: Int, steps: Int = 24) {
+                val pts = ShortArray((steps + 1) * 2)
+                for (i in 0..steps) {
+                        val angle = 2 * Math.PI * i / steps
+                        pts[i * 2] = (cx + (r * Math.cos(angle)).toInt()).toShort()
+                        pts[i * 2 + 1] = (cy + (r * Math.sin(angle)).toInt()).toShort()
+                }
+                g.polyline(pts)
         }
 
         // ════════════════════════════════════════════════════════════════════

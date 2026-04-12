@@ -6,6 +6,8 @@ import com.activelook.activelooksdk.DiscoveredGlasses
 import com.kema.k2look.model.VisualizationType
 import com.kema.k2look.util.PreferencesManager
 import io.hammerhead.karooext.models.DataType
+import io.hammerhead.karooext.models.ReleaseBluetooth
+import io.hammerhead.karooext.models.RequestBluetooth
 import io.hammerhead.karooext.models.RideState
 import io.hammerhead.karooext.models.StreamState
 import kotlinx.coroutines.CoroutineScope
@@ -41,6 +43,9 @@ class KarooActiveLookBridge(context: Context) {
     private var scanJob: Job? = null
     private var scanTimeoutJob: Job? = null
     private var statusLogJob: Job? = null
+    private var autoConnectCollectionJob: Job? = null
+    private var autoConnectTimeoutJob: Job? = null
+    private var bluetoothRequested = false
 
     // Simulator mode (for Debug tab)
     private var simulatorJob: Job? = null
@@ -59,8 +64,8 @@ class KarooActiveLookBridge(context: Context) {
     private var activeScreenId: Int? = null
 
     // Auto profile switching on ride start
-    private var hasAutoSwitchedProfile = false  // Track if we've auto-switched this ride
-    private var lastKarooProfileName: String? = null  // Track last seen Karoo profile
+    private var hasAutoSwitchedProfile = false // Track if we've auto-switched this ride
+    private var lastKarooProfileName: String? = null // Track last seen Karoo profile
 
     // Update throttling
     private var lastUpdateTime = 0L
@@ -76,9 +81,7 @@ class KarooActiveLookBridge(context: Context) {
     private var lastNoDataLogTimeMs: Long = 0L
     private val noDataLogIntervalMs: Long = 30_000L
 
-    /**
-     * Bridge state enum
-     */
+    /** Bridge state enum */
     sealed class BridgeState {
         data object Idle : BridgeState()
         data object KarooConnecting : BridgeState()
@@ -90,14 +93,14 @@ class KarooActiveLookBridge(context: Context) {
         data object Streaming : BridgeState() // Actively streaming data to glasses
     }
 
-
-    /**
-     * Set the active DataField profile for display layout
-     */
+    /** Set the active DataField profile for display layout */
     fun setActiveProfile(profile: com.kema.k2look.model.DataFieldProfile) {
         activeProfile = profile
         activeScreenId = profile.screens.firstOrNull()?.id
-        Log.i(TAG, "📋 Active profile set: ${profile.name} (${profile.screens.size} screens), active screen: $activeScreenId")
+        Log.i(
+                TAG,
+                "📋 Active profile set: ${profile.name} (${profile.screens.size} screens), active screen: $activeScreenId"
+        )
 
         if (activeLookService.isConnected) {
             scope.launch {
@@ -116,9 +119,7 @@ class KarooActiveLookBridge(context: Context) {
         }
     }
 
-    /**
-     * Set the currently displayed screen (called by gesture cycling / LayoutBuilderViewModel)
-     */
+    /** Set the currently displayed screen (called by gesture cycling / LayoutBuilderViewModel) */
     fun setActiveScreen(screenId: Int) {
         activeScreenId = screenId
         Log.d(TAG, "Active screen changed to: $screenId")
@@ -126,31 +127,29 @@ class KarooActiveLookBridge(context: Context) {
     }
 
     /**
-     * Invalidate the glasses-side config cache for [profileId].
-     * Call this whenever a profile's fields or layout are modified so the next
-     * [setActiveProfile] triggers a re-upload rather than a stale cfgSet.
+     * Invalidate the glasses-side config cache for [profileId]. Call this whenever a profile's
+     * fields or layout are modified so the next [setActiveProfile] triggers a re-upload rather than
+     * a stale cfgSet.
      */
     fun invalidateProfileConfig(profileId: String) {
         layoutService.invalidateConfig(profileId)
     }
 
     /**
-     * Callback to find K2Look profile by name
-     * Set by LayoutBuilderViewModel to enable auto-switching
+     * Callback to find K2Look profile by name Set by LayoutBuilderViewModel to enable
+     * auto-switching
      */
     private var profileLookup: ((String) -> com.kema.k2look.model.DataFieldProfile?)? = null
 
-    /**
-     * Set the profile lookup callback for auto-switching
-     */
+    /** Set the profile lookup callback for auto-switching */
     fun setProfileLookup(lookup: (String) -> com.kema.k2look.model.DataFieldProfile?) {
         profileLookup = lookup
         Log.i(TAG, "Profile lookup callback registered for auto-switching")
     }
 
     /**
-     * Attempt to auto-switch profile based on Karoo profile name
-     * Only happens once at ride start, not mid-ride
+     * Attempt to auto-switch profile based on Karoo profile name Only happens once at ride start,
+     * not mid-ride
      */
     private fun tryAutoSwitchProfile(karooProfileName: String) {
         // Don't switch if we already auto-switched this ride
@@ -164,8 +163,8 @@ class KarooActiveLookBridge(context: Context) {
 
         if (matchingProfile != null) {
             Log.i(
-                TAG,
-                "🎯 Auto-switching to K2Look profile '${matchingProfile.name}' (matches Karoo profile '$karooProfileName')"
+                    TAG,
+                    "🎯 Auto-switching to K2Look profile '${matchingProfile.name}' (matches Karoo profile '$karooProfileName')"
             )
             setActiveProfile(matchingProfile)
             hasAutoSwitchedProfile = true
@@ -174,18 +173,14 @@ class KarooActiveLookBridge(context: Context) {
         }
     }
 
-    /**
-     * Reset auto-switch flag when ride ends (allows auto-switch on next ride)
-     */
+    /** Reset auto-switch flag when ride ends (allows auto-switch on next ride) */
     private fun resetAutoSwitch() {
         hasAutoSwitchedProfile = false
         lastKarooProfileName = null
         Log.d(TAG, "Auto-switch reset - ready for next ride")
     }
 
-    /**
-     * Initialize both services and auto-connect based on preferences
-     */
+    /** Initialize both services and auto-connect based on preferences */
     fun initialize() {
         android.util.Log.i(TAG, "🚀 === Initializing KarooActiveLookBridge ===")
 
@@ -200,20 +195,23 @@ class KarooActiveLookBridge(context: Context) {
             android.util.Log.i(TAG, "⏭️ Auto-connect to Karoo disabled in preferences")
         }
 
+        // Request BLE radio from Karoo OS so it stays available for our scanning
+        requestBluetooth()
+
         // Auto-connect to last paired glasses if enabled
         if (preferencesManager.isAutoConnectActiveLookEnabled()) {
             val lastGlassesAddress = preferencesManager.getLastConnectedGlassesAddress()
             if (lastGlassesAddress != null) {
                 android.util.Log.i(
-                    TAG,
-                    "👓 Auto-connect to glasses enabled, will attempt connection to: $lastGlassesAddress"
+                        TAG,
+                        "👓 Auto-connect to glasses enabled, will attempt connection to: $lastGlassesAddress"
                 )
                 // Start scanning to find the previously connected glasses
                 attemptAutoConnectToGlasses(lastGlassesAddress)
             } else {
                 android.util.Log.i(
-                    TAG,
-                    "⚠️ Auto-connect to glasses enabled, but no previous connection found"
+                        TAG,
+                        "⚠️ Auto-connect to glasses enabled, but no previous connection found"
                 )
             }
         } else {
@@ -228,38 +226,47 @@ class KarooActiveLookBridge(context: Context) {
     private fun startPeriodicStatusLogging() {
         if (statusLogJob?.isActive == true) return
 
-        statusLogJob = scope.launch {
-            while (true) {
-                delay(15_000)
+        statusLogJob =
+                scope.launch {
+                    while (true) {
+                        delay(15_000)
 
-                val activeLookState = activeLookService.connectionState.value
-                val scanning = activeLookService.isScanning.value
-                val connectedAddr = try {
-                    activeLookService.getConnectedGlasses()?.address
-                } catch (_: Exception) {
-                    null
+                        val activeLookState = activeLookService.connectionState.value
+                        val scanning = activeLookService.isScanning.value
+                        val connectedAddr =
+                                try {
+                                    activeLookService.getConnectedGlasses()?.address
+                                } catch (_: Exception) {
+                                    null
+                                }
+
+                        Log.i(
+                                TAG,
+                                "Status: bridge=${_bridgeState.value}, karooConnected=${karooDataService.isConnected}, " +
+                                        "activeLookState=$activeLookState, scanning=$scanning, connectedAddr=${connectedAddr ?: "-"}"
+                        )
+                    }
                 }
-
-                Log.i(
-                    TAG,
-                    "Status: bridge=${_bridgeState.value}, karooConnected=${karooDataService.isConnected}, " +
-                            "activeLookState=$activeLookState, scanning=$scanning, connectedAddr=${connectedAddr ?: "-"}"
-                )
-            }
-        }
     }
 
-    /**
-     * Attempt to auto-connect to previously connected glasses
-     */
+    /** Attempt to auto-connect to previously connected glasses */
     private fun attemptAutoConnectToGlasses(targetAddress: String) {
+        // Cancel any previous auto-connect scan to avoid duplicate collectors
+        autoConnectCollectionJob?.cancel()
+        autoConnectTimeoutJob?.cancel()
+
         val timeoutMinutes = preferencesManager.getStartupTimeoutMinutes()
         val timeoutMs = timeoutMinutes * 60 * 1000L // Convert to milliseconds
 
         android.util.Log.i(
-            TAG,
-            "🔍 Scanning for previously connected glasses: $targetAddress (timeout: ${timeoutMinutes}min)"
+                TAG,
+                "🔍 Scanning for previously connected glasses: $targetAddress (timeout: ${timeoutMinutes}min)"
         )
+
+        // Stop any existing scan before starting fresh
+        if (activeLookService.isScanning.value) {
+            activeLookService.stopScanning()
+        }
 
         // Start scanning
         activeLookService.startScanning()
@@ -267,58 +274,59 @@ class KarooActiveLookBridge(context: Context) {
         var glassesFound = false
 
         // Observe discovered glasses and connect when found
-        val collectionJob = scope.launch {
-            activeLookService.discoveredGlasses.collect { glassesList ->
-                android.util.Log.d(
-                    TAG,
-                    "📋 Discovered glasses list updated: ${glassesList.size} devices"
-                )
-                glassesList.forEach {
-                    android.util.Log.d(TAG, "  - ${it.name} (${it.address})")
-                }
+        autoConnectCollectionJob =
+                scope.launch {
+                    activeLookService.discoveredGlasses.collect { glassesList ->
+                        android.util.Log.d(
+                                TAG,
+                                "📋 Discovered glasses list updated: ${glassesList.size} devices"
+                        )
+                        glassesList.forEach {
+                            android.util.Log.d(TAG, "  - ${it.name} (${it.address})")
+                        }
 
-                // Look for the target glasses
-                val targetGlasses = glassesList.find { it.address == targetAddress }
-                if (targetGlasses != null && !glassesFound) {
-                    glassesFound = true
-                    android.util.Log.i(
-                        TAG,
-                        "✅ Found previously connected glasses: ${targetGlasses.name}"
-                    )
-                    // Stop scanning
-                    activeLookService.stopScanning()
-                    // Connect to the glasses
-                    connectActiveLook(targetGlasses)
-                } else if (glassesList.isNotEmpty() && !glassesFound) {
-                    android.util.Log.w(
-                        TAG,
-                        "⚠️ Found glasses but not matching target address $targetAddress"
-                    )
+                        // Look for the target glasses
+                        val targetGlasses = glassesList.find { it.address == targetAddress }
+                        if (targetGlasses != null && !glassesFound) {
+                            glassesFound = true
+                            android.util.Log.i(
+                                    TAG,
+                                    "✅ Found previously connected glasses: ${targetGlasses.name}"
+                            )
+                            // Stop scanning
+                            activeLookService.stopScanning()
+                            autoConnectTimeoutJob?.cancel()
+                            // Connect to the glasses
+                            connectActiveLook(targetGlasses)
+                        } else if (glassesList.isNotEmpty() && !glassesFound) {
+                            android.util.Log.w(
+                                    TAG,
+                                    "⚠️ Found glasses but not matching target address $targetAddress"
+                            )
+                        }
+                    }
                 }
-            }
-        }
 
         // Timeout after configured minutes
-        scope.launch {
-            delay(timeoutMs)
-            if (!glassesFound && activeLookService.isScanning.value) {
-                android.util.Log.w(
-                    TAG,
-                    "⏱️ Startup auto-connect timeout (${timeoutMinutes}min): Could not find glasses with address $targetAddress"
-                )
-                android.util.Log.i(
-                    TAG,
-                    "🔄 Service will continue running and will attempt reconnect when ride starts"
-                )
-                activeLookService.stopScanning()
-                collectionJob.cancel()
-            }
-        }
+        autoConnectTimeoutJob =
+                scope.launch {
+                    delay(timeoutMs)
+                    if (!glassesFound && activeLookService.isScanning.value) {
+                        android.util.Log.w(
+                                TAG,
+                                "⏱️ Startup auto-connect timeout (${timeoutMinutes}min): Could not find glasses with address $targetAddress"
+                        )
+                        android.util.Log.i(
+                                TAG,
+                                "🔄 Service will continue running and will attempt reconnect when ride starts"
+                        )
+                        activeLookService.stopScanning()
+                        autoConnectCollectionJob?.cancel()
+                    }
+                }
     }
 
-    /**
-     * Connect to Karoo System
-     */
+    /** Connect to Karoo System */
     fun connectKaroo() {
         Log.i(TAG, "Connecting to Karoo System...")
         _bridgeState.value = BridgeState.KarooConnecting
@@ -329,9 +337,7 @@ class KarooActiveLookBridge(context: Context) {
         observeKarooData()
     }
 
-    /**
-     * Disconnect from Karoo System
-     */
+    /** Disconnect from Karoo System */
     fun disconnectKaroo() {
         Log.i(TAG, "Disconnecting from Karoo System...")
         karooDataService.disconnect()
@@ -340,64 +346,105 @@ class KarooActiveLookBridge(context: Context) {
     }
 
     /**
-     * Start scanning for ActiveLook glasses
-     * When called from UI, will auto-connect to first discovered glasses
+     * Start scanning for ActiveLook glasses When called from UI, will auto-connect to first
+     * discovered glasses
      */
     fun startActiveLookScan() {
-        // Cancel any previous scan jobs
+        // Cancel any previous scan jobs (including auto-connect jobs)
+        Log.i(
+                TAG,
+                "🔍 startActiveLookScan() called — scanJob.active=${scanJob?.isActive}, scanTimeoutJob.active=${scanTimeoutJob?.isActive}, currentBridgeState=${_bridgeState.value}"
+        )
         scanJob?.cancel()
         scanTimeoutJob?.cancel()
+        autoConnectCollectionJob?.cancel()
+        autoConnectTimeoutJob?.cancel()
 
         Log.i(TAG, "Starting ActiveLook scan with auto-connect...")
+        Log.i(TAG, "  SDK initialized: ${activeLookService.isSdkInitialized()}")
+        Log.i(TAG, "  isScanning before start: ${activeLookService.isScanning.value}")
+        Log.i(TAG, "  connectionState before start: ${activeLookService.connectionState.value}")
+
+        // Ensure BLE is requested before scanning
+        requestBluetooth()
+
         _bridgeState.value = BridgeState.ActiveLookScanning
-        activeLookService.startScanning()
 
-        // Auto-connect to first discovered glasses
+        // Scan with retry: up to MAX_SCAN_RETRIES attempts with increasing delays
         var glassesFound = false
-        scanJob = scope.launch {
-            activeLookService.discoveredGlasses.collect { glassesList ->
-                if (glassesList.isNotEmpty() && !glassesFound) {
-                    val firstGlasses = glassesList.first()
-                    glassesFound = true
-                    Log.i(TAG, "Auto-connecting to discovered glasses: ${firstGlasses.name}")
-                    activeLookService.stopScanning()
+        var scanAttempt = 0
 
-                    // Cancel scan jobs
-                    scanJob?.cancel()
-                    scanTimeoutJob?.cancel()
+        scanJob =
+                scope.launch {
+                    while (scanAttempt < MAX_SCAN_RETRIES && !glassesFound) {
+                        scanAttempt++
+                        Log.i(TAG, "🔍 Scan attempt $scanAttempt/$MAX_SCAN_RETRIES")
 
-                    // Connect to the glasses
-                    connectActiveLook(firstGlasses)
+                        // Stop any lingering scan and start fresh
+                        if (activeLookService.isScanning.value) {
+                            activeLookService.stopScanning()
+                            delay(500) // Let BLE adapter settle
+                        }
+
+                        activeLookService.startScanning()
+                        Log.i(
+                                TAG,
+                                "  isScanning after start: ${activeLookService.isScanning.value}"
+                        )
+
+                        // Wait for SCAN_ATTEMPT_DURATION_MS, checking for results
+                        val scanStartTime = System.currentTimeMillis()
+                        val collectJob = launch {
+                            activeLookService.discoveredGlasses.collect { glassesList ->
+                                if (glassesList.isNotEmpty() && !glassesFound) {
+                                    val firstGlasses = glassesList.first()
+                                    glassesFound = true
+                                    Log.i(
+                                            TAG,
+                                            "✅ Auto-connecting to discovered glasses: ${firstGlasses.name} (attempt $scanAttempt)"
+                                    )
+                                    activeLookService.stopScanning()
+                                    connectActiveLook(firstGlasses)
+                                }
+                            }
+                        }
+
+                        // Wait for this attempt's duration
+                        delay(SCAN_ATTEMPT_DURATION_MS)
+                        collectJob.cancel()
+
+                        if (!glassesFound) {
+                            activeLookService.stopScanning()
+                            if (scanAttempt < MAX_SCAN_RETRIES) {
+                                val backoffMs = SCAN_RETRY_BASE_DELAY_MS * scanAttempt
+                                Log.i(
+                                        TAG,
+                                        "⏳ No glasses found on attempt $scanAttempt, retrying in ${backoffMs}ms..."
+                                )
+                                delay(backoffMs)
+                            }
+                        }
+                    }
+
+                    if (!glassesFound) {
+                        Log.w(
+                                TAG,
+                                "Scan failed after $MAX_SCAN_RETRIES attempts — no glasses found"
+                        )
+                        scanJob = null
+                        updateBridgeState()
+                    }
                 }
-            }
-        }
-
-        // Timeout after 30 seconds
-        scanTimeoutJob = scope.launch {
-            delay(30000)
-            if (!glassesFound && activeLookService.isScanning.value) {
-                Log.w(TAG, "Scan timeout - no glasses found")
-                activeLookService.stopScanning()
-                scanJob?.cancel()
-                scanTimeoutJob = null
-                scanJob = null
-                updateBridgeState()
-            }
-        }
     }
 
-    /**
-     * Stop scanning for ActiveLook glasses
-     */
+    /** Stop scanning for ActiveLook glasses */
     fun stopActiveLookScan() {
         Log.i(TAG, "Stopping ActiveLook scan...")
         activeLookService.stopScanning()
         updateBridgeState()
     }
 
-    /**
-     * Connect to ActiveLook glasses
-     */
+    /** Connect to ActiveLook glasses */
     fun connectActiveLook(glasses: DiscoveredGlasses) {
         Log.i(TAG, "Connecting to ActiveLook glasses: ${glasses.name} (${glasses.address})...")
         _bridgeState.value = BridgeState.ActiveLookConnecting
@@ -412,9 +459,7 @@ class KarooActiveLookBridge(context: Context) {
         observeActiveLookState()
     }
 
-    /**
-     * Disconnect from ActiveLook glasses
-     */
+    /** Disconnect from ActiveLook glasses */
     fun disconnectActiveLook() {
         Log.i(TAG, "Disconnecting from ActiveLook glasses...")
         activeLookService.disconnect()
@@ -423,13 +468,13 @@ class KarooActiveLookBridge(context: Context) {
     }
 
     /**
-     * Observe Karoo data streams and update [currentData].
-     * Delegated to focused sub-functions by metric category.
+     * Observe Karoo data streams and update [currentData]. Delegated to focused sub-functions by
+     * metric category.
      */
     private fun observeKarooData() {
-        observeSystemState()          // connection, ride state, profile auto-switch
-        observeCoreMetrics()          // speed, HR, cadence, power, distance, time, VAM
-        observeRadar()                // multi-field radar stream
+        observeSystemState() // connection, ride state, profile auto-switch
+        observeCoreMetrics() // speed, HR, cadence, power, distance, time, VAM
+        observeRadar() // multi-field radar stream
         observeGeneralMetrics()
         observeHeartRateMetrics()
         observePowerMetrics()
@@ -444,12 +489,12 @@ class KarooActiveLookBridge(context: Context) {
     }
 
     /**
-     * Convenience: collect [flow] in a new coroutine, apply [update] to [currentData],
-     * and mark the frame dirty. Eliminates 3-line boilerplate per metric.
+     * Convenience: collect [flow] in a new coroutine, apply [update] to [currentData], and mark the
+     * frame dirty. Eliminates 3-line boilerplate per metric.
      */
     private fun observe(
-        flow: kotlinx.coroutines.flow.Flow<StreamState?>,
-        update: CurrentData.(StreamState?) -> Unit
+            flow: kotlinx.coroutines.flow.Flow<StreamState?>,
+            update: CurrentData.(StreamState?) -> Unit
     ) {
         scope.launch {
             flow.collect { state ->
@@ -470,7 +515,7 @@ class KarooActiveLookBridge(context: Context) {
                         updateBridgeState()
                     }
                     is KarooDataService.ConnectionState.Error ->
-                        _bridgeState.value = BridgeState.Error("Karoo: ${state.message}")
+                            _bridgeState.value = BridgeState.Error("Karoo: ${state.message}")
                     else -> updateBridgeState()
                 }
             }
@@ -485,15 +530,22 @@ class KarooActiveLookBridge(context: Context) {
                     is RideState.Recording -> {
                         if (_bridgeState.value == BridgeState.FullyConnected) startStreaming()
                         if (!wasInActiveRide) {
-                            Log.i(TAG, "Entered active ride - starting continuous reconnect monitoring")
+                            Log.i(
+                                    TAG,
+                                    "Entered active ride - starting continuous reconnect monitoring"
+                            )
                             startContinuousReconnect()
                         }
                     }
-                    else -> if (wasInActiveRide) {
-                        Log.i(TAG, "Exited active ride - stopping continuous reconnect monitoring")
-                        stopContinuousReconnect()
-                        resetAutoSwitch()
-                    }
+                    else ->
+                            if (wasInActiveRide) {
+                                Log.i(
+                                        TAG,
+                                        "Exited active ride - stopping continuous reconnect monitoring"
+                                )
+                                stopContinuousReconnect()
+                                resetAutoSwitch()
+                            }
                 }
             }
         }
@@ -503,10 +555,16 @@ class KarooActiveLookBridge(context: Context) {
                 if (profileName != null && profileName != lastKarooProfileName) {
                     Log.i(TAG, "Karoo profile changed: '$lastKarooProfileName' → '$profileName'")
                     if (!hasAutoSwitchedProfile && isInActiveRide) {
-                        Log.i(TAG, "Ride starting with Karoo profile '$profileName', checking for matching K2Look profile...")
+                        Log.i(
+                                TAG,
+                                "Ride starting with Karoo profile '$profileName', checking for matching K2Look profile..."
+                        )
                         tryAutoSwitchProfile(profileName)
                     } else if (hasAutoSwitchedProfile && isInActiveRide) {
-                        Log.i(TAG, "Karoo profile changed mid-ride to '$profileName', keeping current K2Look profile (no auto-switch)")
+                        Log.i(
+                                TAG,
+                                "Karoo profile changed mid-ride to '$profileName', keeping current K2Look profile (no auto-switch)"
+                        )
                     }
                     lastKarooProfileName = profileName
                 } else if (profileName == null && lastKarooProfileName != null) {
@@ -519,24 +577,26 @@ class KarooActiveLookBridge(context: Context) {
 
     // ── Core cycling metrics ───────────────────────────────────────────────
     private fun observeCoreMetrics() {
-        observe(karooDataService.speedData)              { speed         = formatStreamData(it, "km/h") }
-        observe(karooDataService.maxSpeedData)           { maxSpeed      = formatStreamData(it, "km/h") }
-        observe(karooDataService.averageSpeedData)       { avgSpeed      = formatStreamData(it, "km/h") }
-        observe(karooDataService.heartRateData)          { heartRate     = formatStreamData(it, "bpm")  }
-        observe(karooDataService.maxHeartRateData)       { maxHeartRate  = formatStreamData(it, "bpm")  }
-        observe(karooDataService.averageHeartRateData)   { avgHeartRate  = formatStreamData(it, "bpm")  }
-        observe(karooDataService.hrZoneData)             { hrZone        = formatHRZoneData(it)          }
-        observe(karooDataService.cadenceData)            { cadence       = formatStreamData(it, "rpm")  }
-        observe(karooDataService.maxCadenceData)         { maxCadence    = formatStreamData(it, "rpm")  }
-        observe(karooDataService.averageCadenceData)     { avgCadence    = formatStreamData(it, "rpm")  }
-        observe(karooDataService.powerData)              { power         = formatStreamData(it, "w")    }
-        observe(karooDataService.maxPowerData)           { maxPower      = formatStreamData(it, "w")    }
-        observe(karooDataService.averagePowerData)       { avgPower      = formatStreamData(it, "w")    }
-        observe(karooDataService.smoothed3sPowerData)    { power3s       = formatStreamData(it, "w")    }
-        observe(karooDataService.distanceData)           { distance      = formatStreamData(it, "km")   }
-        observe(karooDataService.timeData)               { time          = formatTimeData(it)            }
-        observe(karooDataService.vamData)                { vam           = formatStreamData(it, "m/h")  }
-        observe(karooDataService.avgVamData)             { avgVam        = formatStreamData(it, "m/h")  }
+        observe(karooDataService.speedData) { speed = formatStreamData(it, "km/h") }
+        observe(karooDataService.maxSpeedData) { maxSpeed = formatStreamData(it, "km/h") }
+        observe(karooDataService.averageSpeedData) { avgSpeed = formatStreamData(it, "km/h") }
+        observe(karooDataService.heartRateData) { heartRate = formatStreamData(it, "bpm") }
+        observe(karooDataService.maxHeartRateData) { maxHeartRate = formatStreamData(it, "bpm") }
+        observe(karooDataService.averageHeartRateData) {
+            avgHeartRate = formatStreamData(it, "bpm")
+        }
+        observe(karooDataService.hrZoneData) { hrZone = formatHRZoneData(it) }
+        observe(karooDataService.cadenceData) { cadence = formatStreamData(it, "rpm") }
+        observe(karooDataService.maxCadenceData) { maxCadence = formatStreamData(it, "rpm") }
+        observe(karooDataService.averageCadenceData) { avgCadence = formatStreamData(it, "rpm") }
+        observe(karooDataService.powerData) { power = formatStreamData(it, "w") }
+        observe(karooDataService.maxPowerData) { maxPower = formatStreamData(it, "w") }
+        observe(karooDataService.averagePowerData) { avgPower = formatStreamData(it, "w") }
+        observe(karooDataService.smoothed3sPowerData) { power3s = formatStreamData(it, "w") }
+        observe(karooDataService.distanceData) { distance = formatStreamData(it, "km") }
+        observe(karooDataService.timeData) { time = formatTimeData(it) }
+        observe(karooDataService.vamData) { vam = formatStreamData(it, "m/h") }
+        observe(karooDataService.avgVamData) { avgVam = formatStreamData(it, "m/h") }
     }
 
     // ── Radar (multi-field DataPoint — handled separately) ─────────────────
@@ -548,22 +608,36 @@ class KarooActiveLookBridge(context: Context) {
                         val v = streamState.dataPoint.values
                         val threat = v[DataType.Field.RADAR_THREAT_LEVEL]?.toInt() ?: 0
                         currentData.radarThreatLevel = threat.toString()
-                        val ranges = listOfNotNull(
-                            v[DataType.Field.RADAR_TARGET_1_RANGE], v[DataType.Field.RADAR_TARGET_2_RANGE],
-                            v[DataType.Field.RADAR_TARGET_3_RANGE], v[DataType.Field.RADAR_TARGET_4_RANGE],
-                            v[DataType.Field.RADAR_TARGET_5_RANGE], v[DataType.Field.RADAR_TARGET_6_RANGE],
-                            v[DataType.Field.RADAR_TARGET_7_RANGE], v[DataType.Field.RADAR_TARGET_8_RANGE]
-                        ).filter { it > 0.0 }
+                        val ranges =
+                                listOfNotNull(
+                                                v[DataType.Field.RADAR_TARGET_1_RANGE],
+                                                v[DataType.Field.RADAR_TARGET_2_RANGE],
+                                                v[DataType.Field.RADAR_TARGET_3_RANGE],
+                                                v[DataType.Field.RADAR_TARGET_4_RANGE],
+                                                v[DataType.Field.RADAR_TARGET_5_RANGE],
+                                                v[DataType.Field.RADAR_TARGET_6_RANGE],
+                                                v[DataType.Field.RADAR_TARGET_7_RANGE],
+                                                v[DataType.Field.RADAR_TARGET_8_RANGE]
+                                        )
+                                        .filter { it > 0.0 }
                         currentData.radarTargetCount = ranges.size.toString()
                         val closest = ranges.minOrNull()
-                        currentData.radarClosestRange = if (closest != null) "${formatValue(closest)} m" else "--"
-                        Log.d(TAG, "Radar: threat=$threat, targets=${ranges.size}, closest=${currentData.radarClosestRange}")
+                        currentData.radarClosestRange =
+                                if (closest != null) "${formatValue(closest)} m" else "--"
+                        Log.d(
+                                TAG,
+                                "Radar: threat=$threat, targets=${ranges.size}, closest=${currentData.radarClosestRange}"
+                        )
                     }
                     is StreamState.Searching -> {
-                        currentData.radarThreatLevel = "..."; currentData.radarTargetCount = "..."; currentData.radarClosestRange = "..."
+                        currentData.radarThreatLevel = "..."
+                        currentData.radarTargetCount = "..."
+                        currentData.radarClosestRange = "..."
                     }
                     else -> {
-                        currentData.radarThreatLevel = "--"; currentData.radarTargetCount = "--"; currentData.radarClosestRange = "--"
+                        currentData.radarThreatLevel = "--"
+                        currentData.radarTargetCount = "--"
+                        currentData.radarClosestRange = "--"
                     }
                 }
                 currentData.isDirty = true
@@ -573,87 +647,103 @@ class KarooActiveLookBridge(context: Context) {
 
     // ── General additions ──────────────────────────────────────────────────
     private fun observeGeneralMetrics() {
-        observe(karooDataService.clockTimeData)       { clockTime      = formatClockTime(it)       }
-        observe(karooDataService.temperatureData)     { temperature    = formatStreamData(it, "°C") }
-        observe(karooDataService.batteryPercentData)  { batteryPercent = formatPercent(it)          }
-        observe(karooDataService.rideTimeData)        { rideTime       = formatTimeData(it)         }
+        observe(karooDataService.clockTimeData) { clockTime = formatClockTime(it) }
+        observe(karooDataService.temperatureData) { temperature = formatStreamData(it, "°C") }
+        observe(karooDataService.batteryPercentData) { batteryPercent = formatPercent(it) }
+        observe(karooDataService.rideTimeData) { rideTime = formatTimeData(it) }
     }
 
     // ── Heart Rate additions ───────────────────────────────────────────────
     private fun observeHeartRateMetrics() {
         observe(karooDataService.percentMaxHrData) { percentMaxHr = formatPercent(it) }
-        observe(karooDataService.percentHrrData)   { percentHrr   = formatPercent(it) }
+        observe(karooDataService.percentHrrData) { percentHrr = formatPercent(it) }
     }
 
     // ── Power additions ────────────────────────────────────────────────────
     private fun observePowerMetrics() {
-        observe(karooDataService.powerZoneData)           { powerZone       = formatZoneData(it, 7)        }
-        observe(karooDataService.smoothed5sPowerData)     { power5s         = formatStreamData(it, "w")    }
-        observe(karooDataService.smoothed10sPowerData)    { power10s        = formatStreamData(it, "w")    }
-        observe(karooDataService.smoothed30sPowerData)    { power30s        = formatStreamData(it, "w")    }
-        observe(karooDataService.normalizedPowerData)     { normalizedPower = formatStreamData(it, "w")    }
-        observe(karooDataService.percentFtpData)          { percentFtp      = formatPercent(it)            }
-        observe(karooDataService.intensityFactorData)     { intensityFactor = formatStreamData(it, "")     }
-        observe(karooDataService.trainingStressScoreData) { tss             = formatStreamData(it, "")     }
-        observe(karooDataService.powerToWeightData)       { wPerKg          = formatStreamData(it, "w/kg") }
+        observe(karooDataService.powerZoneData) { powerZone = formatZoneData(it, 7) }
+        observe(karooDataService.smoothed5sPowerData) { power5s = formatStreamData(it, "w") }
+        observe(karooDataService.smoothed10sPowerData) { power10s = formatStreamData(it, "w") }
+        observe(karooDataService.smoothed30sPowerData) { power30s = formatStreamData(it, "w") }
+        observe(karooDataService.normalizedPowerData) {
+            normalizedPower = formatStreamData(it, "w")
+        }
+        observe(karooDataService.percentFtpData) { percentFtp = formatPercent(it) }
+        observe(karooDataService.intensityFactorData) { intensityFactor = formatStreamData(it, "") }
+        observe(karooDataService.trainingStressScoreData) { tss = formatStreamData(it, "") }
+        observe(karooDataService.powerToWeightData) { wPerKg = formatStreamData(it, "w/kg") }
     }
 
     // ── Energy ────────────────────────────────────────────────────────────
     private fun observeEnergyMetrics() {
-        observe(karooDataService.energyOutputData)    { energyOutput    = formatStreamData(it, "kJ")     }
-        observe(karooDataService.caloriesData)        { calories        = formatStreamData(it, "kcal")   }
-        observe(karooDataService.caloriesPerHourData) { caloriesPerHour = formatStreamData(it, "kcal/h") }
+        observe(karooDataService.energyOutputData) { energyOutput = formatStreamData(it, "kJ") }
+        observe(karooDataService.caloriesData) { calories = formatStreamData(it, "kcal") }
+        observe(karooDataService.caloriesPerHourData) {
+            caloriesPerHour = formatStreamData(it, "kcal/h")
+        }
     }
 
     // ── Speed and Cadence additions ────────────────────────────────────────
     private fun observeSpeedCadenceMetrics() {
-        observe(karooDataService.smoothed3sSpeedData)   { speed3s   = formatStreamData(it, "km/h") }
-        observe(karooDataService.smoothed3sCadenceData) { cadence3s = formatStreamData(it, "rpm")  }
+        observe(karooDataService.smoothed3sSpeedData) { speed3s = formatStreamData(it, "km/h") }
+        observe(karooDataService.smoothed3sCadenceData) { cadence3s = formatStreamData(it, "rpm") }
     }
 
     // ── Elevation ─────────────────────────────────────────────────────────
     private fun observeElevationMetrics() {
-        observe(karooDataService.elevationGradeData) { elevationGrade = formatGrade(it)             }
-        observe(karooDataService.elevationGainData)  { elevationGain  = formatStreamData(it, "m")   }
-        observe(karooDataService.elevationLossData)  { elevationLoss  = formatStreamData(it, "m")   }
-        observe(karooDataService.altitudeData)       { altitude       = formatStreamData(it, "m")   }
-        observe(karooDataService.vam30sData)         { vam30s         = formatStreamData(it, "m/h") }
+        observe(karooDataService.elevationGradeData) { elevationGrade = formatGrade(it) }
+        observe(karooDataService.elevationGainData) { elevationGain = formatStreamData(it, "m") }
+        observe(karooDataService.elevationLossData) { elevationLoss = formatStreamData(it, "m") }
+        observe(karooDataService.altitudeData) { altitude = formatStreamData(it, "m") }
+        observe(karooDataService.vam30sData) { vam30s = formatStreamData(it, "m/h") }
     }
 
     // ── Lap ───────────────────────────────────────────────────────────────
     private fun observeLapMetrics() {
-        observe(karooDataService.lapNumberData)   { lapNumber   = formatInteger(it)            }
-        observe(karooDataService.lapTimeData)     { lapTime     = formatLapTime(it)            }
-        observe(karooDataService.lapDistanceData) { lapDistance = formatStreamData(it, "km")  }
-        observe(karooDataService.lapSpeedData)    { lapSpeed    = formatStreamData(it, "km/h") }
-        observe(karooDataService.lapHrData)       { lapHr       = formatStreamData(it, "bpm") }
-        observe(karooDataService.lapPowerData)    { lapPower    = formatStreamData(it, "w")   }
-        observe(karooDataService.lapNpData)       { lapNp       = formatStreamData(it, "w")   }
-        observe(karooDataService.lapCadenceData)  { lapCadence  = formatStreamData(it, "rpm") }
-        observe(karooDataService.lapAscentData)   { lapAscent   = formatStreamData(it, "m")   }
+        observe(karooDataService.lapNumberData) { lapNumber = formatInteger(it) }
+        observe(karooDataService.lapTimeData) { lapTime = formatLapTime(it) }
+        observe(karooDataService.lapDistanceData) { lapDistance = formatStreamData(it, "km") }
+        observe(karooDataService.lapSpeedData) { lapSpeed = formatStreamData(it, "km/h") }
+        observe(karooDataService.lapHrData) { lapHr = formatStreamData(it, "bpm") }
+        observe(karooDataService.lapPowerData) { lapPower = formatStreamData(it, "w") }
+        observe(karooDataService.lapNpData) { lapNp = formatStreamData(it, "w") }
+        observe(karooDataService.lapCadenceData) { lapCadence = formatStreamData(it, "rpm") }
+        observe(karooDataService.lapAscentData) { lapAscent = formatStreamData(it, "m") }
     }
 
     // ── Last Lap ──────────────────────────────────────────────────────────
     private fun observeLastLapMetrics() {
-        observe(karooDataService.lastLapTimeData)     { lastLapTime     = formatLapTime(it)            }
-        observe(karooDataService.lastLapDistanceData) { lastLapDistance = formatStreamData(it, "km")   }
-        observe(karooDataService.lastLapSpeedData)    { lastLapSpeed    = formatStreamData(it, "km/h") }
-        observe(karooDataService.lastLapHrData)       { lastLapHr       = formatStreamData(it, "bpm")  }
-        observe(karooDataService.lastLapPowerData)    { lastLapPower    = formatStreamData(it, "w")    }
-        observe(karooDataService.lastLapNpData)       { lastLapNp       = formatStreamData(it, "w")    }
+        observe(karooDataService.lastLapTimeData) { lastLapTime = formatLapTime(it) }
+        observe(karooDataService.lastLapDistanceData) {
+            lastLapDistance = formatStreamData(it, "km")
+        }
+        observe(karooDataService.lastLapSpeedData) { lastLapSpeed = formatStreamData(it, "km/h") }
+        observe(karooDataService.lastLapHrData) { lastLapHr = formatStreamData(it, "bpm") }
+        observe(karooDataService.lastLapPowerData) { lastLapPower = formatStreamData(it, "w") }
+        observe(karooDataService.lastLapNpData) { lastLapNp = formatStreamData(it, "w") }
     }
 
     // ── Shifting (multi-field for gears, simple for count) ─────────────────
     private fun observeShiftingMetrics() {
         scope.launch {
             karooDataService.shiftingFrontGearData.collect {
-                currentData.shiftingFrontGear = formatGear(it, DataType.Field.SHIFTING_FRONT_GEAR, DataType.Field.SHIFTING_FRONT_GEAR_MAX)
+                currentData.shiftingFrontGear =
+                        formatGear(
+                                it,
+                                DataType.Field.SHIFTING_FRONT_GEAR,
+                                DataType.Field.SHIFTING_FRONT_GEAR_MAX
+                        )
                 currentData.isDirty = true
             }
         }
         scope.launch {
             karooDataService.shiftingRearGearData.collect {
-                currentData.shiftingRearGear = formatGear(it, DataType.Field.SHIFTING_REAR_GEAR, DataType.Field.SHIFTING_REAR_GEAR_MAX)
+                currentData.shiftingRearGear =
+                        formatGear(
+                                it,
+                                DataType.Field.SHIFTING_REAR_GEAR,
+                                DataType.Field.SHIFTING_REAR_GEAR_MAX
+                        )
                 currentData.isDirty = true
             }
         }
@@ -668,24 +758,22 @@ class KarooActiveLookBridge(context: Context) {
 
     // ── Navigation ────────────────────────────────────────────────────────
     private fun observeNavigationMetrics() {
-        observe(karooDataService.distanceToTurnData) { distanceToTurn = formatDistanceToTurn(it)  }
+        observe(karooDataService.distanceToTurnData) { distanceToTurn = formatDistanceToTurn(it) }
         observe(karooDataService.distanceToDestData) { distanceToDest = formatStreamData(it, "km") }
-        observe(karooDataService.timeOfArrivalData)  { timeOfArrival  = formatClockTime(it)        }
-        observe(karooDataService.timeToDestData)     { timeToDest     = formatDuration(it)          }
-        observe(karooDataService.headingData)        { heading        = formatHeading(it)           }
+        observe(karooDataService.timeOfArrivalData) { timeOfArrival = formatClockTime(it) }
+        observe(karooDataService.timeToDestData) { timeToDest = formatDuration(it) }
+        observe(karooDataService.headingData) { heading = formatHeading(it) }
     }
 
     // ── eBike ─────────────────────────────────────────────────────────────
     private fun observeEBikeMetrics() {
-        observe(karooDataService.levBatteryData)    { levBattery    = formatPercent(it)         }
-        observe(karooDataService.levRangeData)      { levRange      = formatStreamData(it, "km") }
-        observe(karooDataService.levAssistModeData) { levAssistMode = formatInteger(it)          }
-        observe(karooDataService.levMotorPowerData) { levMotorPower = formatStreamData(it, "w")  }
+        observe(karooDataService.levBatteryData) { levBattery = formatPercent(it) }
+        observe(karooDataService.levRangeData) { levRange = formatStreamData(it, "km") }
+        observe(karooDataService.levAssistModeData) { levAssistMode = formatInteger(it) }
+        observe(karooDataService.levMotorPowerData) { levMotorPower = formatStreamData(it, "w") }
     }
 
-    /**
-     * Observe ActiveLook connection state
-     */
+    /** Observe ActiveLook connection state */
     private fun observeActiveLookState() {
         scope.launch {
             activeLookService.connectionState.collect { state ->
@@ -695,8 +783,8 @@ class KarooActiveLookBridge(context: Context) {
                         // Save the connected glasses address for reconnect attempts
                         lastConnectedGlassesAddress = state.glasses.address
                         Log.d(
-                            TAG,
-                            "Tracking connected glasses address: $lastConnectedGlassesAddress"
+                                TAG,
+                                "Tracking connected glasses address: $lastConnectedGlassesAddress"
                         )
 
                         // Refresh config cache so fast-path cfgSet works immediately
@@ -708,31 +796,26 @@ class KarooActiveLookBridge(context: Context) {
                             startStreaming()
                         }
                     }
-
                     is ActiveLookService.ConnectionState.Disconnected -> {
                         // If we're in an active ride and glasses disconnected, trigger reconnect
                         if (isInActiveRide && lastConnectedGlassesAddress != null) {
                             Log.w(
-                                TAG,
-                                "Glasses disconnected during active ride - will attempt reconnect"
+                                    TAG,
+                                    "Glasses disconnected during active ride - will attempt reconnect"
                             )
                         }
                         updateBridgeState()
                     }
-
                     is ActiveLookService.ConnectionState.Error -> {
                         _bridgeState.value = BridgeState.Error("ActiveLook: ${state.message}")
                     }
-
                     else -> updateBridgeState()
                 }
             }
         }
     }
 
-    /**
-     * Update bridge state based on both service states
-     */
+    /** Update bridge state based on both service states */
     private fun updateBridgeState() {
         val karooConnected = karooDataService.isConnected
         val activeLookConnected = activeLookService.isConnected
@@ -751,9 +834,7 @@ class KarooActiveLookBridge(context: Context) {
         }
     }
 
-    /**
-     * Start streaming data to ActiveLook glasses
-     */
+    /** Start streaming data to ActiveLook glasses */
     private fun startStreaming() {
         if (updateJob?.isActive == true) {
             Log.d(TAG, "Already streaming")
@@ -769,26 +850,29 @@ class KarooActiveLookBridge(context: Context) {
         _bridgeState.value = BridgeState.Streaming
 
         // Start periodic flush job
-        updateJob = scope.launch {
-            while (true) {
-                try {
-                    // Wait for the update interval
-                    delay(updateIntervalMs)
+        updateJob =
+                scope.launch {
+                    while (true) {
+                        try {
+                            // Wait for the update interval
+                            delay(updateIntervalMs)
 
-                    // Flush accumulated data to glasses
-                    flushToGlasses()
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error in streaming loop: ${e.message}", e)
+                            // Flush accumulated data to glasses
+                            flushToGlasses()
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            // Normal coroutine cancellation (e.g. stopStreaming / cleanup) — exit
+                            // cleanly
+                            throw e
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error in streaming loop: ${e.message}", e)
+                        }
+                    }
                 }
-            }
-        }
 
         Log.i(TAG, "✓ Streaming started (1 update/second)")
     }
 
-    /**
-     * Stop streaming data to glasses
-     */
+    /** Stop streaming data to glasses */
     private fun stopStreaming() {
         updateJob?.cancel()
         updateJob = null
@@ -799,9 +883,7 @@ class KarooActiveLookBridge(context: Context) {
         }
     }
 
-    /**
-     * Flush accumulated data to ActiveLook glasses (hold/flush pattern)
-     */
+    /** Flush accumulated data to ActiveLook glasses (hold/flush pattern) */
     private fun flushToGlasses() {
         if (!currentData.isDirty) {
             val now = System.currentTimeMillis()
@@ -835,12 +917,16 @@ class KarooActiveLookBridge(context: Context) {
 
     private fun flushWithProfile(profile: com.kema.k2look.model.DataFieldProfile) {
         val selectedScreenId = activeScreenId
-        val screen = if (selectedScreenId != null)
-            profile.screens.find { it.id == selectedScreenId } ?: profile.screens.first()
-        else
-            profile.screens.first()
+        val screen =
+                if (selectedScreenId != null)
+                        profile.screens.find { it.id == selectedScreenId }
+                                ?: profile.screens.first()
+                else profile.screens.first()
 
-        Log.v(TAG, "Flushing: profile=${profile.name}, screen=${screen.id}, fields=${screen.dataFields.size}")
+        Log.v(
+                TAG,
+                "Flushing: profile=${profile.name}, screen=${screen.id}, fields=${screen.dataFields.size}"
+        )
 
         if (layoutService.isProfileSaved(profile.id)) {
             flushWithEfficientMode(screen)
@@ -855,38 +941,29 @@ class KarooActiveLookBridge(context: Context) {
         screen.dataFields.forEach { field ->
             val value = currentData.valueFor(field.dataField.id)
             when (field.visualizationType ?: VisualizationType.TEXT) {
-                com.kema.k2look.model.VisualizationType.TEXT ->
-                    fields[field.zoneId] = value
-                else ->
-                    updateVisualization(field, value)
+                com.kema.k2look.model.VisualizationType.TEXT -> fields[field.zoneId] = value
+                else -> updateVisualization(field, value)
             }
         }
         if (fields.isNotEmpty()) {
-            layoutService.displayAllFieldValues(fields)
+            layoutService.displayAllFieldValues(fields, screen)
         }
     }
 
-
     // Formatter methods live in BridgeMetricFormatters.kt (package-level functions)
 
-    /**
-     * Get KarooDataService for direct access if needed
-     */
+    /** Get KarooDataService for direct access if needed */
     fun getKarooDataService(): KarooDataService = karooDataService
 
-    /**
-     * Get ActiveLookService for direct access if needed
-     */
+    /** Get ActiveLookService for direct access if needed */
     fun getActiveLookService(): ActiveLookService = activeLookService
 
-    /**
-     * Get ActiveLookLayoutService for Phase 4.2 layout management
-     */
+    /** Get ActiveLookLayoutService for Phase 4.2 layout management */
     fun getLayoutService(): ActiveLookLayoutService = layoutService
 
     /**
-     * Start a local simulator that periodically pushes sample values to the glasses.
-     * This uses the same flush pipeline as normal streaming.
+     * Start a local simulator that periodically pushes sample values to the glasses. This uses the
+     * same flush pipeline as normal streaming.
      */
     fun startSimulator() {
         Log.i(TAG, "🎮 startSimulator() called")
@@ -904,16 +981,20 @@ class KarooActiveLookBridge(context: Context) {
         }
 
         Log.i(TAG, "✅ Starting simulator (profile-aware)")
-        simulatorJob = scope.launch {
-            var tick = 0
-            Log.i(TAG, "🔁 Simulator coroutine loop started")
-            while (true) {
-                tick++
-                Log.d(TAG, "📊 Simulator tick $tick (profile: ${activeProfile?.name ?: "none"})")
-                pushSimulatedFrame(tick)
-                delay(2000)
-            }
-        }
+        simulatorJob =
+                scope.launch {
+                    var tick = 0
+                    Log.i(TAG, "🔁 Simulator coroutine loop started")
+                    while (true) {
+                        tick++
+                        Log.d(
+                                TAG,
+                                "📊 Simulator tick $tick (profile: ${activeProfile?.name ?: "none"})"
+                        )
+                        pushSimulatedFrame(tick)
+                        delay(2000)
+                    }
+                }
         Log.i(TAG, "✅ Simulator job launched successfully")
     }
 
@@ -927,17 +1008,25 @@ class KarooActiveLookBridge(context: Context) {
     }
 
     /**
-     * Simulate one frame: populate every field that appears in the active profile,
-     * then flush to the glasses.  Falls back to the 6 core fields when no profile is set.
+     * Simulate one frame: populate every field that appears in the active profile, then flush to
+     * the glasses. Falls back to the 6 core fields when no profile is set.
      */
     private fun pushSimulatedFrame(tick: Int) {
-        val fieldIds = activeProfile
-            ?.screens
-            ?.flatMap { it.dataFields }
-            ?.map { it.dataField.id }
-            ?.distinct()
-            ?.takeIf { it.isNotEmpty() }
-            ?: listOf(1, 2, 4, 7, 12, 18) // fallback: time, distance, HR, power, speed, cadence
+        val fieldIds =
+                activeProfile
+                        ?.screens
+                        ?.flatMap { it.dataFields }
+                        ?.map { it.dataField.id }
+                        ?.distinct()
+                        ?.takeIf { it.isNotEmpty() }
+                        ?: listOf(
+                                1,
+                                2,
+                                4,
+                                7,
+                                12,
+                                18
+                        ) // fallback: time, distance, HR, power, speed, cadence
 
         for (id in fieldIds) {
             applySimulatedValue(id, tick)
@@ -951,93 +1040,105 @@ class KarooActiveLookBridge(context: Context) {
     private fun applySimulatedValue(id: Int, t: Int) {
         when (id) {
             // ── General ──────────────────────────────────────────────────
-            1  -> currentData.time          = formatSimulatedTime(t * 2)
-            2  -> currentData.distance      = "${t / 10}.${t % 10} km"
-            53 -> currentData.clockTime     = String.format(java.util.Locale.ROOT, "14:%02d", t % 60)
-            54 -> currentData.temperature   = "${18 + t % 10} °C"
-            55 -> currentData.batteryPercent= "${80 - t % 30}%"
-            56 -> currentData.rideTime      = formatSimulatedTime(t * 2)
+            1 -> currentData.time = formatSimulatedTime(t * 2)
+            2 -> currentData.distance = "${t / 10}.${t % 10} km"
+            53 -> currentData.clockTime = String.format(java.util.Locale.ROOT, "14:%02d", t % 60)
+            54 -> currentData.temperature = "${18 + t % 10} °C"
+            55 -> currentData.batteryPercent = "${80 - t % 30}%"
+            56 -> currentData.rideTime = formatSimulatedTime(t * 2)
             // ── Heart Rate ───────────────────────────────────────────────
-            4  -> currentData.heartRate     = "${140 + t % 30}"
-            5  -> currentData.maxHeartRate  = "175"
-            6  -> currentData.avgHeartRate  = "145"
-            47 -> currentData.hrZone        = "Z${2 + (t / 10) % 3}"
-            57 -> currentData.percentMaxHr  = "${75 + t % 15}%"
-            58 -> currentData.percentHrr    = "${65 + t % 20}%"
+            4 -> currentData.heartRate = "${140 + t % 30}"
+            5 -> currentData.maxHeartRate = "175"
+            6 -> currentData.avgHeartRate = "145"
+            47 -> currentData.hrZone = "Z${2 + (t / 10) % 3}"
+            57 -> currentData.percentMaxHr = "${75 + t % 15}%"
+            58 -> currentData.percentHrr = "${65 + t % 20}%"
             // ── Power ────────────────────────────────────────────────────
-            7  -> currentData.power         = "${200 + t % 100}"
-            8  -> currentData.maxPower      = "450"
-            9  -> currentData.avgPower      = "210"
-            10 -> currentData.power3s       = "${195 + t % 80}"
-            48 -> currentData.powerZone     = "Z${2 + (t / 15) % 4}"
-            59 -> currentData.power5s       = "${198 + t % 90}"
-            60 -> currentData.power10s      = "${205 + t % 70}"
-            61 -> currentData.power30s      = "${210 + t % 50}"
-            62 -> currentData.normalizedPower= "${215 + t % 40}"
-            63 -> currentData.percentFtp    = "${85 + t % 30}%"
-            64 -> currentData.intensityFactor= String.format(java.util.Locale.ROOT, "%.2f", 0.85 + (t % 15) * 0.01)
-            65 -> currentData.tss           = "${50 + t * 2}"
-            66 -> currentData.wPerKg        = String.format(java.util.Locale.ROOT, "%.1f", 3.2 + (t % 10) * 0.1)
+            7 -> currentData.power = "${200 + t % 100}"
+            8 -> currentData.maxPower = "450"
+            9 -> currentData.avgPower = "210"
+            10 -> currentData.power3s = "${195 + t % 80}"
+            48 -> currentData.powerZone = "Z${2 + (t / 15) % 4}"
+            59 -> currentData.power5s = "${198 + t % 90}"
+            60 -> currentData.power10s = "${205 + t % 70}"
+            61 -> currentData.power30s = "${210 + t % 50}"
+            62 -> currentData.normalizedPower = "${215 + t % 40}"
+            63 -> currentData.percentFtp = "${85 + t % 30}%"
+            64 ->
+                    currentData.intensityFactor =
+                            String.format(java.util.Locale.ROOT, "%.2f", 0.85 + (t % 15) * 0.01)
+            65 -> currentData.tss = "${50 + t * 2}"
+            66 ->
+                    currentData.wPerKg =
+                            String.format(java.util.Locale.ROOT, "%.1f", 3.2 + (t % 10) * 0.1)
             // ── Speed ────────────────────────────────────────────────────
-            12 -> currentData.speed         = "${25 + t % 15}"
-            13 -> currentData.maxSpeed      = "42"
-            14 -> currentData.avgSpeed      = "28"
-            70 -> currentData.speed3s       = "${24 + t % 12}"
+            12 -> currentData.speed = "${25 + t % 15}"
+            13 -> currentData.maxSpeed = "42"
+            14 -> currentData.avgSpeed = "28"
+            70 -> currentData.speed3s = "${24 + t % 12}"
             // ── Cadence ──────────────────────────────────────────────────
-            18 -> currentData.cadence       = "${85 + t % 20}"
-            19 -> currentData.maxCadence    = "102"
-            20 -> currentData.avgCadence    = "88"
-            71 -> currentData.cadence3s     = "${83 + t % 18}"
+            18 -> currentData.cadence = "${85 + t % 20}"
+            19 -> currentData.maxCadence = "102"
+            20 -> currentData.avgCadence = "88"
+            71 -> currentData.cadence3s = "${83 + t % 18}"
             // ── Energy ───────────────────────────────────────────────────
-            67 -> currentData.energyOutput  = "${200 + t * 5} kJ"
-            68 -> currentData.calories      = "${150 + t * 3}"
-            69 -> currentData.caloriesPerHour= "${600 + t % 200}"
+            67 -> currentData.energyOutput = "${200 + t * 5} kJ"
+            68 -> currentData.calories = "${150 + t * 3}"
+            69 -> currentData.caloriesPerHour = "${600 + t % 200}"
             // ── Climbing ─────────────────────────────────────────────────
-            24 -> currentData.vam           = "${800 + t % 400}"
-            25 -> currentData.avgVam        = "650"
+            24 -> currentData.vam = "${800 + t % 400}"
+            25 -> currentData.avgVam = "650"
             // ── Elevation ────────────────────────────────────────────────
-            72 -> currentData.elevationGrade= "${-2 + t % 8}%"
+            72 -> currentData.elevationGrade = "${-2 + t % 8}%"
             73 -> currentData.elevationGain = "${100 + t * 2} m"
             74 -> currentData.elevationLoss = "${30 + t} m"
-            75 -> currentData.altitude      = "${250 + t * 3} m"
-            76 -> currentData.vam30s        = "${700 + t % 300}"
+            75 -> currentData.altitude = "${250 + t * 3} m"
+            76 -> currentData.vam30s = "${700 + t % 300}"
             // ── Lap ──────────────────────────────────────────────────────
-            77 -> currentData.lapNumber     = "${1 + t / 30}"
-            78 -> currentData.lapTime       = formatSimulatedTime(t * 2 % 3600)
-            79 -> currentData.lapDistance   = String.format(java.util.Locale.ROOT, "%.1f km", (t % 50) * 0.1 + 0.1)
-            80 -> currentData.lapSpeed      = "${26 + t % 10}"
-            81 -> currentData.lapHr         = "${138 + t % 25}"
-            82 -> currentData.lapPower      = "${205 + t % 80}"
-            83 -> currentData.lapNp         = "${210 + t % 70}"
-            84 -> currentData.lapCadence    = "${87 + t % 15}"
-            85 -> currentData.lapAscent     = "${20 + t % 80} m"
+            77 -> currentData.lapNumber = "${1 + t / 30}"
+            78 -> currentData.lapTime = formatSimulatedTime(t * 2 % 3600)
+            79 ->
+                    currentData.lapDistance =
+                            String.format(java.util.Locale.ROOT, "%.1f km", (t % 50) * 0.1 + 0.1)
+            80 -> currentData.lapSpeed = "${26 + t % 10}"
+            81 -> currentData.lapHr = "${138 + t % 25}"
+            82 -> currentData.lapPower = "${205 + t % 80}"
+            83 -> currentData.lapNp = "${210 + t % 70}"
+            84 -> currentData.lapCadence = "${87 + t % 15}"
+            85 -> currentData.lapAscent = "${20 + t % 80} m"
             // ── Last Lap ─────────────────────────────────────────────────
-            86 -> currentData.lastLapTime   = "00:45:12"
-            87 -> currentData.lastLapDistance= "22.5 km"
-            88 -> currentData.lastLapSpeed  = "29"
-            89 -> currentData.lastLapHr     = "142"
-            90 -> currentData.lastLapPower  = "215"
-            91 -> currentData.lastLapNp     = "220"
+            86 -> currentData.lastLapTime = "00:45:12"
+            87 -> currentData.lastLapDistance = "22.5 km"
+            88 -> currentData.lastLapSpeed = "29"
+            89 -> currentData.lastLapHr = "142"
+            90 -> currentData.lastLapPower = "215"
+            91 -> currentData.lastLapNp = "220"
             // ── Radar ────────────────────────────────────────────────────
-            50 -> currentData.radarThreatLevel  = "${t % 3}"
-            51 -> currentData.radarTargetCount  = "${1 + t % 4}"
+            50 -> currentData.radarThreatLevel = "${t % 3}"
+            51 -> currentData.radarTargetCount = "${1 + t % 4}"
             52 -> currentData.radarClosestRange = "${15 + t % 50} m"
             // ── Shifting ─────────────────────────────────────────────────
             92 -> currentData.shiftingFrontGear = "3/3"
-            93 -> currentData.shiftingRearGear  = "${1 + t % 11}/11"
-            94 -> currentData.shiftingBattery   = "${85 - t % 20}%"
-            95 -> currentData.shiftingCount     = "${t * 3}"
+            93 -> currentData.shiftingRearGear = "${1 + t % 11}/11"
+            94 -> currentData.shiftingBattery = "${85 - t % 20}%"
+            95 -> currentData.shiftingCount = "${t * 3}"
             // ── Navigation ───────────────────────────────────────────────
-            96 -> currentData.distanceToTurn= "${(2000 - t * 10).coerceAtLeast(0)} m"
-            97 -> currentData.distanceToDest= String.format(java.util.Locale.ROOT, "%.1f km", (50.0 - t * 0.1).coerceAtLeast(0.0))
+            96 -> currentData.distanceToTurn = "${(2000 - t * 10).coerceAtLeast(0)} m"
+            97 ->
+                    currentData.distanceToDest =
+                            String.format(
+                                    java.util.Locale.ROOT,
+                                    "%.1f km",
+                                    (50.0 - t * 0.1).coerceAtLeast(0.0)
+                            )
             98 -> currentData.timeOfArrival = "15:30"
-            99 -> currentData.timeToDest    = formatSimulatedTime((5400 - t * 2).coerceAtLeast(0))
-            100-> currentData.heading       = listOf("N","NE","E","SE","S","SW","W","NW")[t % 8]
+            99 -> currentData.timeToDest = formatSimulatedTime((5400 - t * 2).coerceAtLeast(0))
+            100 -> currentData.heading = listOf("N", "NE", "E", "SE", "S", "SW", "W", "NW")[t % 8]
             // ── eBike ────────────────────────────────────────────────────
-            101-> currentData.levBattery    = "${80 - t % 30}%"
-            102-> currentData.levRange      = "${(60 - t).coerceAtLeast(0)} km"
-            103-> currentData.levAssistMode = listOf("OFF","ECO","TRAIL","BOOST")[t % 4]
-            104-> currentData.levMotorPower = "${80 + t % 120} w"
+            101 -> currentData.levBattery = "${80 - t % 30}%"
+            102 -> currentData.levRange = "${(60 - t).coerceAtLeast(0)} km"
+            103 -> currentData.levAssistMode = listOf("OFF", "ECO", "TRAIL", "BOOST")[t % 4]
+            104 -> currentData.levMotorPower = "${80 + t % 120} w"
         }
     }
 
@@ -1048,14 +1149,15 @@ class KarooActiveLookBridge(context: Context) {
         return String.format(java.util.Locale.ROOT, "%02d:%02d:%02d", h, m, s)
     }
 
-    /**
-     * Clean up resources
-     */
+    /** Clean up resources */
     fun cleanup() {
         Log.i(TAG, "Cleaning up KarooActiveLookBridge...")
 
         stopStreaming()
         stopContinuousReconnect()
+        autoConnectCollectionJob?.cancel()
+        autoConnectTimeoutJob?.cancel()
+        releaseBluetooth()
         karooDataService.disconnect()
         activeLookService.cleanup()
         scope.cancel()
@@ -1076,23 +1178,24 @@ class KarooActiveLookBridge(context: Context) {
 
         reconnectStartTime = System.currentTimeMillis()
         Log.i(
-            TAG,
-            "🔁 Starting continuous reconnect loop (every ${reconnectIntervalMs / 1000}s) for $address"
+                TAG,
+                "🔁 Starting continuous reconnect loop (every ${reconnectIntervalMs / 1000}s) for $address"
         )
 
-        reconnectJob = scope.launch {
-            while (true) {
-                delay(reconnectIntervalMs)
+        reconnectJob =
+                scope.launch {
+                    while (true) {
+                        delay(reconnectIntervalMs)
 
-                if (activeLookService.isConnected) {
-                    Log.d(TAG, "Reconnect loop: glasses already connected")
-                    continue
+                        if (activeLookService.isConnected) {
+                            Log.d(TAG, "Reconnect loop: glasses already connected")
+                            continue
+                        }
+
+                        Log.i(TAG, "Reconnect loop: scanning to find $address")
+                        attemptAutoConnectToGlasses(address)
+                    }
                 }
-
-                Log.i(TAG, "Reconnect loop: scanning to find $address")
-                attemptAutoConnectToGlasses(address)
-            }
-        }
     }
 
     private fun stopContinuousReconnect() {
@@ -1105,25 +1208,21 @@ class KarooActiveLookBridge(context: Context) {
 
     // ========== GAUGE & BAR VISUALIZATION ==========
 
-    /**
-     * Initialize gauges for all fields in the profile that use gauge visualization
-     */
+    /** Initialize gauges for all fields in the profile that use gauge visualization */
 
-    /**
-     * Update visualization (gauge or bar) with current metric value
-     */
+    /** Update visualization (gauge or bar) with current metric value */
     private fun updateVisualization(field: com.kema.k2look.model.LayoutDataField, value: String) {
         when (field.visualizationType ?: VisualizationType.TEXT) {
-            com.kema.k2look.model.VisualizationType.GAUGE      -> updateGauge(field, value)
-            com.kema.k2look.model.VisualizationType.BAR        -> updateProgressBar(field, value)
-            com.kema.k2look.model.VisualizationType.ZONED_BAR  -> updateZonedBar(field, value)
-            com.kema.k2look.model.VisualizationType.TEXT       -> { /* handled by batch in flushWithEfficientMode */ }
+            com.kema.k2look.model.VisualizationType.GAUGE -> updateGauge(field, value)
+            com.kema.k2look.model.VisualizationType.BAR -> updateProgressBar(field, value)
+            com.kema.k2look.model.VisualizationType.ZONED_BAR -> updateZonedBar(field, value)
+            com.kema.k2look.model.VisualizationType.TEXT -> {
+                /* handled by batch in flushWithEfficientMode */
+            }
         }
     }
 
-    /**
-     * Update gauge with current metric value
-     */
+    /** Update gauge with current metric value */
     private fun updateGauge(field: com.kema.k2look.model.LayoutDataField, value: String) {
         val gauge = field.gauge ?: return
 
@@ -1138,16 +1237,12 @@ class KarooActiveLookBridge(context: Context) {
         val percentage = gauge.calculatePercentage(numericValue)
 
         // Update gauge on glasses
-        scope.launch {
-            activeLookService.displayGauge(gauge.id, percentage)
-        }
+        scope.launch { activeLookService.displayGauge(gauge.id, percentage) }
 
         Log.d(TAG, "Gauge ${gauge.id}: ${field.dataField.name} = $numericValue ($percentage%)")
     }
 
-    /**
-     * Update progress bar with current metric value
-     */
+    /** Update progress bar with current metric value */
     private fun updateProgressBar(field: com.kema.k2look.model.LayoutDataField, value: String) {
         val bar = field.progressBar ?: return
 
@@ -1162,16 +1257,12 @@ class KarooActiveLookBridge(context: Context) {
         val percentage = bar.calculatePercentage(numericValue)
 
         // Update bar on glasses
-        scope.launch {
-            activeLookService.displayProgressBar(bar, percentage)
-        }
+        scope.launch { activeLookService.displayProgressBar(bar, percentage) }
 
         Log.d(TAG, "Bar ${bar.id}: ${field.dataField.name} = $numericValue ($percentage%)")
     }
 
-    /**
-     * Update zoned progress bar with current metric value
-     */
+    /** Update zoned progress bar with current metric value */
     private fun updateZonedBar(field: com.kema.k2look.model.LayoutDataField, value: String) {
         val zonedBar = field.zonedBar ?: return
 
@@ -1183,20 +1274,16 @@ class KarooActiveLookBridge(context: Context) {
         }
 
         // Update zoned bar on glasses (uses actual value, not percentage)
-        scope.launch {
-            activeLookService.displayZonedBar(zonedBar, numericValue)
-        }
+        scope.launch { activeLookService.displayZonedBar(zonedBar, numericValue) }
 
         val currentZone = zonedBar.findZone(numericValue)
         Log.d(
-            TAG,
-            "Zoned bar ${zonedBar.bar.id}: ${field.dataField.name} = $numericValue (${currentZone?.name ?: "?"})"
+                TAG,
+                "Zoned bar ${zonedBar.bar.id}: ${field.dataField.name} = $numericValue (${currentZone?.name ?: "?"})"
         )
     }
 
-    /**
-     * Parse numeric value from display string (removes units, handles special cases)
-     */
+    /** Parse numeric value from display string (removes units, handles special cases) */
     private fun parseNumericValue(value: String): Float? {
         return when {
             value == "--" || value == "..." || value == "N/A" -> null
@@ -1208,8 +1295,42 @@ class KarooActiveLookBridge(context: Context) {
         }
     }
 
+    // ========== BLUETOOTH RESOURCE MANAGEMENT ==========
+
+    /**
+     * Request the Karoo OS to keep BLE radio available for this app. Without this, the OS may
+     * power-save the BLE adapter, causing scans to find 0 devices.
+     */
+    private fun requestBluetooth() {
+        if (bluetoothRequested) return
+        try {
+            karooDataService.getKarooSystem().dispatch(RequestBluetooth(BT_RESOURCE_ID))
+            bluetoothRequested = true
+            Log.i(TAG, "📡 RequestBluetooth dispatched")
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to request Bluetooth: ${e.message}")
+        }
+    }
+
+    private fun releaseBluetooth() {
+        if (!bluetoothRequested) return
+        try {
+            karooDataService.getKarooSystem().dispatch(ReleaseBluetooth(BT_RESOURCE_ID))
+            bluetoothRequested = false
+            Log.i(TAG, "📡 ReleaseBluetooth dispatched")
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to release Bluetooth: ${e.message}")
+        }
+    }
+
     companion object {
         private const val TAG = "KarooActiveLookBridge"
+        private const val BT_RESOURCE_ID = "k2look-activelook-ble"
+        /** Per-attempt scan window before retrying */
+        private const val SCAN_ATTEMPT_DURATION_MS = 10_000L
+        /** Base delay between scan retries (multiplied by attempt number) */
+        private const val SCAN_RETRY_BASE_DELAY_MS = 2_000L
+        /** Maximum number of scan attempts for UI-triggered scan */
+        private const val MAX_SCAN_RETRIES = 3
     }
 }
-

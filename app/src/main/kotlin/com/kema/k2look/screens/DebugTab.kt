@@ -289,8 +289,23 @@ fun DebugTab(viewModel: MainViewModel, uiState: MainViewModel.UiState) {
                                                 ),
                                                 DebugTest(
                                                         10,
-                                                        "10 · Visual Styles",
-                                                        "GAUGE (power zones) / BAR (effort %) / ZONE VIEW (HR zones)"
+                                                        "10 · Dynamic Layout (4 rows)",
+                                                        "[speed][time][HR][power] via DynamicLayoutEngine"
+                                                ),
+                                                DebugTest(
+                                                        11,
+                                                        "11 · Gauge 270°",
+                                                        "270° arc gauge at 0 / 33 / 66 / 100 %"
+                                                ),
+                                                DebugTest(
+                                                        12,
+                                                        "12 · Production Layout (3 rows)",
+                                                        "[speed font3][HR font2][cadence font1] — production sizeToFont mapping"
+                                                ),
+                                                DebugTest(
+                                                        13,
+                                                        "13 · HR Zone Bar",
+                                                        "5-segment horizontal bar, cycles no zone → Z1 → Z5"
                                                 ),
                                         )
 
