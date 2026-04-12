@@ -191,4 +191,36 @@ object ValueFormatter {
         val padding = (intDigits - intPart.length).coerceAtLeast(0)
         return "$".repeat(padding) + value
     }
+
+    /**
+     * Pad a formatted value with leading spaces so integer values always occupy [intDigits]
+     * character columns. Unlike [padGhost], spaces work in all ActiveLook fonts (fonts 1-3 render
+     * '$' visibly).
+     *
+     * Space width ≈ half a digit width in most fonts, so this is not pixel-perfect, but it keeps
+     * the value right-edge stable enough for a fixed unit X to work across digit counts.
+     *
+     * Examples (intDigits=3): "98" → " 98" "150" → "150" "5" → " 5"
+     *
+     * @param intDigits target integer-part column count
+     */
+    fun padSpace(value: String, intDigits: Int = 3): String {
+        if (value == "--" || value == "..." || value == "N/A") return value
+        val dotIndex = value.indexOfFirst { it == '.' || it == ':' }
+        val intPart = if (dotIndex >= 0) value.substring(0, dotIndex) else value
+        val padding = (intDigits - intPart.length).coerceAtLeast(0)
+        return " ".repeat(padding) + value
+    }
+
+    /**
+     * Returns the expected maximum integer digit count for a given unit string. Used by [padSpace]
+     * callers to right-align values per metric range.
+     */
+    fun unitMaxDigits(unit: String): Int =
+            when (unit) {
+                "w", "w/kg" -> 4 // power: up to 9999W
+                "kcal", "kcal/h" -> 4
+                "ft" -> 5 // altitude in feet: up to 99999
+                else -> 3 // HR, cadence, speed, distance, etc.
+            }
 }

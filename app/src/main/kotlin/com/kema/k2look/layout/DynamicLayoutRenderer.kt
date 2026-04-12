@@ -24,7 +24,7 @@ object DynamicLayoutRenderer {
     private const val TAG = "DynamicLayoutRenderer"
 
     /** An icon queued for batch rendering in the ALooK config pass. */
-    data class PendingIcon(val iconId: Int, val absX: Short, val absY: Short)
+    data class PendingIcon(val iconId: Int, val absX: Short, val absY: Short, val iconPx: Int)
 
     // ── Layout save helper ────────────────────────────────────────────────
 
@@ -170,7 +170,7 @@ object DynamicLayoutRenderer {
         val absY = (baseY + iconYOffset).toShort()
         // Small icons (28px) shifted 5px viewer-left (higher X) for visual alignment
         val iconAbsX = (LayoutPositionDefaults.ICON_ABS_X + if (iconPx == 28) 15 else 0).toShort()
-        pendingIcons.add(PendingIcon(iconId, iconAbsX, absY))
+        pendingIcons.add(PendingIcon(iconId, iconAbsX, absY, iconPx))
         Log.v(TAG, "queueIcon: id=$iconId iconPx=$iconPx y0=$y0 zoneH=$zoneHeight → absY=$absY")
     }
 

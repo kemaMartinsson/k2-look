@@ -90,8 +90,10 @@ referenced from the layout clipping region (X0, Y0)."
 **Ghost characters** for alignment (from Visual Assets README):
 - `$` = invisible char same width as digit `0`
 - `&` = invisible char same width as `:` or `.`
-- These are available in **all fonts** (they fall within the Space-to-`;` range of fonts 4/5 too)
-- Right-align example: `&$123`, Left-align: `1.23$`
+- **Only invisible in fonts 4 and 5.** Fonts 1–3 render standard ASCII `$` visibly.
+- Right-align example (fonts 4/5 only): `&$123`, Left-align: `1.23$`
+- For fonts 1–3: use **space padding** (`padSpace()`) — spaces are ~half a digit wide but
+  sufficient to stabilize the unit label position across digit counts.
 
 **Official text positions** (from Visual Assets layout table):
 
@@ -159,42 +161,48 @@ saveAndActivateProfile(profile)
   ├── cfgWrite(configName, version, 0)         // open user config for writing
   ├── saveProfileLayouts(profile)
   │     ├── screen.getTemplate()                // LayoutTemplateRegistry → zone heights
-  │     ├── heightToSize() per field            // height → "large"/"medium"/"small"
-  │     ├── DynamicLayoutEngine.createRowLayouts(sizes, LAYOUT_ID_BASE)
-  │     │     └── List<RowConfig> with y0, height, size per row
-  │     ├── glasses.layoutDeleteAll()           // clear stale layouts in this config
-  │     ├── for each row:
-  │     │     ├── DynamicLayoutRenderer.buildLayoutParams(...)
-  │     │     │     └── reads LayoutPositionDefaults.fontConfigs[font]
+  │     ├── glasses.layoutDeleteAll()           // clear stale layout definitions in this config
+  │     ├── glasses.clear()                     // erase stale pixels from old template
+  │     ├── for each field:
+  │     │     ├── zone = template.zones.find { it.id == field.zoneId }  // use template coords directly
+  │     │     ├── DynamicLayoutRenderer.buildLayoutParams(layoutId, x0, y0, width, zoneHeight, font, hasIcon)
   │     │     └── glasses.layoutSave(params)
-  │     └── cache geometry in screenGeometry[zoneId]
+  │     └── cache geometry in screenGeometry[zoneId] (x0, y0, width, height, font)
   ├── saveProfileGauges(profile)
   └── glasses.cfgSet(configName)                // activate the config
 
 displayAllFieldValues(fields, screen)           // called every frame
   ├── glasses.holdFlush(HOLD)
   ├── for each field:
-  │     ├── DynamicLayoutRenderer.buildExtraCmd(value, unit, font, height, showUnit)
+  │     ├── DynamicLayoutRenderer.buildExtraCmd(value, unit, font, height, showUnit, iconPx)
   │     │     └── returns (LayoutExtraCmd, renderValue)
   │     ├── glasses.layoutClearAndDisplayExtended(layoutId, x0, y0, value, extraCmd)
-  │     └── DynamicLayoutRenderer.queueIcon(...) if hasIcon
-  ├── if pendingIcons:
+  │     └── DynamicLayoutRenderer.queueIcon(...) if hasIcon → currentIconsByZone[zoneId] = icon
+  ├── zonesToErase = activeIconsByZone.keys - currentIconsByZone.keys
+  ├── if pendingIcons OR zonesToErase:
   │     ├── glasses.cfgSet("ALooK")
+  │     ├── if zonesToErase: glasses.color(0) + glasses.rectf(x,y,x2,y2) per stale zone
   │     ├── DynamicLayoutRenderer.renderPendingIcons(glasses, icons)
   │     └── glasses.cfgSet(activeConfigName)    // restore user config
+  ├── activeIconsByZone = currentIconsByZone     // update cross-frame tracking
   └── glasses.holdFlush(FLUSH)
 ```
 
-### Stale Layout Prevention (Session 10)
+### Stale Layout Prevention
 
-Two mechanisms prevent ghost layouts from appearing:
+Three mechanisms prevent ghost layouts and pixels from appearing:
 
-1. **`layoutDeleteAll()`** in `saveProfileLayouts()`: Clears all layouts in the current K2L
-   config before saving new ones. Scoped to config namespace — does not affect Suunto or ALooK.
+1. **`layoutDeleteAll()`** in `saveProfileLayouts()`: Clears all layout *definitions* in the
+   current K2L config before saving new ones. Scoped to config namespace — does not affect
+   Suunto or ALooK.
 
-2. **`invalidateProfileConfig()`** on tab entry: `LayoutBuilderViewModel.setBridge()` invalidates
-   the config cache before auto-applying, forcing a full re-upload (which includes the delete).
-   Without this, the fast path (`cfgSet` only) would activate stale layouts from a previous session.
+2. **`glasses.clear()`** immediately after `layoutDeleteAll()`: Erases all *pixels* on the
+   display. Without this, pixels from the old template (e.g. zones that no longer exist after
+   switching from a pyramid to a 3-row layout) remain visible as garbage until overwritten.
+
+3. **`invalidateProfileConfig()`** on tab entry: `LayoutBuilderViewModel.setBridge()` invalidates
+   the config cache before auto-applying, forcing a full re-upload (which includes the delete
+   and clear). Without this, the fast path (`cfgSet` only) would activate stale layouts.
 
 ---
 
@@ -231,21 +239,42 @@ When zone height differs from `refHeight`, a vertical adjustment is applied:
 | medium | 35 | 2 |
 | small | 30 | 1 |
 
-### Unit Label X Positions (unitXLookup)
+### Unit Label X Positions (unitXLookup + offsets)
 
 Unit labels are rendered as font-1 overlays via `LayoutExtraCmd`. With TOP_LR rotation,
 text flows viewer-left from the anchor — lower x = further viewer-right.
 
-| Unit | X | Status |
-|------|---|--------|
-| km/h | 140 | Calibrated |
-| w | 50 | Calibrated |
-| bpm | 155 | Calibrated |
-| rpm | 165 | Calibrated |
-| km | 100 | Calibrated |
-| m | 60 | Calibrated |
-| mph | 160 | Estimated |
-| % | 50 | Estimated |
+The final X is a **3-factor formula** in `LayoutPositionDefaults.unitXFor(unit, font, iconPx)`:
+```
+finalX = unitXLookup[unit] + unitXFontOffset[font] + unitXIconOffset[iconPx]
+```
+
+**`unitXLookup`** — base X calibrated for font 2, large icon (40px):
+
+| Unit | X | Unit | X |
+|------|---|------|---|
+| km/h | 165 | w | 179 |
+| bpm | 165 | m | 179 |
+| rpm | 165 | % | 178 |
+| km | 173 | ft | 179 |
+| w/kg | 165 | kcal | 170 |
+| kcal/h | 158 | mph | 168 |
+
+**`unitXFontOffset`** — adjustment per font (larger font = wider value text = unit must move viewer-right):
+
+| Font | Offset |
+|------|--------|
+| 1 | 0 |
+| 2 | +10 |
+| 3 | −20 |
+
+**`unitXIconOffset`** — adjustment per icon size (smaller icon = more room for value = unit moves viewer-right):
+
+| iconPx | Offset |
+|--------|--------|
+| 0 (no icon) | +28 |
+| 28 (small) | +7 |
+| 40 (large) | +2 |
 
 ### Elapsed Time Split Rendering
 
@@ -278,15 +307,23 @@ K2Look configs: `"K2L" + CRC32(profileId)` = 11 chars. Fits the 12-byte config n
 
 ### Icon Placement
 Icons are rendered via `imgDisplay` in the ALooK config pass (after all layout renders).
-- **Absolute X**: `ICON_ABS_X = 260` (viewer-left end of display)
+- **Absolute X**: `ICON_ABS_X = 260` base. Small icons (28px) get +15 applied in `queueIcon`.
 - **Absolute Y**: `y0 + (zoneHeight - iconPx) / 2` (vertically centered in zone)
 - Small icons: 28×28 px. Large icons: 40×40 px.
-- A +6px calibrated offset is applied for 28px icons in 35px zones (medium rows).
+- A +6px calibrated Y offset is applied for 28px icons in 35px zones (medium rows).
 
 ### Icon Pass Flow
 Icons cannot be rendered with `layoutClearAndDisplayExtended` because `imgDisplay` requires
-the ALooK system config. The display loop queues icons, then does a batch ALooK pass at the
-end, restoring the user config afterward.
+the ALooK system config. The display loop:
+1. Queues icons per frame into `pendingIcons`; also records them in `currentIconsByZone[zoneId]`.
+2. Computes `zonesToErase = activeIconsByZone.keys - currentIconsByZone.keys` (zones that had
+   an icon last frame but not this frame).
+3. If either list is non-empty: `cfgSet("ALooK")`, then `color(0)` + `rectf` over each stale
+   icon area to erase it, then `renderPendingIcons`.
+4. Restores user config. Updates `activeIconsByZone = currentIconsByZone` for next frame.
+
+**`activeIconsByZone`** is cleared on `saveProfileLayouts` so stale erase data from a
+previous profile cannot accidentally erase pixels on the new layout.
 
 ---
 
@@ -374,11 +411,29 @@ K2Look/ActiveLook layout. Eliminates manual setup.
 10. **`layoutDeleteAll()` only affects the current config namespace.** Safe to call — won't
     touch Suunto or other apps' layouts.
 
-11. **Ghost characters `$` and `&` work in ALL fonts** (they are within the 0x20–0x3B range
-    that even fonts 4/5 support). Use for alignment padding.
+11. **Ghost characters `$` and `&` are only invisible in fonts 4/5.** Fonts 1–3 render `$`
+    as a visible character. Use `padSpace()` for value alignment in fonts 1–3. Ghost chars
+    work for fonts 4/5. SDK encodes strings as `US_ASCII`, so `0xFF` (API doc §6.3 padding
+    byte) cannot be sent through the SDK — it would be mangled to `?`.
 
 12. **LayoutTemplateRegistry has TWO copies** of every template. `registerAllTemplates()` (runtime,
     has R.drawable previews) and `registerAllTemplatesWithoutPreviews()` (unit tests). Keep in sync.
+
+13. **Unit X is a 3-factor formula.** `unitXFor(unit, font, iconPx)` = `unitXLookup[unit] +
+    unitXFontOffset[font] + unitXIconOffset[iconPx]`. Each dimension matters: larger fonts
+    produce wider value text (needs lower unitX); smaller icons leave more room for value text
+    (also needs lower unitX). Missing any dimension causes visible overlap on certain combinations.
+
+14. **`imgDisplay` pixels persist until explicitly erased.** When a field is reconfigured from
+    icon→no-icon, the old icon pixels remain on screen. Fix: `activeIconsByZone` tracks the
+    last rendered icon per zone. Each frame, zones present in `activeIconsByZone` but absent
+    from `currentIconsByZone` get a black `rectf` erase in the ALooK pass. `PendingIcon` must
+    carry `iconPx` for the erase dimensions.
+
+15. **`layoutDeleteAll()` removes definitions, NOT pixels.** After switching templates (e.g.
+    pyramid → 3-row), zones that no longer exist leave visible garbage. Always call
+    `glasses.clear()` immediately after `layoutDeleteAll()` in `saveProfileLayouts()` to
+    blank the screen before uploading the new layout definitions.
 
 ---
 

@@ -12,6 +12,7 @@ import com.kema.k2look.model.DataFieldProfile
 import com.kema.k2look.model.IconSize
 import com.kema.k2look.model.LayoutScreen
 import com.kema.k2look.model.VisualizationType
+import com.kema.k2look.util.ValueFormatter
 import kotlin.coroutines.resume
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -32,13 +33,17 @@ import kotlinx.coroutines.withTimeoutOrNull
 class ActiveLookLayoutService(private val activeLookService: ActiveLookService) {
 
     /**
-     * Geometry for one field row as computed by [DynamicLayoutEngine]. Cached in [screenGeometry]
-     * after each [saveProfileLayouts] call so [displayAllFieldValues] uses the exact same
-     * coordinates.
+     * Geometry for one field zone as computed from the template. Cached in [screenGeometry] after
+     * each [saveProfileLayouts] call so [displayAllFieldValues] uses the exact same coordinates.
+     *
+     * [x0] and [width] come directly from the template zone, enabling half-width (multi-column)
+     * zones to render at their correct horizontal position alongside sibling zones.
      */
     private data class ScreenFieldGeometry(
             val layoutId: Int,
+            val x0: Int,
             val y0: Int,
+            val width: Int,
             val height: Int,
             val font: Int,
     )
@@ -60,6 +65,12 @@ class ActiveLookLayoutService(private val activeLookService: ActiveLookService) 
      * [displayAllFieldValues] to keep render coordinates in sync with saved layouts.
      */
     private val screenGeometry = mutableMapOf<String, ScreenFieldGeometry>()
+
+    /**
+     * zoneId → the [PendingIcon] rendered in the previous frame. Used to detect when an icon is
+     * removed so we can erase the old pixels with a black rect in the ALooK pass.
+     */
+    private val activeIconsByZone = mutableMapOf<String, DynamicLayoutRenderer.PendingIcon>()
 
     companion object {
         private const val TAG = "ActiveLookLayoutService"
@@ -231,6 +242,7 @@ class ActiveLookLayoutService(private val activeLookService: ActiveLookService) 
         if (!activeLookService.isConnected) return
         val glasses = activeLookService.getConnectedGlasses() ?: return
         val pendingIcons = mutableListOf<DynamicLayoutRenderer.PendingIcon>()
+        val currentIconsByZone = mutableMapOf<String, DynamicLayoutRenderer.PendingIcon>()
         try {
             glasses.holdFlush(com.activelook.activelooksdk.types.holdFlushAction.HOLD)
 
@@ -251,9 +263,17 @@ class ActiveLookLayoutService(private val activeLookService: ActiveLookService) 
                                 (field.dataField.icon28 != null || field.dataField.icon40 != null)
 
                 val iconPxForUnit = if (hasIcon) field.iconSize.pixels else 0
+                val isText =
+                        field.visualizationType == VisualizationType.TEXT ||
+                                field.visualizationType == null
+                val paddedValue =
+                        if (isText) {
+                            val maxDigits = ValueFormatter.unitMaxDigits(field.dataField.unit)
+                            ValueFormatter.padSpace(value, maxDigits)
+                        } else value
                 val (extraCmd, renderValue) =
                         DynamicLayoutRenderer.buildExtraCmd(
-                                value,
+                                paddedValue,
                                 field.dataField.unit,
                                 geometry.font,
                                 geometry.height,
@@ -263,7 +283,7 @@ class ActiveLookLayoutService(private val activeLookService: ActiveLookService) 
 
                 glasses.layoutClearAndDisplayExtended(
                         layoutId.toByte(),
-                        LayoutPositionDefaults.ZONE_X0.toShort(),
+                        geometry.x0.toShort(),
                         geometry.y0.toByte(),
                         renderValue,
                         extraCmd,
@@ -285,6 +305,7 @@ class ActiveLookLayoutService(private val activeLookService: ActiveLookService) 
                                 geometry.y0,
                                 geometry.height,
                         )
+                        currentIconsByZone[zoneId] = pendingIcons.last()
                     }
                 }
 
@@ -294,9 +315,25 @@ class ActiveLookLayoutService(private val activeLookService: ActiveLookService) 
                 )
             }
 
-            // Icon pass: imgDisplay requires ALooK system config context
-            if (pendingIcons.isNotEmpty()) {
+            // Icon pass: imgDisplay requires ALooK system config context.
+            // Also erases icon areas for zones that had an icon last frame but no longer do.
+            val zonesToErase = activeIconsByZone.keys - currentIconsByZone.keys
+            if (pendingIcons.isNotEmpty() || zonesToErase.isNotEmpty()) {
                 glasses.cfgSet("ALooK")
+                // Erase stale icons by painting a black filled rect over the old icon area
+                if (zonesToErase.isNotEmpty()) {
+                    glasses.color(0)
+                    zonesToErase.forEach { zoneId ->
+                        val old = activeIconsByZone[zoneId]!!
+                        val x2 = (old.absX + old.iconPx - 1).toShort()
+                        val y2 = (old.absY + old.iconPx - 1).toShort()
+                        glasses.rectf(old.absX, old.absY, x2, y2)
+                        Log.d(
+                                TAG,
+                                "Erased stale icon at zone=$zoneId x=${old.absX} y=${old.absY} px=${old.iconPx}"
+                        )
+                    }
+                }
                 DynamicLayoutRenderer.renderPendingIcons(glasses, pendingIcons)
                 // Restore the user config so the next frame's layoutClearAndDisplayExtended
                 // calls find our saved layouts — not the ALooK system defaults.
@@ -305,6 +342,9 @@ class ActiveLookLayoutService(private val activeLookService: ActiveLookService) 
                     glasses.cfgSet(restoreName)
                 }
             }
+            // Update cross-frame icon tracking
+            activeIconsByZone.clear()
+            activeIconsByZone.putAll(currentIconsByZone)
 
             glasses.holdFlush(com.activelook.activelooksdk.types.holdFlushAction.FLUSH)
         } catch (e: Exception) {
@@ -337,16 +377,8 @@ class ActiveLookLayoutService(private val activeLookService: ActiveLookService) 
         val template = screen.getTemplate()
 
         screenGeometry.clear()
+        activeIconsByZone.clear()
         val fields = screen.dataFields
-
-        // Map each field's template zone height to a DynamicLayoutEngine size label
-        val sizes =
-                fields.map { field ->
-                    val zone = template.zones.find { it.id == field.zoneId }
-                    zone?.let { heightToSize(it.height) } ?: "small"
-                }
-
-        val rowConfigs = DynamicLayoutEngine.createRowLayouts(sizes, LAYOUT_ID_BASE)
 
         // Delete all layouts in this config before saving new ones.
         // This is scoped to the current cfgWrite config — it will NOT affect
@@ -354,10 +386,21 @@ class ActiveLookLayoutService(private val activeLookService: ActiveLookService) 
         glasses.layoutDeleteAll()
         delay(COMMAND_DELAY_MS)
 
+        // Clear the display so stale pixels from a previous template (e.g. going from pyramid
+        // back to 3-row) do not linger. clear() is safe here because we are outside holdFlush.
+        glasses.clear()
+        delay(COMMAND_DELAY_MS)
+
         var saved = 0
-        rowConfigs.forEachIndexed { index, rowConfig ->
-            val field = fields.getOrNull(index) ?: return@forEachIndexed
-            val font = sizeToFont(rowConfig.size)
+        fields.forEachIndexed { index, field ->
+            // Use template zone coordinates directly so multi-column (half-width) zones
+            // are placed at their designed x/y position, not recalculated as rows.
+            val zone = template.zones.find { it.id == field.zoneId }
+            val zoneX = zone?.x ?: LayoutPositionDefaults.ZONE_X0
+            val zoneY = zone?.y ?: 0
+            val zoneWidth = zone?.width ?: LayoutPositionDefaults.ZONE_WIDTH
+            val zoneHeight = zone?.height ?: 50
+            val font = sizeToFont(heightToSize(zoneHeight))
             val hasIcon =
                     field.showIcon &&
                             (field.dataField.icon28 != null || field.dataField.icon40 != null)
@@ -366,10 +409,10 @@ class ActiveLookLayoutService(private val activeLookService: ActiveLookService) 
             val params =
                     DynamicLayoutRenderer.buildLayoutParams(
                             layoutId = layoutId,
-                            x0 = LayoutPositionDefaults.ZONE_X0,
-                            y0 = rowConfig.y0,
-                            width = LayoutPositionDefaults.ZONE_WIDTH,
-                            zoneHeight = rowConfig.height,
+                            x0 = zoneX,
+                            y0 = zoneY,
+                            width = zoneWidth,
+                            zoneHeight = zoneHeight,
                             font = font,
                             hasIcon = hasIcon,
                     )
@@ -378,7 +421,7 @@ class ActiveLookLayoutService(private val activeLookService: ActiveLookService) 
                 delay(COMMAND_DELAY_MS)
             }
             screenGeometry[field.zoneId] =
-                    ScreenFieldGeometry(layoutId, rowConfig.y0, rowConfig.height, font)
+                    ScreenFieldGeometry(layoutId, zoneX, zoneY, zoneWidth, zoneHeight, font)
         }
 
         val expected = fields.size

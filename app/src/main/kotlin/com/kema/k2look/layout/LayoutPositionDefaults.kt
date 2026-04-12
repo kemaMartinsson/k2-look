@@ -128,8 +128,8 @@ object LayoutPositionDefaults {
                         // Right-alignment: shorter units get higher X so their right edge
                         // aligns with km/h's right edge. Each ~12px of width difference ≈ 4-5 X.
                         "km/h" to 165.toShort(), // 4 chars, ~50px — calibrated
-                        "bpm" to 168.toShort(), // 3 chars, ~42px — calibrated
-                        "rpm" to 168.toShort(), // 3 chars, ~38px
+                        "bpm" to 165.toShort(), // 3 chars, ~42px — calibrated
+                        "rpm" to 165.toShort(), // 3 chars, ~38px
                         "w" to 179.toShort(), // 1 char,  ~16px
                         "m" to 179.toShort(), // 1 char,  ~16px
                         "%" to 178.toShort(), // 1 char,  ~14px
@@ -176,9 +176,9 @@ object LayoutPositionDefaults {
          */
         private val unitXIconOffset: Map<Int, Int> =
                 mapOf(
-                        0 to 45, // no icon — baseline
-                        28 to 20, // small icon — value can extend further viewer-right
-                        40 to 0, // large icon — baseline (row 3 calibrated here)
+                        0 to 28, // no icon — baseline
+                        28 to 7, // small icon — value can extend further viewer-right
+                        40 to 2, // large icon — baseline (row 3 calibrated here)
                 )
 
         /** Returns the unit overlay x position for [unit] adjusted for [font] and [iconPx]. */

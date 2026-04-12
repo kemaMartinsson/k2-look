@@ -423,6 +423,9 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
                         )
 
                 Log.i(TAG, "Updated profile: ${profile.name} (id: ${profile.id})")
+                // Push updated layout to glasses — cache was invalidated above so a
+                // full re-upload (including layoutDeleteAll) will run, clearing stale layouts.
+                applyProfileToGlasses(updatedActiveProfile)
             } catch (e: Exception) {
                 Log.e(TAG, "Error updating profile", e)
                 _uiState.value =
