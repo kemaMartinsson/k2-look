@@ -33,6 +33,7 @@ import kotlinx.coroutines.launch
  */
 class KarooActiveLookBridge(context: Context) {
 
+    private val context = context
     private val karooDataService = KarooDataService(context)
     private val activeLookService = ActiveLookService(context)
     private val layoutService = ActiveLookLayoutService(activeLookService)
@@ -89,6 +90,11 @@ class KarooActiveLookBridge(context: Context) {
     // True if the active profile has at least one radar field on any screen.
     // Cached on setActiveProfile() so observeRadar() can gate the bypass cheaply.
     private var activeProfileHasRadar = false
+
+    // ── Radar warning overlay ────────────────────────────────────────────────
+    private var warningBitmapSmall: android.graphics.Bitmap? = null
+    private var warningBitmapLarge: android.graphics.Bitmap? = null
+    private var radarWarningEnabled: Boolean = true
 
     // Reconnect tracking
     private var reconnectStartTime = 0L
@@ -638,6 +644,76 @@ class KarooActiveLookBridge(context: Context) {
     }
 
     // ── Radar (multi-field DataPoint — handled separately) ─────────────────
+    private fun getWarningBitmapSmall(): android.graphics.Bitmap =
+        warningBitmapSmall ?: android.graphics.BitmapFactory.decodeStream(
+            context.assets.open("warning_white_28.png")
+        ).also { warningBitmapSmall = it }
+
+    private fun getWarningBitmapLarge(): android.graphics.Bitmap =
+        warningBitmapLarge ?: android.graphics.BitmapFactory.decodeStream(
+            context.assets.open("warning_white_40.png")
+        ).also { warningBitmapLarge = it }
+
+    private val renderWarningSmall: () -> Unit = {
+        try {
+            activeLookService.getConnectedGlasses()
+                ?.imgStream(getWarningBitmapSmall(), com.activelook.activelooksdk.types.ImgStreamFormat.MONO_4BPP_HEATSHRINK, 30, 25)
+        } catch (e: Exception) {
+            Log.e(TAG, "renderWarningSmall failed: ${e.message}", e)
+        }
+    }
+
+    private val eraseWarningSmall: () -> Unit = {
+        try {
+            activeLookService.getConnectedGlasses()?.let { g ->
+                g.holdFlush(com.activelook.activelooksdk.types.holdFlushAction.HOLD)
+                g.color(0)
+                g.rectf(30, 25, 57, 52)
+                g.color(15)
+                g.holdFlush(com.activelook.activelooksdk.types.holdFlushAction.FLUSH)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "eraseWarningSmall failed: ${e.message}", e)
+        }
+    }
+
+    private val renderWarningLarge: () -> Unit = {
+        try {
+            activeLookService.getConnectedGlasses()
+                ?.imgStream(getWarningBitmapLarge(), com.activelook.activelooksdk.types.ImgStreamFormat.MONO_4BPP_HEATSHRINK, 30, 25)
+        } catch (e: Exception) {
+            Log.e(TAG, "renderWarningLarge failed: ${e.message}", e)
+        }
+    }
+
+    private val eraseWarningLarge: () -> Unit = {
+        try {
+            activeLookService.getConnectedGlasses()?.let { g ->
+                g.holdFlush(com.activelook.activelooksdk.types.holdFlushAction.HOLD)
+                g.color(0)
+                g.rectf(30, 25, 69, 64)
+                g.color(15)
+                g.holdFlush(com.activelook.activelooksdk.types.holdFlushAction.FLUSH)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "eraseWarningLarge failed: ${e.message}", e)
+        }
+    }
+
+    private val radarWarningController = RadarWarningController(
+        renderSmall = renderWarningSmall,
+        eraseSmall  = eraseWarningSmall,
+        renderLarge = renderWarningLarge,
+        eraseLarge  = eraseWarningLarge
+    )
+
+    /** Enable or disable the radar warning overlay. */
+    fun setRadarWarningEnabled(enabled: Boolean) {
+        radarWarningEnabled = enabled
+        radarWarningController.setEnabled(enabled)
+        Log.d(TAG, "Radar warning overlay: ${if (enabled) "enabled" else "disabled"}")
+    }
+
     private fun observeRadar() {
         scope.launch {
             karooDataService.radarData.collect { streamState ->
@@ -666,6 +742,7 @@ class KarooActiveLookBridge(context: Context) {
                         // Only do this when the profile actually shows radar to avoid
                         // flooding the BLE queue on profiles that don't use radar.
                         if (activeProfileHasRadar) currentData.radarFlushImmediate = true
+                        radarWarningController.onRadarUpdate(threat, closest?.toFloat())
                         Log.d(
                                 TAG,
                                 "Radar: threat=$threat, targets=${ranges.size}, closest=${currentData.radarClosestRange}"
@@ -857,6 +934,9 @@ class KarooActiveLookBridge(context: Context) {
                         }
                     }
                     is ActiveLookService.ConnectionState.Disconnected -> {
+                        radarWarningController.reset()
+                        warningBitmapSmall = null
+                        warningBitmapLarge = null
                         // Auto-reconnect if we have a known glasses address
                         if (lastConnectedGlassesAddress != null) {
                             Log.w(

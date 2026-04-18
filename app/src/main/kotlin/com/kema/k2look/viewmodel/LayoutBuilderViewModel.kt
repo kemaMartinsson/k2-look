@@ -66,7 +66,7 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
                 .radarWarningEnabled
                 .onEach { enabled ->
                     _uiState.value = _uiState.value.copy(radarWarningEnabled = enabled)
-                    // bridge?.setRadarWarningEnabled(enabled)  // TODO: uncomment after Task 4
+                    bridge?.setRadarWarningEnabled(enabled)
                 }
                 .launchIn(viewModelScope)
         loadProfiles()
@@ -181,7 +181,7 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
             applyProfileToGlasses(profile)
         }
         // Sync radar warning setting to bridge on connect
-        // bridge.setRadarWarningEnabled(_uiState.value.radarWarningEnabled)  // TODO: uncomment after Task 4
+        bridge.setRadarWarningEnabled(_uiState.value.radarWarningEnabled)
     }
 
     // -------------------------------------------------------------------------
