@@ -46,7 +46,8 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
             val isGlassesConnected: Boolean = false,
             val activeRideProfile: RideProfile? = null,
             val isRiding: Boolean = false,
-            val karooSyncEnabled: Boolean = true
+            val karooSyncEnabled: Boolean = true,
+            val radarWarningEnabled: Boolean = true
     )
 
     init {
@@ -57,6 +58,15 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
                 .karooSyncEnabled
                 .onEach { enabled ->
                     _uiState.value = _uiState.value.copy(karooSyncEnabled = enabled)
+                }
+                .launchIn(viewModelScope)
+        _uiState.value =
+                _uiState.value.copy(radarWarningEnabled = settingsRepository.radarWarningEnabled.value)
+        settingsRepository
+                .radarWarningEnabled
+                .onEach { enabled ->
+                    _uiState.value = _uiState.value.copy(radarWarningEnabled = enabled)
+                    // bridge?.setRadarWarningEnabled(enabled)  // TODO: uncomment after Task 4
                 }
                 .launchIn(viewModelScope)
         loadProfiles()
@@ -170,6 +180,8 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
             bridge.invalidateProfileConfig(profile.id)
             applyProfileToGlasses(profile)
         }
+        // Sync radar warning setting to bridge on connect
+        // bridge.setRadarWarningEnabled(_uiState.value.radarWarningEnabled)  // TODO: uncomment after Task 4
     }
 
     // -------------------------------------------------------------------------
@@ -791,6 +803,11 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
     fun setKarooSyncEnabled(enabled: Boolean) {
         settingsRepository.setKarooSyncEnabled(enabled)
         Log.i(TAG, "Karoo sync ${if (enabled) "enabled" else "disabled"}")
+    }
+
+    fun setRadarWarningEnabled(enabled: Boolean) {
+        settingsRepository.setRadarWarningEnabled(enabled)
+        Log.i(TAG, "Radar warning ${if (enabled) "enabled" else "disabled"}")
     }
 
     companion object {
