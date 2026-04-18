@@ -143,6 +143,24 @@ fun DataFieldBuilderTab(
                 onManageProfiles = { viewModel.setShowProfileManagement(true) }
         )
 
+        // Radar warning overlay toggle
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 2.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "⚠ Radar warning overlay",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            androidx.compose.material3.Switch(
+                checked = uiState.radarWarningEnabled,
+                onCheckedChange = { viewModel.setRadarWarningEnabled(it) }
+            )
+        }
+
         // Loading indicator
         if (uiState.isLoading) {
             Column(
