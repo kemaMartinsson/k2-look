@@ -4,6 +4,7 @@ import android.util.Log
 import com.activelook.activelooksdk.Glasses
 import com.activelook.activelooksdk.types.ConfigurationDescription
 import com.activelook.activelooksdk.types.FreeSpace
+import com.activelook.activelooksdk.types.Rotation
 import com.kema.k2look.layout.ActiveLookLayout
 import com.kema.k2look.layout.DynamicLayoutEngine
 import com.kema.k2look.layout.DynamicLayoutRenderer
@@ -11,7 +12,10 @@ import com.kema.k2look.layout.LayoutPositionDefaults
 import com.kema.k2look.model.DataFieldProfile
 import com.kema.k2look.model.IconSize
 import com.kema.k2look.model.LayoutScreen
+import com.kema.k2look.model.Orientation
+import com.kema.k2look.model.ProgressBar
 import com.kema.k2look.model.VisualizationType
+import com.kema.k2look.model.ZonedProgressBar
 import com.kema.k2look.util.ValueFormatter
 import kotlin.coroutines.resume
 import kotlinx.coroutines.delay
@@ -86,8 +90,13 @@ class ActiveLookLayoutService(private val activeLookService: ActiveLookService) 
         private val zoneToLayoutId = mutableMapOf<String, Int>()
         private var nextLayoutId = LAYOUT_ID_BASE
 
-        fun getLayoutIdForZone(zoneId: String): Int =
-                zoneToLayoutId.getOrPut(zoneId) { nextLayoutId++ }
+        /**
+         * Returns a stable layout ID for a (screenId, zoneId) pair. Using screenId in the key
+         * ensures screen 1 and screen 2 layouts never share the same ID, even when both screens use
+         * the same template (and thus the same zone ID strings).
+         */
+        fun getLayoutIdForZone(screenId: Int, zoneId: String): Int =
+                zoneToLayoutId.getOrPut("s${screenId}_${zoneId}") { nextLayoutId++ }
 
         /**
          * Stable 11-char config name derived from [profileId]. Format: "K2L" (3) + CRC32 hash of
@@ -188,6 +197,41 @@ class ActiveLookLayoutService(private val activeLookService: ActiveLookService) 
     }
 
     /**
+     * Compute layout IDs and zone geometry for every field in every screen, in profile list order.
+     *
+     * Resetting the map and counter here (before the fast/full path split) guarantees that IDs are
+     * always assigned in [DataFieldProfile.screens] order, regardless of which screen happens to
+     * call [displayAllFieldValues] first. This prevents the post-restart ID scramble where
+     * [displayAllFieldValues] for screen 2 ran before screen 1 and claimed IDs that the glasses had
+     * saved for screen 1.
+     */
+    private fun precomputeLayoutIdsAndGeometry(profile: DataFieldProfile) {
+        zoneToLayoutId.clear()
+        nextLayoutId = LAYOUT_ID_BASE
+        screenGeometry.clear()
+        activeIconsByZone.clear()
+
+        profile.screens.forEach { screen ->
+            val template = screen.getTemplate()
+            screen.dataFields.forEach { field ->
+                val zone = template.zones.find { it.id == field.zoneId }
+                val zoneX = zone?.x ?: LayoutPositionDefaults.ZONE_X0
+                val zoneY = zone?.y ?: 0
+                val zoneWidth = zone?.width ?: LayoutPositionDefaults.ZONE_WIDTH
+                val zoneHeight = zone?.height ?: 50
+                val font = sizeToFont(heightToSize(zoneHeight))
+                val layoutId = getLayoutIdForZone(screen.id, field.zoneId)
+                screenGeometry["${screen.id}:${field.zoneId}"] =
+                        ScreenFieldGeometry(layoutId, zoneX, zoneY, zoneWidth, zoneHeight, font)
+            }
+        }
+        Log.d(
+                TAG,
+                "precompute: ${zoneToLayoutId.size} zone(s) across ${profile.screens.size} screen(s) — IDs ${LAYOUT_ID_BASE}–${nextLayoutId - 1}"
+        )
+    }
+
+    /**
      * Populate [configVersionCache] by reading the config list from the glasses. Call this once
      * after every connection.
      */
@@ -247,9 +291,9 @@ class ActiveLookLayoutService(private val activeLookService: ActiveLookService) 
             glasses.holdFlush(com.activelook.activelooksdk.types.holdFlushAction.HOLD)
 
             fields.forEach { (zoneId, value) ->
-                val layoutId = getLayoutIdForZone(zoneId)
+                val layoutId = getLayoutIdForZone(screen.id, zoneId)
                 val field = screen.dataFields.find { it.zoneId == zoneId }
-                val geometry = screenGeometry[zoneId]
+                val geometry = screenGeometry["${screen.id}:${zoneId}"]
 
                 if (field == null || geometry == null) {
                     // Fallback: geometry not yet saved — basic display without ExtraCmd
@@ -309,10 +353,8 @@ class ActiveLookLayoutService(private val activeLookService: ActiveLookService) 
                     }
                 }
 
-                Log.v(
-                        TAG,
-                        "Layout $layoutId (zone $zoneId font=${geometry.font}): '$renderValue' unit=${field.dataField.unit} icon=$hasIcon"
-                )
+                // Log.v(TAG, "Layout $layoutId (zone $zoneId font=${geometry.font}): '$renderValue'
+                // unit=${field.dataField.unit} icon=$hasIcon")
             }
 
             // Icon pass: imgDisplay requires ALooK system config context.
@@ -360,73 +402,93 @@ class ActiveLookLayoutService(private val activeLookService: ActiveLookService) 
     // ──────────────────────────────────────────────────────────────────────
 
     /**
-     * Save layout definitions for the first screen of [profile] using [DynamicLayoutEngine] to
-     * compute row positions and [DynamicLayoutRenderer] to build each [LayoutParameters].
+     * Save layout definitions for ALL screens of [profile] using [DynamicLayoutEngine] to compute
+     * row positions and [DynamicLayoutRenderer] to build each [LayoutParameters].
+     *
+     * Layout IDs are namespaced by screen ID so that two screens using the same template (same zone
+     * IDs) get distinct layout IDs and do not overwrite each other.
      *
      * Row sizes are derived from the template zone heights:
      * - height ≥ 50 px → "large" → font 3
      * - height ≥ 35 px → "medium" → font 2
      * - height < 35 px → "small" → font 1
      *
-     * The resulting geometry is cached in [screenGeometry] so [displayAllFieldValues] uses the
-     * exact same y0 / height / font values that were saved with each layout.
+     * The resulting geometry is cached in [screenGeometry] (keyed by "screenId:zoneId") so
+     * [displayAllFieldValues] uses the exact same y0 / height / font values that were saved.
      */
     private suspend fun saveProfileLayouts(profile: DataFieldProfile): Boolean {
         val glasses = activeLookService.getConnectedGlasses() ?: return false
-        val screen = profile.screens.firstOrNull() ?: return false
-        val template = screen.getTemplate()
+        if (profile.screens.isEmpty()) return false
 
-        screenGeometry.clear()
-        activeIconsByZone.clear()
-        val fields = screen.dataFields
+        // screenGeometry and activeIconsByZone are already cleared and pre-populated by
+        // precomputeLayoutIdsAndGeometry() which ran before this call. Do not clear them here
+        // — that would lose the geometry data that the fast path relies on.
 
         // Delete all layouts in this config before saving new ones.
-        // This is scoped to the current cfgWrite config — it will NOT affect
-        // other apps' configs (e.g. Suunto) or the ALooK system config.
         glasses.layoutDeleteAll()
         delay(COMMAND_DELAY_MS)
 
-        // Clear the display so stale pixels from a previous template (e.g. going from pyramid
-        // back to 3-row) do not linger. clear() is safe here because we are outside holdFlush.
+        // Clear the display so stale pixels from a previous template do not linger.
         glasses.clear()
         delay(COMMAND_DELAY_MS)
 
-        var saved = 0
-        fields.forEachIndexed { index, field ->
-            // Use template zone coordinates directly so multi-column (half-width) zones
-            // are placed at their designed x/y position, not recalculated as rows.
-            val zone = template.zones.find { it.id == field.zoneId }
-            val zoneX = zone?.x ?: LayoutPositionDefaults.ZONE_X0
-            val zoneY = zone?.y ?: 0
-            val zoneWidth = zone?.width ?: LayoutPositionDefaults.ZONE_WIDTH
-            val zoneHeight = zone?.height ?: 50
-            val font = sizeToFont(heightToSize(zoneHeight))
-            val hasIcon =
-                    field.showIcon &&
-                            (field.dataField.icon28 != null || field.dataField.icon40 != null)
-            val layoutId = getLayoutIdForZone(field.zoneId)
+        // Delete all saved gauge definitions so arc pixels from a gauge layout cannot
+        // reappear after switching to a non-gauge template.
+        glasses.gaugeDelete(0xFF.toByte())
+        delay(COMMAND_DELAY_MS)
 
-            val params =
-                    DynamicLayoutRenderer.buildLayoutParams(
-                            layoutId = layoutId,
-                            x0 = zoneX,
-                            y0 = zoneY,
-                            width = zoneWidth,
-                            zoneHeight = zoneHeight,
-                            font = font,
-                            hasIcon = hasIcon,
-                    )
-            if (saveLayoutDirect(glasses, layoutId, params)) {
-                saved++
-                delay(COMMAND_DELAY_MS)
+        var totalSaved = 0
+        var totalExpected = 0
+
+        profile.screens.forEach { screen ->
+            val template = screen.getTemplate()
+            val fields = screen.dataFields
+            totalExpected += fields.size
+
+            fields.forEach { field ->
+                // Use template zone coordinates directly so multi-column (half-width) zones
+                // are placed at their designed x/y position, not recalculated as rows.
+                val zone = template.zones.find { it.id == field.zoneId }
+                val zoneX = zone?.x ?: LayoutPositionDefaults.ZONE_X0
+                val zoneY = zone?.y ?: 0
+                val zoneWidth = zone?.width ?: LayoutPositionDefaults.ZONE_WIDTH
+                val zoneHeight = zone?.height ?: 50
+                val font = sizeToFont(heightToSize(zoneHeight))
+                val hasIcon =
+                        field.showIcon &&
+                                (field.dataField.icon28 != null || field.dataField.icon40 != null)
+                // Screen-namespaced layout ID: screen 1 and screen 2 with the same zone IDs
+                // get different layout IDs and co-exist on the glasses.
+                val layoutId = getLayoutIdForZone(screen.id, field.zoneId)
+
+                val params =
+                        DynamicLayoutRenderer.buildLayoutParams(
+                                layoutId = layoutId,
+                                x0 = zoneX,
+                                y0 = zoneY,
+                                width = zoneWidth,
+                                zoneHeight = zoneHeight,
+                                font = font,
+                                hasIcon = hasIcon,
+                        )
+                if (saveLayoutDirect(glasses, layoutId, params)) {
+                    totalSaved++
+                    delay(COMMAND_DELAY_MS)
+                }
+                // Cache geometry with screen-namespaced key so displayAllFieldValues picks up
+                // the correct coordinates for whichever screen is currently active.
+                screenGeometry["${screen.id}:${field.zoneId}"] =
+                        ScreenFieldGeometry(layoutId, zoneX, zoneY, zoneWidth, zoneHeight, font)
             }
-            screenGeometry[field.zoneId] =
-                    ScreenFieldGeometry(layoutId, zoneX, zoneY, zoneWidth, zoneHeight, font)
+
+            Log.i(TAG, "Screen ${screen.id}: ${fields.size} layout(s) saved")
         }
 
-        val expected = fields.size
-        Log.i(TAG, "Layouts saved: $saved / $expected")
-        return saved == expected
+        Log.i(
+                TAG,
+                "Layouts saved: $totalSaved / $totalExpected across ${profile.screens.size} screen(s)"
+        )
+        return totalSaved == totalExpected
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -479,7 +541,18 @@ class ActiveLookLayoutService(private val activeLookService: ActiveLookService) 
                 if ((field.visualizationType ?: VisualizationType.TEXT) == VisualizationType.GAUGE
                 ) {
                     field.gauge?.let { gauge ->
-                        activeLookService.saveGauge(gauge)
+                        // Re-centre the gauge arc in the zone it is assigned to.
+                        // screenGeometry is populated by saveProfileLayouts which runs first,
+                        // so the geometry is available here.
+                        val geom = screenGeometry["${screen.id}:${field.zoneId}"]
+                        val centeredGauge =
+                                if (geom != null) {
+                                    gauge.copy(
+                                            centerX = geom.x0 + geom.width / 2,
+                                            centerY = geom.y0 + geom.height / 2
+                                    )
+                                } else gauge
+                        activeLookService.saveGauge(centeredGauge)
                         delay(COMMAND_DELAY_MS)
                     }
                 }
@@ -588,5 +661,277 @@ class ActiveLookLayoutService(private val activeLookService: ActiveLookService) 
         screenGeometry.clear()
         activeConfigName = null
         Log.i(TAG, "Layout cache cleared")
+    }
+
+    // ── Bar visualization ──────────────────────────────────────────────────
+
+    /**
+     * Renders a horizontal or vertical progress bar at the field's actual template zone position.
+     *
+     * Visual style:
+     * - Below the current value (achieved portion): dim fill (color 2), matching zone circles.
+     * - Current value tip: 2px bright white rect.
+     * - Above the current value: black (invisible).
+     * - Optional thin border around the full bar area.
+     *
+     * @param bar Progress bar model (provides value range and orientation).
+     * @param currentValue Raw metric value used to compute fill amount.
+     * @param zoneId Template zone ID whose geometry drives bar placement.
+     */
+    fun displayBarAtZone(
+            bar: ProgressBar,
+            currentValue: Float,
+            zoneId: String,
+    ) {
+        if (!activeLookService.isConnected) return
+        val glasses = activeLookService.getConnectedGlasses() ?: return
+        val geometry =
+                screenGeometry[zoneId]
+                        ?: run {
+                            Log.w(TAG, "displayBarAtZone: no geometry for zone $zoneId — skipping")
+                            return
+                        }
+
+        val x0 = geometry.x0
+        val y0 = geometry.y0
+        val w = geometry.width
+        val h = geometry.height
+
+        // Inner bar: 3px inset on each side vertically, 0 horizontal inset
+        val barInset = 3
+        val barY0 = y0 + barInset
+        val barH = (h - barInset * 2).coerceAtLeast(2)
+        val barX0 = x0
+        val barW = w
+
+        val range = (bar.maxValue - bar.minValue).coerceAtLeast(0.001f)
+        val progress = ((currentValue - bar.minValue) / range).coerceIn(0f, 1f)
+
+        try {
+            glasses.holdFlush(com.activelook.activelooksdk.types.holdFlushAction.HOLD)
+
+            // Clear full zone area
+            glasses.color(0)
+            glasses.rectf(x0.toShort(), y0.toShort(), (x0 + w).toShort(), (y0 + h).toShort())
+
+            when (bar.orientation) {
+                Orientation.HORIZONTAL -> {
+                    val fillPx = (barW * progress).toInt()
+                    // Dim fill: achieved portion
+                    if (fillPx > 2) {
+                        glasses.color(2)
+                        glasses.rectf(
+                                barX0.toShort(),
+                                barY0.toShort(),
+                                (barX0 + fillPx - 2).toShort(),
+                                (barY0 + barH).toShort()
+                        )
+                    }
+                    // Bright tip: 2px wide at current position
+                    if (fillPx > 0) {
+                        val tipX = (barX0 + fillPx - 2).coerceAtLeast(barX0)
+                        glasses.color(15)
+                        glasses.rectf(
+                                tipX.toShort(),
+                                barY0.toShort(),
+                                (tipX + 2).toShort(),
+                                (barY0 + barH).toShort()
+                        )
+                    }
+                    // Border
+                    if (bar.showBorder) {
+                        glasses.color(4)
+                        glasses.rect(
+                                barX0.toShort(),
+                                barY0.toShort(),
+                                (barX0 + barW).toShort(),
+                                (barY0 + barH).toShort()
+                        )
+                    }
+                }
+                Orientation.VERTICAL -> {
+                    val fillPx = (barH * progress).toInt()
+                    val fillY0 = barY0 + barH - fillPx
+                    // Dim fill: achieved portion (all but the tip)
+                    if (fillPx > 2) {
+                        glasses.color(2)
+                        glasses.rectf(
+                                barX0.toShort(),
+                                (fillY0 + 2).toShort(),
+                                (barX0 + barW).toShort(),
+                                (barY0 + barH).toShort()
+                        )
+                    }
+                    // Bright tip: 2px tall at current position
+                    if (fillPx > 0) {
+                        val tipY = fillY0.coerceAtMost(barY0 + barH - 2)
+                        glasses.color(15)
+                        glasses.rectf(
+                                barX0.toShort(),
+                                tipY.toShort(),
+                                (barX0 + barW).toShort(),
+                                (tipY + 2).toShort()
+                        )
+                    }
+                    // Border
+                    if (bar.showBorder) {
+                        glasses.color(4)
+                        glasses.rect(
+                                barX0.toShort(),
+                                barY0.toShort(),
+                                (barX0 + barW).toShort(),
+                                (barY0 + barH).toShort()
+                        )
+                    }
+                }
+            }
+
+            glasses.holdFlush(com.activelook.activelooksdk.types.holdFlushAction.FLUSH)
+            Log.d(TAG, "Bar zone=$zoneId progress=${(progress*100).toInt()}% value=$currentValue")
+        } catch (e: Exception) {
+            Log.e(TAG, "displayBarAtZone failed for zone $zoneId: ${e.message}", e)
+            try {
+                glasses.holdFlush(com.activelook.activelooksdk.types.holdFlushAction.FLUSH)
+            } catch (_: Exception) {}
+        }
+    }
+
+    // ── Zone-circle visualization ─────────────────────────────────────────
+
+    /**
+     * Renders zone progress as a row of filled circles, one per zone in [zonedBar].
+     *
+     * The circles are horizontally distributed across the template zone identified by [zoneId].
+     * Fill progression: zones below the active one are dim; the active zone is bright white; zones
+     * above the active one are not drawn (black = invisible).
+     *
+     * Must be called from a coroutine (uses hold/flush + optional cfgSet("ALooK") for the icon).
+     *
+     * @param zonedBar Zoned bar data model (zones + value range).
+     * @param currentValue Current metric value used to determine the active zone.
+     * @param zoneId Template zone ID whose geometry drives circle placement.
+     * @param iconId Optional 28×28 icon ID to render at the viewer-left end of the zone.
+     */
+    fun displayZoneCircles(
+            zonedBar: ZonedProgressBar,
+            currentValue: Float,
+            zoneId: String,
+            iconId: Int?,
+    ) {
+        if (!activeLookService.isConnected) return
+        val glasses = activeLookService.getConnectedGlasses() ?: return
+        val geometry =
+                screenGeometry[zoneId]
+                        ?: run {
+                            Log.w(
+                                    TAG,
+                                    "displayZoneCircles: no geometry for zone $zoneId — skipping"
+                            )
+                            return
+                        }
+
+        val numZones = zonedBar.zones.size
+        // Icon at the viewer-left edge (high display-x), outside the circle area.
+        val iconPx = if (iconId != null) 28 else 0
+        val safeRight = LayoutPositionDefaults.ZONE_X0 + LayoutPositionDefaults.ZONE_WIDTH // =274
+        val iconX = (safeRight - iconPx + 12).toShort() // 246 with icon, 274 without
+        // Shift circles +20px in display-x (toward viewer-left) to align with icon row above.
+        val circleXOffset = 0
+        val circleAreaWidth = iconX - 6 - (LayoutPositionDefaults.ZONE_X0 + circleXOffset)
+
+        val slot = circleAreaWidth / numZones
+        // Base radius: fit within slot width and within zone height.
+        val rBySlot = slot / 2 - 1
+        val rByHeight = geometry.height / 2 - 2
+        val r = minOf(rBySlot, rByHeight).coerceAtLeast(2)
+        val cy = geometry.y0 + geometry.height / 2
+
+        // Active-zone label: same anchor formula as Test 13.
+        // txtY = cy - 24 places font-1 text viewer-below the circle center.
+        val txtYAdjust = if (numZones >= 7) 3 else 0
+        val txtY = (cy - 24 + txtYAdjust).toShort()
+        val txtXAdjust = if (numZones >= 7) -2 else -8
+
+        // Determine active zone index (1-based). If value exceeds all zones, use last.
+        val activeZoneIdx: Int = run {
+            val idx =
+                    zonedBar.zones.indexOfFirst {
+                        currentValue >= it.minValue && currentValue < it.maxValue
+                    }
+            if (idx < 0) zonedBar.zones.size else idx + 1
+        }
+
+        // Zone 1 (lowest effort) → highest display-x → viewer-left.
+        // Zone N (max effort) → lowest display-x → viewer-right. Matches Test 13 geometry.
+        fun zoneCx(z: Int) =
+                LayoutPositionDefaults.ZONE_X0 + circleXOffset + slot / 2 + (numZones - z) * slot
+
+        try {
+            glasses.holdFlush(com.activelook.activelooksdk.types.holdFlushAction.HOLD)
+
+            // Clear the zone area — extend 24px above y0 so any label drawn above the zone
+            // boundary (possible when txtY = cy-24 < y0 for short zones) is also erased.
+            val eraseY0 = (geometry.y0 - 24).coerceAtLeast(0).toShort()
+            glasses.color(0)
+            glasses.rectf(
+                    geometry.x0.toShort(),
+                    eraseY0,
+                    (geometry.x0 + geometry.width).toShort(),
+                    (geometry.y0 + geometry.height).toShort(),
+            )
+
+            for (z in 1..numZones) {
+                val cx = zoneCx(z)
+                when {
+                    z < activeZoneIdx -> {
+                        // Achieved zone: very dim fill, no label (like Test 13)
+                        glasses.color(2)
+                        filledCircle(glasses, cx, cy, r)
+                    }
+                    z == activeZoneIdx -> {
+                        // Active zone: bright white fill, larger circle, label below
+                        val rActive = (r + 2).coerceAtMost(minOf(rBySlot, rByHeight))
+                        glasses.color(15)
+                        filledCircle(glasses, cx, cy, rActive)
+                        val txtX = (cx + slot / 2 + txtXAdjust).toShort()
+                        glasses.txt(txtX, txtY, Rotation.TOP_LR, 1.toByte(), 15.toByte(), "Z$z")
+                    }
+                // z > activeZoneIdx: draw nothing (black background = inactive)
+                }
+            }
+
+            // Icon pass: imgDisplay requires ALooK system config
+            if (iconId != null) {
+                glasses.cfgSet("ALooK")
+                glasses.imgDisplay(iconId.toByte(), iconX, (cy - iconPx / 2).toShort())
+                activeConfigName?.let { glasses.cfgSet(it) }
+            }
+
+            glasses.holdFlush(com.activelook.activelooksdk.types.holdFlushAction.FLUSH)
+
+            Log.d(
+                    TAG,
+                    "Zone circles zone=$zoneId numZones=$numZones active=$activeZoneIdx value=$currentValue"
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "displayZoneCircles failed for zone $zoneId: ${e.message}", e)
+            try {
+                glasses.holdFlush(com.activelook.activelooksdk.types.holdFlushAction.FLUSH)
+            } catch (_: Exception) {}
+        }
+    }
+
+    /** Draws a filled circle at ([cx], [cy]) with radius [r] using horizontal scan-lines. */
+    private fun filledCircle(glasses: Glasses, cx: Int, cy: Int, r: Int) {
+        for (dy in -r..r) {
+            val dx = Math.sqrt((r * r - dy * dy).toDouble()).toInt()
+            if (dx == 0) continue
+            glasses.line(
+                    (cx - dx).toShort(),
+                    (cy + dy).toShort(),
+                    (cx + dx).toShort(),
+                    (cy + dy).toShort(),
+            )
+        }
     }
 }

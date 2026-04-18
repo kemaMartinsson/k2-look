@@ -130,8 +130,8 @@ object LayoutPositionDefaults {
                         "km/h" to 165.toShort(), // 4 chars, ~50px — calibrated
                         "bpm" to 165.toShort(), // 3 chars, ~42px — calibrated
                         "rpm" to 165.toShort(), // 3 chars, ~38px
-                        "w" to 179.toShort(), // 1 char,  ~16px
-                        "m" to 179.toShort(), // 1 char,  ~16px
+                        "w" to 150.toShort(), // 1 char,  ~16px
+                        "m" to 150.toShort(), // 1 char,  ~16px
                         "%" to 178.toShort(), // 1 char,  ~14px
                         "z" to 180.toShort(), // 1 char,  ~11px (zone label)
                         "km" to 173.toShort(), // 2 chars, ~29px
@@ -141,10 +141,10 @@ object LayoutPositionDefaults {
                         "°C" to 174.toShort(), // 2 chars, ~23px
                         "°F" to 174.toShort(), // 2 chars, ~21px
                         "mph" to 168.toShort(), // 3 chars, ~42px (m is wide)
-                        "m/h" to 172.toShort(), // 3 chars, ~37px
+                        "m/h" to 150.toShort(), // 3 chars, ~37px
                         "w/kg" to 165.toShort(), // 4 chars, ~50px — same as km/h
-                        "kcal" to 170.toShort(), // 4 chars, ~41px ('l' narrow)
-                        "kcal/h" to 158.toShort(), // 6 chars, ~62px
+                        "kcal" to 150.toShort(), // 4 chars, ~41px ('l' narrow)
+                        "kcal/h" to 150.toShort(), // 6 chars, ~62px
                         "HH:MM:SS" to 130.toShort(), // rarely shown — seconds rendered separately
                         "HH:MM" to 152.toShort(), // 5 chars + colon
                         "MM:SS" to 152.toShort(), // 5 chars + colon

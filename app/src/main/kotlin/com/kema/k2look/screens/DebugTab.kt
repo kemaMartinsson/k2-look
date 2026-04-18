@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.kema.k2look.BuildConfig
 import com.kema.k2look.service.ActiveLookService
 import com.kema.k2look.viewmodel.MainViewModel
 
@@ -199,203 +200,224 @@ fun DebugTab(viewModel: MainViewModel, uiState: MainViewModel.UiState) {
                         }
                 }
 
-                // ── Display Debug Tests ──────────────────────────────────────────
-                HorizontalDivider(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-                        thickness = 1.dp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-                )
-
-                Card(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                        colors =
-                                CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.background
-                                ),
-                        shape = androidx.compose.ui.graphics.RectangleShape
-                ) {
-                        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                                Text(
-                                        text = "Display Debug Tests",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(bottom = 4.dp)
-                                )
-                                Text(
-                                        text =
-                                                "Render calibration patterns on the glasses to diagnose layout / clipping issues",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(bottom = 12.dp)
-                                )
-
-                                val glassesConnected =
-                                        uiState.activeLookState is
-                                                ActiveLookService.ConnectionState.Connected
-                                val testsEnabled = debugEnabled && glassesConnected
-
-                                data class DebugTest(
-                                        val num: Int,
-                                        val label: String,
-                                        val desc: String
-                                )
-
-                                val tests =
-                                        listOf(
-                                                DebugTest(
-                                                        1,
-                                                        "1 · Bounds",
-                                                        "Corner markers, safe area, center crosshair"
-                                                ),
-                                                DebugTest(
-                                                        2,
-                                                        "2 · Rotations",
-                                                        "Same anchor, 8 rotation values"
-                                                ),
-                                                DebugTest(
-                                                        3,
-                                                        "3 · Clip w/h",
-                                                        "width=244 vs width=273 → SIZE or COORD?"
-                                                ),
-                                                DebugTest(
-                                                        4,
-                                                        "4 · Text X",
-                                                        "txtX at 50 / 120 / 194 / 234"
-                                                ),
-                                                DebugTest(
-                                                        5,
-                                                        "5 · K2L vs Official",
-                                                        "Current params vs ActiveLook defaults"
-                                                ),
-                                                DebugTest(
-                                                        6,
-                                                        "6 · 3-Field",
-                                                        "Full 3D_FULL layout, official positions"
-                                                ),
-                                                DebugTest(
-                                                        7,
-                                                        "7 · ExtraCmd",
-                                                        "unit / icon / label drawn on top via LayoutExtraCmd"
-                                                ),
-                                                DebugTest(
-                                                        8,
-                                                        "8 · Icon+Value+Unit",
-                                                        "[speed icon][50/20/30][km/h] all fonts"
-                                                ),
-                                                DebugTest(
-                                                        9,
-                                                        "9 · Realistic Layout",
-                                                        "[speed icon][25.1][km/h] / [power icon][250][W] / [HR icon][150][bpm]"
-                                                ),
-                                                DebugTest(
-                                                        10,
-                                                        "10 · Dynamic Layout (4 rows)",
-                                                        "[speed][time][HR][power] via DynamicLayoutEngine"
-                                                ),
-                                                DebugTest(
-                                                        11,
-                                                        "11 · Gauge 270°",
-                                                        "270° arc gauge at 0 / 33 / 66 / 100 %"
-                                                ),
-                                                DebugTest(
-                                                        12,
-                                                        "12 · Production Layout (3 rows)",
-                                                        "[speed font3][HR font2][cadence font1] — production sizeToFont mapping"
-                                                ),
-                                                DebugTest(
-                                                        13,
-                                                        "13 · HR Zone Bar",
-                                                        "5-segment horizontal bar, cycles no zone → Z1 → Z5"
-                                                ),
+                // ── Display Debug Tests (debug builds only) ─────────────────────
+                if (BuildConfig.DEBUG) {
+                        HorizontalDivider(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                                thickness = 1.dp,
+                                color =
+                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                                alpha = 0.3f
                                         )
+                        )
 
-                                tests.forEach { t ->
-                                        Row(
-                                                modifier =
-                                                        Modifier.fillMaxWidth()
-                                                                .padding(vertical = 3.dp),
-                                                verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                                Column(modifier = Modifier.weight(1f)) {
-                                                        Text(
-                                                                text = t.label,
-                                                                style =
-                                                                        MaterialTheme.typography
-                                                                                .bodyMedium,
-                                                                fontWeight = FontWeight.Medium
-                                                        )
-                                                        Text(
-                                                                text = t.desc,
-                                                                style =
-                                                                        MaterialTheme.typography
-                                                                                .labelSmall,
-                                                                color =
-                                                                        MaterialTheme.colorScheme
-                                                                                .onSurfaceVariant
-                                                        )
-                                                }
-                                                Button(
-                                                        onClick = {
-                                                                viewModel.runDisplayDebugTest(t.num)
-                                                        },
-                                                        enabled = testsEnabled,
-                                                        modifier = Modifier.padding(start = 8.dp),
-                                                        contentPadding =
-                                                                androidx.compose.foundation.layout
-                                                                        .PaddingValues(
-                                                                                horizontal = 12.dp,
-                                                                                vertical = 4.dp
-                                                                        )
-                                                ) {
-                                                        Text(
-                                                                "Run",
-                                                                style =
-                                                                        MaterialTheme.typography
-                                                                                .labelMedium
-                                                        )
-                                                }
-                                        }
-                                }
-
-                                // Clear button
-                                HorizontalDivider(
-                                        modifier = Modifier.padding(vertical = 8.dp),
-                                        thickness = 0.5.dp,
-                                        color =
-                                                MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                                        alpha = 0.2f
-                                                )
-                                )
-                                Button(
-                                        onClick = { viewModel.clearGlassesDisplay() },
-                                        enabled = testsEnabled,
-                                        modifier = Modifier.fillMaxWidth(),
-                                        colors =
-                                                androidx.compose.material3.ButtonDefaults
-                                                        .buttonColors(
-                                                                containerColor =
-                                                                        MaterialTheme.colorScheme
-                                                                                .secondary
-                                                        )
-                                ) { Text("Clear Glasses Display") }
-
-                                if (!testsEnabled) {
+                        Card(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                                colors =
+                                        CardDefaults.cardColors(
+                                                containerColor =
+                                                        MaterialTheme.colorScheme.background
+                                        ),
+                                shape = androidx.compose.ui.graphics.RectangleShape
+                        ) {
+                                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                                        Text(
+                                                text = "Display Debug Tests",
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.padding(bottom = 4.dp)
+                                        )
                                         Text(
                                                 text =
-                                                        when {
-                                                                !debugEnabled ->
-                                                                        "⚠️ Enable Debug Mode above"
-                                                                !glassesConnected ->
-                                                                        "⚠️ Connect glasses first"
-                                                                else -> ""
-                                                        },
+                                                        "Render calibration patterns on the glasses to diagnose layout / clipping issues",
                                                 style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.error,
-                                                modifier = Modifier.padding(top = 8.dp)
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.padding(bottom = 12.dp)
                                         )
+
+                                        val glassesConnected =
+                                                uiState.activeLookState is
+                                                        ActiveLookService.ConnectionState.Connected
+                                        val testsEnabled = debugEnabled && glassesConnected
+
+                                        data class DebugTest(
+                                                val num: Int,
+                                                val label: String,
+                                                val desc: String
+                                        )
+
+                                        val tests =
+                                                listOf(
+                                                        DebugTest(
+                                                                1,
+                                                                "1 · Bounds",
+                                                                "Corner markers, safe area, center crosshair"
+                                                        ),
+                                                        DebugTest(
+                                                                2,
+                                                                "2 · Rotations",
+                                                                "Same anchor, 8 rotation values"
+                                                        ),
+                                                        DebugTest(
+                                                                3,
+                                                                "3 · Clip w/h",
+                                                                "width=244 vs width=273 → SIZE or COORD?"
+                                                        ),
+                                                        DebugTest(
+                                                                4,
+                                                                "4 · Text X",
+                                                                "txtX at 50 / 120 / 194 / 234"
+                                                        ),
+                                                        DebugTest(
+                                                                5,
+                                                                "5 · K2L vs Official",
+                                                                "Current params vs ActiveLook defaults"
+                                                        ),
+                                                        DebugTest(
+                                                                6,
+                                                                "6 · 3-Field",
+                                                                "Full 3D_FULL layout, official positions"
+                                                        ),
+                                                        DebugTest(
+                                                                7,
+                                                                "7 · ExtraCmd",
+                                                                "unit / icon / label drawn on top via LayoutExtraCmd"
+                                                        ),
+                                                        DebugTest(
+                                                                8,
+                                                                "8 · Icon+Value+Unit",
+                                                                "[speed icon][50/20/30][km/h] all fonts"
+                                                        ),
+                                                        DebugTest(
+                                                                9,
+                                                                "9 · Realistic Layout",
+                                                                "[speed icon][25.1][km/h] / [power icon][250][W] / [HR icon][150][bpm]"
+                                                        ),
+                                                        DebugTest(
+                                                                10,
+                                                                "10 · Dynamic Layout (4 rows)",
+                                                                "[speed][time][HR][power] via DynamicLayoutEngine"
+                                                        ),
+                                                        DebugTest(
+                                                                11,
+                                                                "11 · Gauge 270°",
+                                                                "270° arc gauge at 0 / 33 / 66 / 100 %"
+                                                        ),
+                                                        DebugTest(
+                                                                12,
+                                                                "12 · Production Layout (3 rows)",
+                                                                "[speed font3][HR font2][cadence font1] — production sizeToFont mapping"
+                                                        ),
+                                                        DebugTest(
+                                                                13,
+                                                                "13 · HR Zone Bar",
+                                                                "5-segment horizontal bar, cycles no zone → Z1 → Z5"
+                                                        ),
+                                                )
+
+                                        tests.forEach { t ->
+                                                Row(
+                                                        modifier =
+                                                                Modifier.fillMaxWidth()
+                                                                        .padding(vertical = 3.dp),
+                                                        verticalAlignment =
+                                                                Alignment.CenterVertically
+                                                ) {
+                                                        Column(modifier = Modifier.weight(1f)) {
+                                                                Text(
+                                                                        text = t.label,
+                                                                        style =
+                                                                                MaterialTheme
+                                                                                        .typography
+                                                                                        .bodyMedium,
+                                                                        fontWeight =
+                                                                                FontWeight.Medium
+                                                                )
+                                                                Text(
+                                                                        text = t.desc,
+                                                                        style =
+                                                                                MaterialTheme
+                                                                                        .typography
+                                                                                        .labelSmall,
+                                                                        color =
+                                                                                MaterialTheme
+                                                                                        .colorScheme
+                                                                                        .onSurfaceVariant
+                                                                )
+                                                        }
+                                                        Button(
+                                                                onClick = {
+                                                                        viewModel
+                                                                                .runDisplayDebugTest(
+                                                                                        t.num
+                                                                                )
+                                                                },
+                                                                enabled = testsEnabled,
+                                                                modifier =
+                                                                        Modifier.padding(
+                                                                                start = 8.dp
+                                                                        ),
+                                                                contentPadding =
+                                                                        androidx.compose.foundation
+                                                                                .layout
+                                                                                .PaddingValues(
+                                                                                        horizontal =
+                                                                                                12.dp,
+                                                                                        vertical =
+                                                                                                4.dp
+                                                                                )
+                                                        ) {
+                                                                Text(
+                                                                        "Run",
+                                                                        style =
+                                                                                MaterialTheme
+                                                                                        .typography
+                                                                                        .labelMedium
+                                                                )
+                                                        }
+                                                }
+                                        }
+
+                                        // Clear button
+                                        HorizontalDivider(
+                                                modifier = Modifier.padding(vertical = 8.dp),
+                                                thickness = 0.5.dp,
+                                                color =
+                                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                                                .copy(alpha = 0.2f)
+                                        )
+                                        Button(
+                                                onClick = { viewModel.clearGlassesDisplay() },
+                                                enabled = testsEnabled,
+                                                modifier = Modifier.fillMaxWidth(),
+                                                colors =
+                                                        androidx.compose.material3.ButtonDefaults
+                                                                .buttonColors(
+                                                                        containerColor =
+                                                                                MaterialTheme
+                                                                                        .colorScheme
+                                                                                        .secondary
+                                                                )
+                                        ) { Text("Clear Glasses Display") }
+
+                                        if (!testsEnabled) {
+                                                Text(
+                                                        text =
+                                                                when {
+                                                                        !debugEnabled ->
+                                                                                "⚠️ Enable Debug Mode above"
+                                                                        !glassesConnected ->
+                                                                                "⚠️ Connect glasses first"
+                                                                        else -> ""
+                                                                },
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.error,
+                                                        modifier = Modifier.padding(top = 8.dp)
+                                                )
+                                        }
                                 }
                         }
-                }
+                } // end BuildConfig.DEBUG
 
                 // Current Values Display
                 Card(

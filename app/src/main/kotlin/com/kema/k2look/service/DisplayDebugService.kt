@@ -1519,7 +1519,7 @@ class DisplayDebugService(private val activeLookService: ActiveLookService) {
                         (cy + 25).toShort() // value label y, centred within the gauge arc gap
                 val rOuter: Char = 70.toChar() // u16 via char
                 val rInner: Char = 45.toChar()
-                val startPortion: Byte = 5 // display 6-o'clock → viewer 12-o'clock
+                val startPortion: Byte = 7 // display 6-o'clock → viewer 12-o'clock
                 val endPortion: Byte =
                         12 // display 12-o'clock → viewer 6-o'clock (~67.5° CW from prior)
 
@@ -1555,6 +1555,12 @@ class DisplayDebugService(private val activeLookService: ActiveLookService) {
                                 Log.i(TAG, "  Gauge @ $pct%")
                                 Thread.sleep(1500)
                         }
+
+                        // Clean up: erase gauge pixels so nothing stale remains on screen
+                        g.holdFlush(holdFlushAction.HOLD)
+                        g.gaugeDelete(gaugeId)
+                        g.clear()
+                        g.holdFlush(holdFlushAction.FLUSH)
 
                         Log.i(TAG, "✓ Test 11 complete — 180° gauge animated at 0/33/66/100 %")
                 } catch (e: Exception) {

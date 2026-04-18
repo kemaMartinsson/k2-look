@@ -1,6 +1,5 @@
 package com.kema.k2look.layout
 
-import android.util.Log
 import com.activelook.activelooksdk.Glasses
 import com.activelook.activelooksdk.types.LayoutExtraCmd
 import com.activelook.activelooksdk.types.LayoutParameters
@@ -171,7 +170,7 @@ object DynamicLayoutRenderer {
         // Small icons (28px) shifted 5px viewer-left (higher X) for visual alignment
         val iconAbsX = (LayoutPositionDefaults.ICON_ABS_X + if (iconPx == 28) 15 else 0).toShort()
         pendingIcons.add(PendingIcon(iconId, iconAbsX, absY, iconPx))
-        Log.v(TAG, "queueIcon: id=$iconId iconPx=$iconPx y0=$y0 zoneH=$zoneHeight → absY=$absY")
+        // Log.v(TAG, "queueIcon: id=$iconId iconPx=$iconPx y0=$y0 zoneH=$zoneHeight → absY=$absY")
     }
 
     // ── Icon rendering ────────────────────────────────────────────────────
@@ -188,6 +187,6 @@ object DynamicLayoutRenderer {
      */
     fun renderPendingIcons(g: Glasses, pendingIcons: List<PendingIcon>) {
         pendingIcons.forEach { icon -> g.imgDisplay(icon.iconId.toByte(), icon.absX, icon.absY) }
-        Log.i(TAG, "renderPendingIcons: ${pendingIcons.size} icons rendered")
+        // Log.i(TAG, "renderPendingIcons: ${pendingIcons.size} icons rendered")
     }
 }

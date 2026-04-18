@@ -9,8 +9,8 @@ import com.kema.k2look.model.LayoutZone
 /**
  * Registry for all official ActiveLook layout templates
  *
- * Provides access to 6 pre-defined layout templates (1D through 6D) based on
- * ActiveLook's official layout positions documented in the Visual Assets README.
+ * Provides access to 6 pre-defined layout templates (1D through 6D) based on ActiveLook's official
+ * layout positions documented in the Visual Assets README.
  */
 object LayoutTemplateRegistry {
     private const val TAG = "LayoutTemplateRegistry"
@@ -23,8 +23,7 @@ object LayoutTemplateRegistry {
 
         try {
             // Try to access R class to see if we're in an Android environment
-            @Suppress("UNUSED_VARIABLE")
-            val testR = R.drawable::class.java
+            @Suppress("UNUSED_VARIABLE") val testR = R.drawable::class.java
             registerAllTemplates()
             Log.i(TAG, "Registered ${templates.size} layout templates with preview images")
         } catch (_: Throwable) {
@@ -37,49 +36,67 @@ object LayoutTemplateRegistry {
     private fun registerAllTemplatesWithoutPreviews() {
         // Register templates without preview images for unit tests
         registerWithoutPreview(
-            LayoutTemplate(
-                id = "1D",
-                name = "Single Data",
-                zones = listOf(
-                    LayoutZone(
+                LayoutTemplate(
                         id = "1D",
-                        displayName = "Center",
-                        x = 59, y = 41, width = 187, height = 163,
-                        font = 5, fontSize = FontSize.LARGE,
-                        isChrono = true,
-                        chronoHourX = 239, chronoHourY = 121
-                    )
-                ),
-                maxFields = 1
-            )
+                        name = "Single Data",
+                        zones =
+                                listOf(
+                                        LayoutZone(
+                                                id = "1D",
+                                                displayName = "Center",
+                                                x = 59,
+                                                y = 41,
+                                                width = 187,
+                                                height = 163,
+                                                font = 5,
+                                                fontSize = FontSize.LARGE,
+                                                isChrono = true,
+                                                chronoHourX = 239,
+                                                chronoHourY = 121
+                                        )
+                                ),
+                        maxFields = 1
+                )
         )
 
         registerWithoutPreview(
-            LayoutTemplate(
-                id = "2D",
-                name = "Two Data",
-                zones = listOf(
-                    LayoutZone(
-                        id = "2D_H",
-                        displayName = "Top",
-                        x = 30, y = 129, width = 244, height = 60,
-                        font = 4, fontSize = FontSize.LARGE,
-                        isChrono = true,
-                        chronoHourX = 203, chronoHourY = 154
-                    ),
-                    LayoutZone(
-                        id = "2D_L",
-                        displayName = "Bottom",
-                        x = 30, y = 25, width = 244, height = 60,
-                        font = 4, fontSize = FontSize.LARGE,
-                        isChrono = true,
-                        chronoHourX = 203, chronoHourY = 50
-                    )
-                ),
-                maxFields = 2
-            )
+                LayoutTemplate(
+                        id = "2D",
+                        name = "Two Data",
+                        zones =
+                                listOf(
+                                        LayoutZone(
+                                                id = "2D_H",
+                                                displayName = "Top",
+                                                x = 30,
+                                                y = 129,
+                                                width = 244,
+                                                height = 60,
+                                                font = 4,
+                                                fontSize = FontSize.LARGE,
+                                                isChrono = true,
+                                                chronoHourX = 203,
+                                                chronoHourY = 154
+                                        ),
+                                        LayoutZone(
+                                                id = "2D_L",
+                                                displayName = "Bottom",
+                                                x = 30,
+                                                y = 25,
+                                                width = 244,
+                                                height = 60,
+                                                font = 4,
+                                                fontSize = FontSize.LARGE,
+                                                isChrono = true,
+                                                chronoHourX = 203,
+                                                chronoHourY = 50
+                                        )
+                                ),
+                        maxFields = 2
+                )
         )
 
+        /* Disabled — partial-width
         registerWithoutPreview(
             LayoutTemplate(
                 id = "3D_TRIANGLE",
@@ -113,41 +130,59 @@ object LayoutTemplateRegistry {
                 maxFields = 3
             )
         )
+        */
 
         registerWithoutPreview(
-            LayoutTemplate(
-                id = "3D_FULL",
-                name = "Three Data Full",
-                zones = listOf(
-                    LayoutZone(
-                        id = "3D_FULL_H",
-                        displayName = "Top",
-                        x = 30, y = 153, width = 244, height = 50,
-                        font = 3, fontSize = FontSize.MEDIUM,
-                        isChrono = true,
-                        chronoHourX = 211, chronoHourY = 170
-                    ),
-                    LayoutZone(
-                        id = "3D_FULL_M",
-                        displayName = "Middle",
-                        x = 30, y = 89, width = 244, height = 50,
-                        font = 3, fontSize = FontSize.MEDIUM,
-                        isChrono = true,
-                        chronoHourX = 211, chronoHourY = 106
-                    ),
-                    LayoutZone(
-                        id = "3D_FULL_L",
-                        displayName = "Bottom",
-                        x = 30, y = 25, width = 244, height = 50,
-                        font = 3, fontSize = FontSize.MEDIUM,
-                        isChrono = true,
-                        chronoHourX = 211, chronoHourY = 42
-                    )
-                ),
-                maxFields = 3
-            )
+                LayoutTemplate(
+                        id = "3D_FULL",
+                        name = "Three Data Full",
+                        zones =
+                                listOf(
+                                        LayoutZone(
+                                                id = "3D_FULL_H",
+                                                displayName = "Top",
+                                                x = 30,
+                                                y = 153,
+                                                width = 244,
+                                                height = 50,
+                                                font = 3,
+                                                fontSize = FontSize.MEDIUM,
+                                                isChrono = true,
+                                                chronoHourX = 211,
+                                                chronoHourY = 170
+                                        ),
+                                        LayoutZone(
+                                                id = "3D_FULL_M",
+                                                displayName = "Middle",
+                                                x = 30,
+                                                y = 89,
+                                                width = 244,
+                                                height = 50,
+                                                font = 3,
+                                                fontSize = FontSize.MEDIUM,
+                                                isChrono = true,
+                                                chronoHourX = 211,
+                                                chronoHourY = 106
+                                        ),
+                                        LayoutZone(
+                                                id = "3D_FULL_L",
+                                                displayName = "Bottom",
+                                                x = 30,
+                                                y = 25,
+                                                width = 244,
+                                                height = 50,
+                                                font = 3,
+                                                fontSize = FontSize.MEDIUM,
+                                                isChrono = true,
+                                                chronoHourX = 211,
+                                                chronoHourY = 42
+                                        )
+                                ),
+                        maxFields = 3
+                )
         )
 
+        /* Disabled — partial-width layout
         registerWithoutPreview(
             LayoutTemplate(
                 id = "4D",
@@ -189,7 +224,9 @@ object LayoutTemplateRegistry {
                 maxFields = 4
             )
         )
+        */
 
+        /* Disabled — partial-width layout
         registerWithoutPreview(
             LayoutTemplate(
                 id = "5D",
@@ -239,7 +276,9 @@ object LayoutTemplateRegistry {
                 maxFields = 5
             )
         )
+        */
 
+        /* Disabled — partial-width layout
         registerWithoutPreview(
             LayoutTemplate(
                 id = "6D",
@@ -297,57 +336,100 @@ object LayoutTemplateRegistry {
                 maxFields = 6
             )
         )
+        */
+
+        /* Disabled — gauge layout, re-enable post-v1.0
+        registerWithoutPreview(
+            LayoutTemplate(
+                id = "2D_GAUGE",
+                name = "2 datafields",
+                zones = listOf(
+                    LayoutZone(
+                        id = "2D_GAUGE_TEXT",
+                        displayName = "Top (Text)",
+                        x = 30, y = 196, width = 244, height = 35,
+                        font = 2, fontSize = FontSize.MEDIUM
+                    ),
+                    LayoutZone(
+                        id = "2D_GAUGE_ARC",
+                        displayName = "Bottom (Gauge)",
+                        x = 30, y = 25, width = 244, height = 160,
+                        font = 3, fontSize = FontSize.LARGE
+                    )
+                ),
+                maxFields = 2
+            )
+        )
+        */
     }
 
     private fun registerAllTemplates() {
         // 1D - Single Large Data
         register(
-            LayoutTemplate(
-                id = "1D",
-                name = "Single Data",
-                zones = listOf(
-                    LayoutZone(
+                LayoutTemplate(
                         id = "1D",
-                        displayName = "Center",
-                        x = 59, y = 41, width = 187, height = 163,
-                        font = 5, fontSize = FontSize.LARGE,
-                        isChrono = true,
-                        chronoHourX = 239, chronoHourY = 121
-                    )
-                ),
-                maxFields = 1,
-                preview = R.drawable.layout_preview_1d
-            )
+                        name = "Single Data",
+                        zones =
+                                listOf(
+                                        LayoutZone(
+                                                id = "1D",
+                                                displayName = "Center",
+                                                x = 59,
+                                                y = 41,
+                                                width = 187,
+                                                height = 163,
+                                                font = 5,
+                                                fontSize = FontSize.LARGE,
+                                                isChrono = true,
+                                                chronoHourX = 239,
+                                                chronoHourY = 121
+                                        )
+                                ),
+                        maxFields = 1,
+                        preview = R.drawable.layout_preview_1d
+                )
         )
 
         // 2D - Two Data Fields
         register(
-            LayoutTemplate(
-                id = "2D",
-                name = "Two Data",
-                zones = listOf(
-                    LayoutZone(
-                        id = "2D_H",
-                        displayName = "Top",
-                        x = 30, y = 129, width = 244, height = 60,
-                        font = 4, fontSize = FontSize.LARGE,
-                        isChrono = true,
-                        chronoHourX = 203, chronoHourY = 154
-                    ),
-                    LayoutZone(
-                        id = "2D_L",
-                        displayName = "Bottom",
-                        x = 30, y = 25, width = 244, height = 60,
-                        font = 4, fontSize = FontSize.LARGE,
-                        isChrono = true,
-                        chronoHourX = 203, chronoHourY = 50
-                    )
-                ),
-                maxFields = 2,
-                preview = R.drawable.layout_preview_2d
-            )
+                LayoutTemplate(
+                        id = "2D",
+                        name = "Two Data",
+                        zones =
+                                listOf(
+                                        LayoutZone(
+                                                id = "2D_H",
+                                                displayName = "Top",
+                                                x = 30,
+                                                y = 129,
+                                                width = 244,
+                                                height = 60,
+                                                font = 4,
+                                                fontSize = FontSize.LARGE,
+                                                isChrono = true,
+                                                chronoHourX = 203,
+                                                chronoHourY = 154
+                                        ),
+                                        LayoutZone(
+                                                id = "2D_L",
+                                                displayName = "Bottom",
+                                                x = 30,
+                                                y = 25,
+                                                width = 244,
+                                                height = 60,
+                                                font = 4,
+                                                fontSize = FontSize.LARGE,
+                                                isChrono = true,
+                                                chronoHourX = 203,
+                                                chronoHourY = 50
+                                        )
+                                ),
+                        maxFields = 2,
+                        preview = R.drawable.layout_preview_2d
+                )
         )
 
+        /* Disabled — partial-width layout
         // 3D_TRIANGLE - Triangle Layout
         register(
             LayoutTemplate(
@@ -383,43 +465,61 @@ object LayoutTemplateRegistry {
                 preview = R.drawable.layout_preview_3d_triangle
             )
         )
+        */
 
         // 3D_FULL - Three Full Width (Default)
         register(
-            LayoutTemplate(
-                id = "3D_FULL",
-                name = "Three Rows",
-                zones = listOf(
-                    LayoutZone(
-                        id = "3D_FULL_H",
-                        displayName = "Top",
-                        x = 30, y = 153, width = 244, height = 50,
-                        font = 3, fontSize = FontSize.MEDIUM,
-                        isChrono = true,
-                        chronoHourX = 211, chronoHourY = 170
-                    ),
-                    LayoutZone(
-                        id = "3D_FULL_M",
-                        displayName = "Middle",
-                        x = 30, y = 89, width = 244, height = 50,
-                        font = 3, fontSize = FontSize.MEDIUM,
-                        isChrono = true,
-                        chronoHourX = 211, chronoHourY = 106
-                    ),
-                    LayoutZone(
-                        id = "3D_FULL_L",
-                        displayName = "Bottom",
-                        x = 30, y = 25, width = 244, height = 50,
-                        font = 3, fontSize = FontSize.MEDIUM,
-                        isChrono = true,
-                        chronoHourX = 211, chronoHourY = 42
-                    )
-                ),
-                maxFields = 3,
-                preview = R.drawable.layout_preview_3d_full
-            )
+                LayoutTemplate(
+                        id = "3D_FULL",
+                        name = "Three Rows",
+                        zones =
+                                listOf(
+                                        LayoutZone(
+                                                id = "3D_FULL_H",
+                                                displayName = "Top",
+                                                x = 30,
+                                                y = 153,
+                                                width = 244,
+                                                height = 50,
+                                                font = 3,
+                                                fontSize = FontSize.MEDIUM,
+                                                isChrono = true,
+                                                chronoHourX = 211,
+                                                chronoHourY = 170
+                                        ),
+                                        LayoutZone(
+                                                id = "3D_FULL_M",
+                                                displayName = "Middle",
+                                                x = 30,
+                                                y = 89,
+                                                width = 244,
+                                                height = 50,
+                                                font = 3,
+                                                fontSize = FontSize.MEDIUM,
+                                                isChrono = true,
+                                                chronoHourX = 211,
+                                                chronoHourY = 106
+                                        ),
+                                        LayoutZone(
+                                                id = "3D_FULL_L",
+                                                displayName = "Bottom",
+                                                x = 30,
+                                                y = 25,
+                                                width = 244,
+                                                height = 50,
+                                                font = 3,
+                                                fontSize = FontSize.MEDIUM,
+                                                isChrono = true,
+                                                chronoHourX = 211,
+                                                chronoHourY = 42
+                                        )
+                                ),
+                        maxFields = 3,
+                        preview = R.drawable.layout_preview_3d_full
+                )
         )
 
+        /* Disabled — partial-width layout
         // 4D - Four Data Fields (2 full + 2 half)
         register(
             LayoutTemplate(
@@ -463,7 +563,9 @@ object LayoutTemplateRegistry {
                 preview = R.drawable.layout_preview_4d
             )
         )
+        */
 
+        /* Disabled — partial-width layout
         // 5D - Five Data Fields
         register(
             LayoutTemplate(
@@ -515,7 +617,9 @@ object LayoutTemplateRegistry {
                 preview = R.drawable.layout_preview_5d
             )
         )
+        */
 
+        /* Disabled — partial-width layout
         // 6D - Six Half-Width Fields
         register(
             LayoutTemplate(
@@ -575,13 +679,38 @@ object LayoutTemplateRegistry {
                 preview = R.drawable.layout_preview_6d
             )
         )
+        */
+
+        /* Disabled — gauge layout, re-enable post-v1.0
+        register(
+            LayoutTemplate(
+                id = "2D_GAUGE",
+                name = "2 datafields",
+                zones = listOf(
+                    LayoutZone(
+                        id = "2D_GAUGE_TEXT",
+                        displayName = "Top (Text)",
+                        x = 30, y = 196, width = 244, height = 35,
+                        font = 2, fontSize = FontSize.MEDIUM
+                    ),
+                    LayoutZone(
+                        id = "2D_GAUGE_ARC",
+                        displayName = "Bottom (Gauge)",
+                        x = 30, y = 25, width = 244, height = 160,
+                        font = 3, fontSize = FontSize.LARGE
+                    )
+                ),
+                maxFields = 2
+            )
+        )
+        */
     }
 
     private fun register(template: LayoutTemplate) {
         templates[template.id] = template
         Log.d(
-            TAG,
-            "Registered template: ${template.id} (${template.name}) with ${template.maxFields} fields"
+                TAG,
+                "Registered template: ${template.id} (${template.name}) with ${template.maxFields} fields"
         )
     }
 
@@ -589,39 +718,40 @@ object LayoutTemplateRegistry {
         templates[template.id] = template
     }
 
-    /**
-     * Get template by ID, returns default if not found
-     */
+    /** Get template by ID, returns default if not found */
     fun getTemplate(id: String): LayoutTemplate {
         ensureInitialized()
-        return templates[id] ?: run {
-            Log.w(TAG, "Template '$id' not found, returning default")
-            getDefaultTemplate()
-        }
+        return templates[id]
+                ?: run {
+                    Log.w(TAG, "Template '$id' not found, returning default")
+                    getDefaultTemplate()
+                }
     }
 
-    /**
-     * Get the default template (3D_FULL)
-     */
+    /** Get the default template (3D_FULL) */
     fun getDefaultTemplate(): LayoutTemplate {
         ensureInitialized()
         return templates["3D_FULL"] ?: throw IllegalStateException("Default template not found")
     }
 
-    /**
-     * Get all available templates
-     */
+    /** Get all available templates */
     fun getAllTemplates(): List<LayoutTemplate> {
         ensureInitialized()
         return templates.values.toList().sortedBy { it.maxFields }
     }
 
-    /**
-     * Get templates sorted by number of fields
-     */
+    /** Get templates sorted by number of fields */
     fun getTemplatesByFieldCount(): Map<Int, List<LayoutTemplate>> {
         ensureInitialized()
         return templates.values.groupBy { it.maxFields }
     }
-}
 
+    /**
+     * Get the height of the zone with [zoneId] across all templates. Returns 0 if the zone is not
+     * found.
+     */
+    fun getZoneHeight(zoneId: String): Int {
+        ensureInitialized()
+        return templates.values.flatMap { it.zones }.find { it.id == zoneId }?.height ?: 0
+    }
+}

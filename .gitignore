@@ -54,3 +54,4 @@ reference/karoo-ext/**/build/
 
 /calibration/*
 /tools/preview/*
+gesture_log.txt

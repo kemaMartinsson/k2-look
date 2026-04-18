@@ -3,6 +3,7 @@ package com.kema.k2look.service
 import android.content.Context
 import android.util.Log
 import com.activelook.activelooksdk.DiscoveredGlasses
+import com.kema.k2look.data.ProfileRepository
 import com.kema.k2look.model.VisualizationType
 import com.kema.k2look.util.PreferencesManager
 import io.hammerhead.karooext.models.DataType
@@ -36,6 +37,7 @@ class KarooActiveLookBridge(context: Context) {
     private val activeLookService = ActiveLookService(context)
     private val layoutService = ActiveLookLayoutService(activeLookService)
     private val preferencesManager = PreferencesManager(context)
+    private val profileRepository = ProfileRepository(context)
 
     private val scope = CoroutineScope(Dispatchers.Main + Job())
     private var updateJob: Job? = null
@@ -67,9 +69,26 @@ class KarooActiveLookBridge(context: Context) {
     private var hasAutoSwitchedProfile = false // Track if we've auto-switched this ride
     private var lastKarooProfileName: String? = null // Track last seen Karoo profile
 
-    // Update throttling
+    // Update throttling — 2-second interval. Radar updates bypass this (see radarFlushImmediate).
     private var lastUpdateTime = 0L
-    private val updateIntervalMs = 1000L // 1 second
+    private val updateIntervalMs = 2000L // 2 seconds
+
+    // When false (display toggled off by user), flushToGlasses() is suppressed so
+    // outgoing layout writes don't immediately power the display back on.
+    private var displayOn = true
+
+    /** Notify the bridge that the display has been toggled on or off. */
+    fun setDisplayOn(on: Boolean) {
+        displayOn = on
+        Log.d(
+                TAG,
+                "Display power: ${if (on) "ON" else "OFF"} — updates ${if (on) "resumed" else "suppressed"}"
+        )
+    }
+
+    // True if the active profile has at least one radar field on any screen.
+    // Cached on setActiveProfile() so observeRadar() can gate the bypass cheaply.
+    private var activeProfileHasRadar = false
 
     // Reconnect tracking
     private var reconnectStartTime = 0L
@@ -97,6 +116,11 @@ class KarooActiveLookBridge(context: Context) {
     fun setActiveProfile(profile: com.kema.k2look.model.DataFieldProfile) {
         activeProfile = profile
         activeScreenId = profile.screens.firstOrNull()?.id
+        // Cache whether any screen has a radar field so observeRadar() can bypass the
+        // 2-second throttle without iterating the profile on every radar packet.
+        val radarIds = setOf(50, 51, 52)
+        activeProfileHasRadar =
+                profile.screens.any { s -> s.dataFields.any { it.dataField.id in radarIds } }
         Log.i(
                 TAG,
                 "📋 Active profile set: ${profile.name} (${profile.screens.size} screens), active screen: $activeScreenId"
@@ -350,6 +374,20 @@ class KarooActiveLookBridge(context: Context) {
      * discovered glasses
      */
     fun startActiveLookScan() {
+        // Guard: do not trigger a new scan if glasses are already connected or connecting.
+        // Scanning while connected causes a scan→disconnect→reconnect loop that leaves the
+        // GATT Commands Interface in a ghost state (battery alive, cbb/cbc dead).
+        val currentConnState = activeLookService.connectionState.value
+        if (currentConnState is ActiveLookService.ConnectionState.Connected ||
+                        currentConnState is ActiveLookService.ConnectionState.Connecting
+        ) {
+            Log.w(
+                    TAG,
+                    "⚠️ startActiveLookScan() called while already $currentConnState — ignoring to prevent ghost GATT state"
+            )
+            return
+        }
+
         // Cancel any previous scan jobs (including auto-connect jobs)
         Log.i(
                 TAG,
@@ -586,13 +624,13 @@ class KarooActiveLookBridge(context: Context) {
             avgHeartRate = formatStreamData(it, "bpm")
         }
         observe(karooDataService.hrZoneData) { hrZone = formatHRZoneData(it) }
-        observe(karooDataService.cadenceData) { cadence = formatStreamData(it, "rpm") }
-        observe(karooDataService.maxCadenceData) { maxCadence = formatStreamData(it, "rpm") }
-        observe(karooDataService.averageCadenceData) { avgCadence = formatStreamData(it, "rpm") }
-        observe(karooDataService.powerData) { power = formatStreamData(it, "w") }
-        observe(karooDataService.maxPowerData) { maxPower = formatStreamData(it, "w") }
-        observe(karooDataService.averagePowerData) { avgPower = formatStreamData(it, "w") }
-        observe(karooDataService.smoothed3sPowerData) { power3s = formatStreamData(it, "w") }
+        observe(karooDataService.cadenceData) { cadence = formatStreamDataInt(it, "rpm") }
+        observe(karooDataService.maxCadenceData) { maxCadence = formatStreamDataInt(it, "rpm") }
+        observe(karooDataService.averageCadenceData) { avgCadence = formatStreamDataInt(it, "rpm") }
+        observe(karooDataService.powerData) { power = formatStreamDataInt(it, "w") }
+        observe(karooDataService.maxPowerData) { maxPower = formatStreamDataInt(it, "w") }
+        observe(karooDataService.averagePowerData) { avgPower = formatStreamDataInt(it, "w") }
+        observe(karooDataService.smoothed3sPowerData) { power3s = formatStreamDataInt(it, "w") }
         observe(karooDataService.distanceData) { distance = formatStreamData(it, "km") }
         observe(karooDataService.timeData) { time = formatTimeData(it) }
         observe(karooDataService.vamData) { vam = formatStreamData(it, "m/h") }
@@ -624,6 +662,10 @@ class KarooActiveLookBridge(context: Context) {
                         val closest = ranges.minOrNull()
                         currentData.radarClosestRange =
                                 if (closest != null) "${formatValue(closest)} m" else "--"
+                        // Bypass the 2s throttle for radar — it's a safety metric.
+                        // Only do this when the profile actually shows radar to avoid
+                        // flooding the BLE queue on profiles that don't use radar.
+                        if (activeProfileHasRadar) currentData.radarFlushImmediate = true
                         Log.d(
                                 TAG,
                                 "Radar: threat=$threat, targets=${ranges.size}, closest=${currentData.radarClosestRange}"
@@ -662,11 +704,11 @@ class KarooActiveLookBridge(context: Context) {
     // ── Power additions ────────────────────────────────────────────────────
     private fun observePowerMetrics() {
         observe(karooDataService.powerZoneData) { powerZone = formatZoneData(it, 7) }
-        observe(karooDataService.smoothed5sPowerData) { power5s = formatStreamData(it, "w") }
-        observe(karooDataService.smoothed10sPowerData) { power10s = formatStreamData(it, "w") }
-        observe(karooDataService.smoothed30sPowerData) { power30s = formatStreamData(it, "w") }
+        observe(karooDataService.smoothed5sPowerData) { power5s = formatStreamDataInt(it, "w") }
+        observe(karooDataService.smoothed10sPowerData) { power10s = formatStreamDataInt(it, "w") }
+        observe(karooDataService.smoothed30sPowerData) { power30s = formatStreamDataInt(it, "w") }
         observe(karooDataService.normalizedPowerData) {
-            normalizedPower = formatStreamData(it, "w")
+            normalizedPower = formatStreamDataInt(it, "w")
         }
         observe(karooDataService.percentFtpData) { percentFtp = formatPercent(it) }
         observe(karooDataService.intensityFactorData) { intensityFactor = formatStreamData(it, "") }
@@ -676,10 +718,10 @@ class KarooActiveLookBridge(context: Context) {
 
     // ── Energy ────────────────────────────────────────────────────────────
     private fun observeEnergyMetrics() {
-        observe(karooDataService.energyOutputData) { energyOutput = formatStreamData(it, "kJ") }
-        observe(karooDataService.caloriesData) { calories = formatStreamData(it, "kcal") }
+        observe(karooDataService.energyOutputData) { energyOutput = formatStreamDataInt(it, "kJ") }
+        observe(karooDataService.caloriesData) { calories = formatStreamDataInt(it, "kcal") }
         observe(karooDataService.caloriesPerHourData) {
-            caloriesPerHour = formatStreamData(it, "kcal/h")
+            caloriesPerHour = formatStreamDataInt(it, "kcal/h")
         }
     }
 
@@ -780,6 +822,9 @@ class KarooActiveLookBridge(context: Context) {
                 Log.d(TAG, "ActiveLook connection state: $state")
                 when (state) {
                     is ActiveLookService.ConnectionState.Connected -> {
+                        // Stop reconnect loop now that we're connected
+                        stopContinuousReconnect()
+
                         // Save the connected glasses address for reconnect attempts
                         lastConnectedGlassesAddress = state.glasses.address
                         Log.d(
@@ -790,6 +835,21 @@ class KarooActiveLookBridge(context: Context) {
                         // Refresh config cache so fast-path cfgSet works immediately
                         scope.launch { layoutService.refreshConfigCache() }
 
+                        // Re-upload active profile on (re)connect so glasses have layout data
+                        activeProfile?.let { profile ->
+                            scope.launch {
+                                val success = layoutService.saveAndActivateProfile(profile)
+                                if (success) {
+                                    Log.i(
+                                            TAG,
+                                            "✅ Profile '${profile.name}' re-uploaded on reconnect"
+                                    )
+                                } else {
+                                    Log.w(TAG, "⚠️ Failed to re-upload profile on reconnect")
+                                }
+                            }
+                        }
+
                         updateBridgeState()
                         // If Karoo is also connected and riding, start streaming
                         if (karooDataService.isConnected) {
@@ -797,12 +857,13 @@ class KarooActiveLookBridge(context: Context) {
                         }
                     }
                     is ActiveLookService.ConnectionState.Disconnected -> {
-                        // If we're in an active ride and glasses disconnected, trigger reconnect
-                        if (isInActiveRide && lastConnectedGlassesAddress != null) {
+                        // Auto-reconnect if we have a known glasses address
+                        if (lastConnectedGlassesAddress != null) {
                             Log.w(
                                     TAG,
-                                    "Glasses disconnected during active ride - will attempt reconnect"
+                                    "Glasses disconnected - will attempt reconnect to $lastConnectedGlassesAddress"
                             )
+                            startContinuousReconnect()
                         }
                         updateBridgeState()
                     }
@@ -885,6 +946,7 @@ class KarooActiveLookBridge(context: Context) {
 
     /** Flush accumulated data to ActiveLook glasses (hold/flush pattern) */
     private fun flushToGlasses() {
+        if (!displayOn) return // display toggled off — don't re-light it with data writes
         if (!currentData.isDirty) {
             val now = System.currentTimeMillis()
             if (now - lastNoDataLogTimeMs >= noDataLogIntervalMs) {
@@ -895,21 +957,32 @@ class KarooActiveLookBridge(context: Context) {
         }
 
         val currentTime = System.currentTimeMillis()
-        if (currentTime - lastUpdateTime < updateIntervalMs) {
-            Log.v(TAG, "Throttling update")
+        val radarBypass = currentData.radarFlushImmediate
+        if (!radarBypass && currentTime - lastUpdateTime < updateIntervalMs) {
+            // Log.v(TAG, "Throttling update")
             return
         }
 
         try {
-            val profile = activeProfile
+            var profile = activeProfile
             if (profile == null || profile.screens.isEmpty()) {
-                Log.v(TAG, "No active profile — skipping flush")
-                return
+                // No profile set yet (e.g. Layout Builder tab not visited) — load latest from
+                // storage
+                profile = profileRepository.loadProfiles().firstOrNull()
+                if (profile != null && profile.screens.isNotEmpty()) {
+                    Log.i(TAG, "Auto-loaded profile '${profile.name}' from storage")
+                    setActiveProfile(profile)
+                } else {
+                    return
+                }
             }
             flushWithProfile(profile)
             currentData.isDirty = false
-            lastUpdateTime = currentTime
-            Log.d(TAG, "✓ Data flushed to glasses")
+            currentData.radarFlushImmediate = false
+            // Only advance the 2-second throttle clock on a regular flush, not a radar bypass,
+            // so the next normal refresh still fires on schedule.
+            if (!radarBypass) lastUpdateTime = currentTime
+            // Log.d(TAG, "✓ Data flushed to glasses")
         } catch (e: Exception) {
             Log.e(TAG, "Error flushing data to glasses: ${e.message}", e)
         }
@@ -923,16 +996,14 @@ class KarooActiveLookBridge(context: Context) {
                                 ?: profile.screens.first()
                 else profile.screens.first()
 
-        Log.v(
-                TAG,
-                "Flushing: profile=${profile.name}, screen=${screen.id}, fields=${screen.dataFields.size}"
-        )
+        // Log.v(TAG, "Flushing: profile=${profile.name}, screen=${screen.id},
+        // fields=${screen.dataFields.size}")
 
         if (layoutService.isProfileSaved(profile.id)) {
             flushWithEfficientMode(screen)
         } else {
             // Profile not yet uploaded to glasses (e.g. still in cfgWrite) — skip this frame.
-            Log.d(TAG, "Profile '${profile.name}' not yet saved on glasses, skipping frame")
+            // Log.d(TAG, "Profile '${profile.name}' not yet saved on glasses, skipping frame")
         }
     }
 
@@ -1253,13 +1324,10 @@ class KarooActiveLookBridge(context: Context) {
             return
         }
 
-        // Calculate percentage
-        val percentage = bar.calculatePercentage(numericValue)
+        // Render bar at the field's actual template zone position
+        scope.launch { layoutService.displayBarAtZone(bar, numericValue, field.zoneId) }
 
-        // Update bar on glasses
-        scope.launch { activeLookService.displayProgressBar(bar, percentage) }
-
-        Log.d(TAG, "Bar ${bar.id}: ${field.dataField.name} = $numericValue ($percentage%)")
+        Log.d(TAG, "Bar ${bar.id}: ${field.dataField.name} = $numericValue")
     }
 
     /** Update zoned progress bar with current metric value */
@@ -1273,8 +1341,12 @@ class KarooActiveLookBridge(context: Context) {
             return
         }
 
-        // Update zoned bar on glasses (uses actual value, not percentage)
-        scope.launch { activeLookService.displayZonedBar(zonedBar, numericValue) }
+        // Render zone circles at the field's actual template zone position.
+        // Respect showIcon so toggling the icon off also removes it from zone circles.
+        val iconId = if (field.showIcon) field.dataField.icon28 else null
+        scope.launch {
+            layoutService.displayZoneCircles(zonedBar, numericValue, field.zoneId, iconId)
+        }
 
         val currentZone = zonedBar.findZone(numericValue)
         Log.d(

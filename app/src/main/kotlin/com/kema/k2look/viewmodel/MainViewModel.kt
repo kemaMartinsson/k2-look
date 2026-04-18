@@ -105,6 +105,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     com.kema.k2look.model.GestureAction.CYCLE_SCREENS,
             val touchAction: com.kema.k2look.model.TouchAction =
                     com.kema.k2look.model.TouchAction.SHOW_HIDE_DISPLAY,
+            val gestureEnabled: Boolean = true,
+            val touchEnabled: Boolean = true,
             // Forget glasses warning dialog
             val showForgetWarningDialog: Boolean = false,
     )
@@ -252,21 +254,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun observeGestureEvents() {
         viewModelScope.launch {
             activeLookService.gestureEvents.collect { count ->
-                Log.i(TAG, "🖐️ Gesture event #$count received")
                 _uiState.value = _uiState.value.copy(gestureEventCount = count)
+                if (count == 0) return@collect // skip initial StateFlow value
+                Log.i(TAG, "🖐️ Gesture event #$count received")
 
-                // Execute the configured gesture action
-                executeGestureAction(_uiState.value.gestureAction)
+                if (_uiState.value.gestureEnabled) {
+                    executeGestureAction(_uiState.value.gestureAction)
+                }
             }
         }
 
         viewModelScope.launch {
             activeLookService.touchEvents.collect { count ->
-                Log.i(TAG, "👆 Touch event #$count received")
                 _uiState.value = _uiState.value.copy(touchEventCount = count)
+                if (count == 0) return@collect // skip initial StateFlow value
+                Log.i(TAG, "👆 Touch event #$count received")
 
-                // Execute the configured touch action
-                executeTouchAction(_uiState.value.touchAction)
+                if (_uiState.value.touchEnabled) {
+                    executeTouchAction(_uiState.value.touchAction)
+                }
             }
         }
     }
@@ -285,11 +291,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _uiState.value = _uiState.value.copy(touchAction = action)
             }
         }
+        viewModelScope.launch {
+            gesturePreferences.gestureEnabled.collect { enabled ->
+                _uiState.value = _uiState.value.copy(gestureEnabled = enabled)
+                bridge.getActiveLookService().enableGestureSensor(enabled)
+            }
+        }
+        viewModelScope.launch {
+            gesturePreferences.touchEnabled.collect { enabled ->
+                _uiState.value = _uiState.value.copy(touchEnabled = enabled)
+            }
+        }
     }
 
     /** Execute the configured gesture action */
     private fun executeGestureAction(action: com.kema.k2look.model.GestureAction) {
-        Log.i(TAG, "🖐️ Executing gesture action: ${action.displayName}")
+        Log.i(TAG, "👋 Executing gesture action: ${action.displayName}")
 
         when (action) {
             com.kema.k2look.model.GestureAction.CYCLE_SCREENS -> {
@@ -383,6 +400,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                 Log.i(TAG, "✓ Toggling display ${if (displayPowerOn) "ON" else "OFF"}")
 
+                // Tell the bridge to suppress/resume data flushes so display writes
+                // don't immediately re-light the screen after the user turned it off.
+                bridge.setDisplayOn(displayPowerOn)
+
                 // Send display power command to glasses (command 0x00)
                 val activeLookService = bridge.getActiveLookService()
                 activeLookService.setDisplayPower(displayPowerOn)
@@ -408,6 +429,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setTouchAction(action: com.kema.k2look.model.TouchAction) {
         Log.i(TAG, "Setting touch action to: ${action.displayName}")
         gesturePreferences.setTouchAction(action)
+    }
+
+    /** Enable or disable gesture sensor */
+    fun setGestureEnabled(enabled: Boolean) {
+        Log.i(TAG, "Setting gesture enabled: $enabled")
+        gesturePreferences.setGestureEnabled(enabled)
+    }
+
+    /** Enable or disable touch button actions */
+    fun setTouchEnabled(enabled: Boolean) {
+        Log.i(TAG, "Setting touch enabled: $enabled")
+        gesturePreferences.setTouchEnabled(enabled)
     }
 
     /** Update reconnect timeout */
@@ -571,6 +604,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             activeLookService.connectionState.collect { state ->
                 Log.d(TAG, "ActiveLook connection state changed: $state")
                 _uiState.value = _uiState.value.copy(activeLookState = state)
+                // Re-apply gesture preference on every (re)connect.
+                // onConnected always calls enableGestureSensor(true); correct it here if the
+                // user has gesture disabled so the preference is respected after reconnects.
+                if (state is ActiveLookService.ConnectionState.Connected) {
+                    val gestureEnabled = gesturePreferences.gestureEnabled.value
+                    Log.d(
+                            TAG,
+                            "Re-applying gesture preference on connect: gestureEnabled=$gestureEnabled"
+                    )
+                    activeLookService.enableGestureSensor(gestureEnabled)
+                }
             }
         }
 
@@ -677,7 +721,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // Observe cadence data
         viewModelScope.launch {
             karooDataService.cadenceData.collect { streamState ->
-                val cadenceStr = formatStreamData(streamState, "rpm")
+                val cadenceStr = formatStreamDataInt(streamState, "rpm")
                 _uiState.value = _uiState.value.copy(cadence = cadenceStr)
             }
         }
@@ -685,7 +729,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // Observe average cadence data
         viewModelScope.launch {
             karooDataService.averageCadenceData.collect { streamState ->
-                val avgCadenceStr = formatStreamData(streamState, "rpm")
+                val avgCadenceStr = formatStreamDataInt(streamState, "rpm")
                 _uiState.value = _uiState.value.copy(avgCadence = avgCadenceStr)
             }
         }
@@ -693,7 +737,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // Observe max cadence data
         viewModelScope.launch {
             karooDataService.maxCadenceData.collect { streamState ->
-                val maxCadenceStr = formatStreamData(streamState, "rpm")
+                val maxCadenceStr = formatStreamDataInt(streamState, "rpm")
                 _uiState.value = _uiState.value.copy(maxCadence = maxCadenceStr)
             }
         }
@@ -701,7 +745,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // Observe power data
         viewModelScope.launch {
             karooDataService.powerData.collect { streamState ->
-                val powerStr = formatStreamData(streamState, "w")
+                val powerStr = formatStreamDataInt(streamState, "w")
                 _uiState.value = _uiState.value.copy(power = powerStr)
             }
         }
@@ -709,7 +753,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // Observe average power data
         viewModelScope.launch {
             karooDataService.averagePowerData.collect { streamState ->
-                val avgPowerStr = formatStreamData(streamState, "w")
+                val avgPowerStr = formatStreamDataInt(streamState, "w")
                 _uiState.value = _uiState.value.copy(avgPower = avgPowerStr)
             }
         }
@@ -717,7 +761,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // Observe max power data
         viewModelScope.launch {
             karooDataService.maxPowerData.collect { streamState ->
-                val maxPowerStr = formatStreamData(streamState, "w")
+                val maxPowerStr = formatStreamDataInt(streamState, "w")
                 _uiState.value = _uiState.value.copy(maxPower = maxPowerStr)
             }
         }
@@ -756,7 +800,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // Observe 3s power data
         viewModelScope.launch {
             karooDataService.smoothed3sPowerData.collect { streamState ->
-                val power3sStr = formatStreamData(streamState, "w")
+                val power3sStr = formatStreamDataInt(streamState, "w")
                 _uiState.value = _uiState.value.copy(power3s = power3sStr)
             }
         }
@@ -764,7 +808,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // Observe 10s power data
         viewModelScope.launch {
             karooDataService.smoothed10sPowerData.collect { streamState ->
-                val power10sStr = formatStreamData(streamState, "w")
+                val power10sStr = formatStreamDataInt(streamState, "w")
                 _uiState.value = _uiState.value.copy(power10s = power10sStr)
             }
         }
@@ -772,7 +816,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // Observe 30s power data
         viewModelScope.launch {
             karooDataService.smoothed30sPowerData.collect { streamState ->
-                val power30sStr = formatStreamData(streamState, "w")
+                val power30sStr = formatStreamDataInt(streamState, "w")
                 _uiState.value = _uiState.value.copy(power30s = power30sStr)
             }
         }
@@ -839,6 +883,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             value >= 100 -> "%.0f".format(value)
             value >= 10 -> "%.1f".format(value)
             else -> "%.2f".format(value)
+        }
+    }
+
+    /** Format an integer-only metric (cadence, power, calories, energy) — no decimals. */
+    private fun formatStreamDataInt(streamState: StreamState?, unit: String): String {
+        return when (streamState) {
+            is StreamState.Streaming ->
+                    streamState.dataPoint.singleValue?.let { "%.0f $unit".format(it) } ?: "-- $unit"
+            is StreamState.Searching -> "Searching..."
+            is StreamState.Idle -> "-- $unit"
+            is StreamState.NotAvailable -> "N/A"
+            null -> "-- $unit"
         }
     }
 

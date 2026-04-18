@@ -1,5 +1,6 @@
 package com.kema.k2look.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -24,6 +25,7 @@ import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,20 +33,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kema.k2look.model.LayoutDataField
 import com.kema.k2look.viewmodel.LayoutBuilderViewModel
 
-/**
- * Main DataField Builder tab
- */
+/** Main DataField Builder tab */
 @Composable
 fun DataFieldBuilderTab(
-    modifier: Modifier = Modifier,
-    mainViewModel: com.kema.k2look.viewmodel.MainViewModel? = null,
-    viewModel: LayoutBuilderViewModel = viewModel()
+        modifier: Modifier = Modifier,
+        mainViewModel: com.kema.k2look.viewmodel.MainViewModel? = null,
+        viewModel: LayoutBuilderViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showFieldConfig by remember { mutableStateOf(false) }
@@ -77,27 +78,21 @@ fun DataFieldBuilderTab(
     // Show profile management screen if requested
     if (uiState.showProfileManagement) {
         ProfileManagementScreen(
-            profiles = uiState.profiles,
-            activeRideProfile = uiState.activeRideProfile,
-            isRiding = uiState.isRiding,
-            karooSyncEnabled = uiState.karooSyncEnabled,
-            onBack = { viewModel.setShowProfileManagement(false) },
-            onCreateProfile = { name ->
-                viewModel.createProfile(name)
-            },
-            onDeleteProfile = { profileId ->
-                viewModel.deleteProfile(profileId)
-            },
-            onDuplicateProfile = { profileId, newName ->
-                viewModel.duplicateProfile(profileId, newName)
-            },
-            onToggleKarooSync = { enabled ->
-                viewModel.setKarooSyncEnabled(enabled)
-            },
-            onImportFromKaroo = { rideProfile ->
-                viewModel.importFromKaroo(rideProfile)
-                viewModel.setShowProfileManagement(false)
-            }
+                profiles = uiState.profiles,
+                activeRideProfile = uiState.activeRideProfile,
+                isRiding = uiState.isRiding,
+                karooSyncEnabled = uiState.karooSyncEnabled,
+                onBack = { viewModel.setShowProfileManagement(false) },
+                onCreateProfile = { name -> viewModel.createProfile(name) },
+                onDeleteProfile = { profileId -> viewModel.deleteProfile(profileId) },
+                onDuplicateProfile = { profileId, newName ->
+                    viewModel.duplicateProfile(profileId, newName)
+                },
+                onToggleKarooSync = { enabled -> viewModel.setKarooSyncEnabled(enabled) },
+                onImportFromKaroo = { rideProfile ->
+                    viewModel.importFromKaroo(rideProfile)
+                    viewModel.setShowProfileManagement(false)
+                }
         )
         return
     }
@@ -105,56 +100,54 @@ fun DataFieldBuilderTab(
     // Show field configuration dialog if requested
     if (showFieldConfig && editingField != null) {
         // Find which screen this field belongs to
-        val fieldScreen = uiState.activeProfile?.screens?.find { screen ->
-            screen.dataFields.any { it.zoneId == editingField!!.zoneId }
-        }
+        val fieldScreen =
+                uiState.activeProfile?.screens?.find { screen ->
+                    screen.dataFields.any { it.zoneId == editingField!!.zoneId }
+                }
 
         FieldConfigurationDialog(
-            field = editingField!!,
-            onDismiss = {
-                showFieldConfig = false
-                editingField = null
-            },
-            onSave = { updatedField ->
-                // Use the screen where the field actually exists, not the currently selected tab!
-                val screenIdToUpdate = fieldScreen?.id ?: uiState.selectedScreen
-                android.util.Log.i(
-                    "DataFieldBuilder",
-                    "Saving field to screen $screenIdToUpdate (currently viewing ${uiState.selectedScreen})"
-                )
-                viewModel.updateField(screenIdToUpdate, updatedField)
-                showFieldConfig = false
-                editingField = null
-            }
+                field = editingField!!,
+                onDismiss = {
+                    showFieldConfig = false
+                    editingField = null
+                },
+                onSave = { updatedField ->
+                    // Use the screen where the field actually exists, not the currently selected
+                    // tab!
+                    val screenIdToUpdate = fieldScreen?.id ?: uiState.selectedScreen
+                    android.util.Log.i(
+                            "DataFieldBuilder",
+                            "Saving field to screen $screenIdToUpdate (currently viewing ${uiState.selectedScreen})"
+                    )
+                    viewModel.updateField(screenIdToUpdate, updatedField)
+                    showFieldConfig = false
+                    editingField = null
+                }
         )
     }
 
     // Main builder UI
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp) // Further reduced from 8.dp
+            modifier =
+                    modifier.fillMaxSize()
+                            .background(MaterialTheme.colorScheme.background)
+                            .verticalScroll(rememberScrollState())
+                            .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp) // Further reduced from 8.dp
     ) {
         // Profile Selector
         ProfileSelectorCard(
-            profiles = uiState.profiles,
-            activeProfile = uiState.activeProfile,
-            onProfileSelected = { profileId ->
-                viewModel.selectProfile(profileId)
-            },
-            onManageProfiles = {
-                viewModel.setShowProfileManagement(true)
-            }
+                profiles = uiState.profiles,
+                activeProfile = uiState.activeProfile,
+                onProfileSelected = { profileId -> viewModel.selectProfile(profileId) },
+                onManageProfiles = { viewModel.setShowProfileManagement(true) }
         )
 
         // Loading indicator
         if (uiState.isLoading) {
             Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 CircularProgressIndicator()
                 Spacer(modifier = Modifier.padding(vertical = 8.dp))
@@ -170,62 +163,63 @@ fun DataFieldBuilderTab(
             if (profile.screens.isNotEmpty()) {
                 // Calculate validSelectedScreen once at the top to avoid race conditions
                 android.util.Log.d(
-                    "DataFieldBuilder",
-                    "Recomposing: screens=${profile.screens.map { it.id }}, selectedScreen=${uiState.selectedScreen}"
+                        "DataFieldBuilder",
+                        "Recomposing: screens=${profile.screens.map { it.id }}, selectedScreen=${uiState.selectedScreen}"
                 )
 
                 val validSelectedScreen =
-                    if (profile.screens.any { it.id == uiState.selectedScreen }) {
-                        android.util.Log.d(
-                            "DataFieldBuilder",
-                            "Selected screen ${uiState.selectedScreen} exists"
-                        )
-                        uiState.selectedScreen
-                    } else {
-                        val fallback = profile.screens.firstOrNull()?.id ?: 1
-                        android.util.Log.w(
-                            "DataFieldBuilder",
-                            "Selected screen ${uiState.selectedScreen} NOT FOUND, falling back to $fallback"
-                        )
-                        fallback
-                    }
+                        if (profile.screens.any { it.id == uiState.selectedScreen }) {
+                            android.util.Log.d(
+                                    "DataFieldBuilder",
+                                    "Selected screen ${uiState.selectedScreen} exists"
+                            )
+                            uiState.selectedScreen
+                        } else {
+                            val fallback = profile.screens.firstOrNull()?.id ?: 1
+                            android.util.Log.w(
+                                    "DataFieldBuilder",
+                                    "Selected screen ${uiState.selectedScreen} NOT FOUND, falling back to $fallback"
+                            )
+                            fallback
+                        }
 
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Capture tab count and selected index together to ensure consistency
                     val tabCount = profile.screens.size
                     val rawIndex = profile.screens.indexOfFirst { it.id == validSelectedScreen }
-                    val safeIndex = when {
-                        rawIndex < 0 -> 0
-                        rawIndex >= tabCount -> tabCount - 1
-                        else -> rawIndex
-                    }.coerceIn(0, maxOf(0, tabCount - 1))
+                    val safeIndex =
+                            when {
+                                rawIndex < 0 -> 0
+                                rawIndex >= tabCount -> tabCount - 1
+                                else -> rawIndex
+                            }.coerceIn(0, maxOf(0, tabCount - 1))
 
                     android.util.Log.d(
-                        "DataFieldBuilder",
-                        "rawIndex=$rawIndex, safeIndex=$safeIndex, tabCount=$tabCount"
+                            "DataFieldBuilder",
+                            "rawIndex=$rawIndex, safeIndex=$safeIndex, tabCount=$tabCount"
                     )
 
                     if (tabCount > 0) {
                         // Use key to force recreate ScrollableTabRow when screen count changes
                         androidx.compose.runtime.key(tabCount) {
                             ScrollableTabRow(
-                                selectedTabIndex = safeIndex,
-                                modifier = Modifier.weight(1f)
+                                    selectedTabIndex = safeIndex,
+                                    modifier = Modifier.weight(1f)
                             ) {
                                 profile.screens.forEach { screen ->
                                     Tab(
-                                        selected = screen.id == validSelectedScreen,
-                                        onClick = { viewModel.selectScreen(screen.id) },
-                                        text = {
-                                            Text(
-                                                text = "Screen ${screen.id}",
-                                                style = MaterialTheme.typography.bodyMedium
-                                            )
-                                        }
+                                            selected = screen.id == validSelectedScreen,
+                                            onClick = { viewModel.selectScreen(screen.id) },
+                                            text = {
+                                                Text(
+                                                        text = "Screen ${screen.id}",
+                                                        style = MaterialTheme.typography.bodyMedium
+                                                )
+                                            }
                                     )
                                 }
                             }
@@ -233,25 +227,21 @@ fun DataFieldBuilderTab(
                     }
 
                     // Add screen button
-                    IconButton(
-                        onClick = { viewModel.addScreen() }
-                    ) {
+                    IconButton(onClick = { viewModel.addScreen() }) {
                         Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Add Screen",
-                            tint = MaterialTheme.colorScheme.primary
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Add Screen",
+                                tint = MaterialTheme.colorScheme.primary
                         )
                     }
 
                     // Remove screen button (only show if more than 1 screen)
                     if (profile.screens.size > 1) {
-                        IconButton(
-                            onClick = { viewModel.removeScreen(validSelectedScreen) }
-                        ) {
+                        IconButton(onClick = { viewModel.removeScreen(validSelectedScreen) }) {
                             Icon(
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = "Remove Screen",
-                                tint = MaterialTheme.colorScheme.error
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = "Remove Screen",
+                                    tint = MaterialTheme.colorScheme.error
                             )
                         }
                     }
@@ -262,42 +252,42 @@ fun DataFieldBuilderTab(
                 val currentScreen = profile.screens.find { it.id == validSelectedScreen }
                 if (currentScreen != null) {
                     ZoneBasedScreenEditor(
-                        screen = currentScreen,
-                        onTemplateChange = { newTemplateId ->
-                            viewModel.changeScreenTemplate(validSelectedScreen, newTemplateId)
-                        },
-                        onFieldAdd = { zoneId, dataField ->
-                            // Add the field to the zone
-                            viewModel.assignMetricToZone(validSelectedScreen, zoneId, dataField)
-                            // Mark that we just added a field so LaunchedEffect can open config dialog
-                            justAddedZone = Pair(validSelectedScreen, zoneId)
-                        },
-                        onFieldEdit = { field ->
-                            editingField = field
-                            showFieldConfig = true
-                        },
-                        onFieldRemove = { zoneId ->
-                            viewModel.removeMetricFromZone(validSelectedScreen, zoneId)
-                        }
+                            screen = currentScreen,
+                            onTemplateChange = { newTemplateId ->
+                                viewModel.changeScreenTemplate(validSelectedScreen, newTemplateId)
+                            },
+                            onFieldAdd = { zoneId, dataField ->
+                                // Add the field to the zone
+                                viewModel.assignMetricToZone(validSelectedScreen, zoneId, dataField)
+                                // Mark that we just added a field so LaunchedEffect can open config
+                                // dialog
+                                justAddedZone = Pair(validSelectedScreen, zoneId)
+                            },
+                            onFieldEdit = { field ->
+                                editingField = field
+                                showFieldConfig = true
+                            },
+                            onFieldRemove = { zoneId ->
+                                viewModel.removeMetricFromZone(validSelectedScreen, zoneId)
+                            }
                     )
                 } else {
                     Text(
-                        text = "Screen not found",
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.error
+                            text = "Screen not found",
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.error
                     )
                 }
             }
 
             Spacer(modifier = Modifier.padding(vertical = 16.dp))
 
-
             // Action buttons
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // Preview button - Commented out, moved to future updates
                 // See docs/Future-Updates.md for implementation plan
@@ -311,12 +301,13 @@ fun DataFieldBuilderTab(
                 }
                 */
                 Button(
-                    onClick = { viewModel.applyProfileToGlasses() },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = uiState.isGlassesConnected && uiState.activeProfile != null
+                        onClick = { viewModel.applyProfileToGlasses() },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = uiState.isGlassesConnected && uiState.activeProfile != null
                 ) {
                     Text(
-                        if (uiState.isGlassesConnected) "Send to Glasses" else "Send to Glasses (not connected)"
+                            if (uiState.isGlassesConnected) "Send to Glasses"
+                            else "Send to Glasses (not connected)"
                     )
                 }
             }
@@ -325,32 +316,18 @@ fun DataFieldBuilderTab(
         // Error message
         uiState.error?.let { error ->
             Snackbar(
-                modifier = Modifier.padding(8.dp),
-                action = {
-                    Button(onClick = { viewModel.clearError() }) {
-                        Text("Dismiss")
-                    }
-                }
-            ) {
-                Text(error)
-            }
+                    modifier = Modifier.padding(8.dp),
+                    action = { Button(onClick = { viewModel.clearError() }) { Text("Dismiss") } }
+            ) { Text(error) }
         }
 
-        // Success message (e.g. after Build & Send)
+        // Success message (e.g. after Build & Send) — shown as auto-dismissing Toast
+        val context = LocalContext.current
         uiState.successMessage?.let { msg ->
-            Snackbar(
-                modifier = Modifier.padding(8.dp),
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                action = {
-                    Button(onClick = { viewModel.clearSuccessMessage() }) {
-                        Text("OK")
-                    }
-                }
-            ) {
-                Text(msg)
+            LaunchedEffect(msg) {
+                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                viewModel.clearSuccessMessage()
             }
         }
     }
 }
-

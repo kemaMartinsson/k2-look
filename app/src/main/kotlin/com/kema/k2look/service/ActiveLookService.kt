@@ -58,6 +58,11 @@ class ActiveLookService(private val context: Context) {
     private val _gestureEvents = MutableStateFlow(0) // Counter for gesture events
     val gestureEvents: StateFlow<Int> = _gestureEvents.asStateFlow()
 
+    // Cooldown: ignore CBB notifications for 500ms after gesture(true) is called to avoid
+    // the spurious event the firmware fires immediately after arming the sensor.
+    @Volatile private var gestureArmTime = 0L
+    private val GESTURE_ARM_COOLDOWN_MS = 500L
+
     private val _touchEvents = MutableStateFlow(0) // Counter for touch events
     val touchEvents: StateFlow<Int> = _touchEvents.asStateFlow()
 
@@ -705,24 +710,57 @@ class ActiveLookService(private val context: Context) {
     /** Setup listeners for gesture and touch events from glasses */
     private fun setupGestureAndTouchListeners(glasses: Glasses) {
         try {
-            Log.i(TAG, "Setting up gesture and touch event listeners...")
+            Log.i(
+                    TAG,
+                    "Setting up gesture and touch event listeners... glasses=${glasses.javaClass.simpleName}@${Integer.toHexString(System.identityHashCode(glasses))}"
+            )
 
-            glasses.subscribeToSensorInterfaceNotifications {
-                // This callback is triggered for both gesture AND touch events
-                handleSensorEvent()
+            // Read and log current firmware settings to verify gestureEnable / alsEnable state
+            glasses.settings { s ->
+                Log.i(
+                        TAG,
+                        "Glasses settings at connect: gestureEnable=${s.isGestureEnable} alsEnable=${s.isAlsEnable} luma=${s.luma} x=${s.globalXShift} y=${s.globalYShift}"
+                )
             }
 
-            Log.i(TAG, "✓ Gesture/Touch event listeners enabled")
+            glasses.subscribeToSensorInterfaceNotifications {
+                // Gesture characteristic (UUID ...CBB): hand motion near glasses.
+                val now = System.currentTimeMillis()
+                if (now - gestureArmTime < GESTURE_ARM_COOLDOWN_MS) {
+                    // Spurious event fired immediately after arming — discard.
+                    Log.d(
+                            TAG,
+                            "Gesture event suppressed (arm cooldown ${now - gestureArmTime}ms < ${GESTURE_ARM_COOLDOWN_MS}ms)"
+                    )
+                    return@subscribeToSensorInterfaceNotifications
+                }
+                _gestureEvents.value += 1
+                Log.d(TAG, "Gesture event. Total: ${_gestureEvents.value}")
+                // Re-arm gesture detection dispatched off the GATT callback thread.
+                // Even though gesture(true) persists in firmware, empirical testing shows
+                // gestures stop being detected after the first event without explicit re-arm.
+                // Dispatching to IO avoids GATT operation overlap on the callback thread.
+                serviceScope.launch(Dispatchers.IO) {
+                    gestureArmTime = System.currentTimeMillis() // re-arm resets the cooldown window
+                    try {
+                        glasses.gesture(true)
+                    } catch (_: Exception) {}
+                }
+            }
+
+            glasses.subscribeToUserInterfaceNotifications {
+                // Touch characteristic (UUID ...CBC): capacitive button press
+                _touchEvents.value += 1
+                Log.d(TAG, "Touch event. Total: ${_touchEvents.value}")
+            }
+
+            Log.i(
+                    TAG,
+                    "✓ Gesture and touch event listeners enabled on glasses@${Integer.toHexString(System.identityHashCode(glasses))}"
+            )
         } catch (e: Exception) {
             Log.e(TAG, "Failed to setup gesture/touch listeners: ${e.message}", e)
         }
-    }
-
-    /** Handle sensor interface events (gesture or touch) */
-    private fun handleSensorEvent() {
-        Log.i(TAG, "🖐️ Sensor event detected (gesture or touch)")
-        _gestureEvents.value += 1
-        Log.d(TAG, "Total sensor events: ${_gestureEvents.value}")
     }
 
     /** Enable or disable the gesture sensor on the glasses */
@@ -735,9 +773,15 @@ class ActiveLookService(private val context: Context) {
 
         try {
             Log.i(TAG, "Enabling gesture sensor: $enable")
-            // The ActiveLook SDK should handle gesture sensor enabling through sensor commands
-            // For now, the gesture notifications will be received once subscribed
-            Log.i(TAG, "✓ Gesture sensor subscription active")
+            // sensor(0x20) powers the ENTIRE optical subsystem (ALS auto-brightness + gesture IR).
+            // It must only be called with `true` — calling sensor(false) also kills ALS and causes
+            // the display to snap to 100% brightness. Use gesture(0x21) to toggle gesture-only.
+            if (enable) {
+                gestureArmTime = System.currentTimeMillis() // start cooldown before arming
+                glasses.sensor(true)
+            }
+            glasses.gesture(enable)
+            Log.i(TAG, "✓ Gesture sensor ${if (enable) "enabled" else "disabled"}")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to enable gesture sensor: ${e.message}", e)
         }

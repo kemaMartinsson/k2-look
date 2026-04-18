@@ -219,9 +219,6 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
         if (profile != null) {
             _uiState.value = _uiState.value.copy(activeProfile = profile)
             Log.i(TAG, "Selected profile: ${profile.name}")
-
-            // Apply to glasses if available
-            applyProfileToGlasses(profile)
         } else {
             Log.w(TAG, "Profile not found: $profileId")
         }
@@ -252,7 +249,7 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
                 bridgeInstance.setActiveProfile(targetProfile)
                 _uiState.value =
                         _uiState.value.copy(
-                                successMessage = "Profile '${targetProfile.name}' sent to glasses ✓"
+                                successMessage = "'${targetProfile.name}' sent to glasses."
                         )
                 Log.i(TAG, "✅ Profile applied to bridge successfully")
             } else {
@@ -423,9 +420,6 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
                         )
 
                 Log.i(TAG, "Updated profile: ${profile.name} (id: ${profile.id})")
-                // Push updated layout to glasses — cache was invalidated above so a
-                // full re-upload (including layoutDeleteAll) will run, clearing stale layouts.
-                applyProfileToGlasses(updatedActiveProfile)
             } catch (e: Exception) {
                 Log.e(TAG, "Error updating profile", e)
                 _uiState.value =
@@ -694,7 +688,6 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
                 )
 
         updateProfile(updatedProfile)
-        applyProfileToGlasses(updatedProfile)
 
         Log.i(
                 TAG,
@@ -749,7 +742,9 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
                 "✓ Cycling from screen ${currentIndex + 1} to screen ${nextIndex + 1}: ${nextScreen.name}"
         )
         selectScreen(nextScreen.id)
-        applyProfileToGlasses(currentProfile)
+        // Tell the bridge which screen to display. All screens' layouts were already uploaded
+        // when the profile was last saved — no re-upload needed here.
+        bridge?.setActiveScreen(nextScreen.id)
         return true
     }
 
@@ -765,7 +760,6 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
                 val allProfiles = reloadAllProfiles()
                 _uiState.value =
                         _uiState.value.copy(profiles = allProfiles, activeProfile = profile)
-                applyProfileToGlasses(profile)
                 Log.i(TAG, "Imported Karoo profile '${rideProfile.name}' → '${profile.name}'")
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to import Karoo profile", e)

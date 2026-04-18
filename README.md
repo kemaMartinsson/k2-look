@@ -88,16 +88,16 @@ Control your display without touching your Karoo during rides - perfect for safe
 
 #### 🎨 **Built-in DataField Builder**
 
-K2Look includes a powerful **DataField Builder** that lets you create custom display layouts
+K2Look includes a **DataField Builder** that lets you create custom display layouts
 directly on your Karoo 2 - no smartphone app needed!
 
 **✨ What You Can Do:**
 
-- ✅ Choose from **7 professional layout templates** (1-6 data fields)
+- ✅ Choose from **3 layout templates** (1-3 data fields, full-width)
 - ✅ Select from **74 real-time metrics** from your Karoo 2
-- ✅ Use **4 visualization styles**: Text, Gauge, Bar, and Zoned Bar
+- ✅ Use **2 visualization styles**: Text and Zoned Bar
 - ✅ Create **multiple profiles** for different bikes or activities
-- ✅ **Karoo Sync** — auto-switch profiles and import layouts from your active Karoo ride profile
+- ✅ **Karoo profile auto-switch** — automatically activates the matching K2Look profile when your Karoo ride profile changes
 - ✅ Configure everything **without glasses connected** - edit anytime, anywhere
 
 **📊 Supported Metrics (74 total):**
@@ -113,31 +113,30 @@ directly on your Karoo 2 - no smartphone app needed!
 - **Lap** (9): Lap #, Lap Time, Lap Dist, Lap Speed, Lap HR, Lap Power, Lap NP, Lap Cadence, Lap Ascent
 - **Last Lap** (6): L.Lap Time, L.Lap Dist, L.Lap Speed, L.Lap HR, L.Lap Power, L.Lap NP
 - **Radar** (3): Radar Threat, Radar Targets, Radar Range *(requires Garmin Varia or compatible)*
-- **Shifting** (4): Front Gear, Rear Gear, Drive Battery, Shift Count *(requires Di2, AXS, or eTap)*
+- **Shifting** (4): Front Gear, Rear Gear, Drive Battery, Shift Count *(requires AXS, or eTap, Ki2 for Di2 is not implemented)*
 - **Navigation** (5): To Turn, To Finish, ETA, Time to End, Heading *(requires active route)*
 - **eBike** (4): Bike Battery, Est. Range, Assist Mode, Motor Power *(requires LEV/eBike sensor)*
 
 **🎨 Visualization Styles:**
 
-1. **📝 Text** - Traditional display with label, unit, and icon (all 74 metrics)
-2. **⊙ Gauge** - Circular progress gauge ~270° arc (numeric/range metrics)
-3. **▬ Bar** - Horizontal progress bar (numeric/range metrics)
-4. **▦ Zoned Bar** - Multi-zone training bars with color coding
+1. **📝 Text** - Traditional display with unit, and icon.
+2. **▦ Zoned circles** - Multi-zone zones coding
     - Heart Rate: 5 zones (Z1-Z5)
     - Power: 7 zones (Z1-Z7) based on FTP
 
-**📐 Layout Templates (7):**
+> ⚙️ **Possible future implementation:** 180° arc gauge visualization
+
+**📐 Layout Templates (3):**
 
 - Single Data (1 field) - Focus on one metric
-- Two Data (2 fields) - Two equally important metrics
-- Triangle Layout (3 fields) - One large top + two small bottom
+- Two Data (2 fields) - Two equally important metrics, full-width stacked
 - Three Data Full (3 fields) - Three equal rows ✅ Default
-- Four Data (4 fields) - 2×2 grid
-- Five Data (5 fields) - One top + 2×2 grid below
-- Six Data (6 fields) - Maximum data density, 3×2 grid
+
+> ⚙️ **Possible future implementation:** Triangle layout, 4-field, 5-field, 6-field, and mixed half-width column templates
 
 **🔄 Real-time Updates:**
-All metrics update at **1Hz** (1 update/second) for optimal Bluetooth performance and battery life.
+All metrics update at **1Hz** (1 update/ 2 second)s for optimal Bluetooth performance and battery life.
+Radar metrics a prioritized for faster updates when present.
 
 ## Project Overview
 
@@ -147,39 +146,34 @@ glasses, featuring:
 - **Hands-Free Gesture & Touch Control** - Wave hand or tap button to control display during rides
 - **Built-in DataField Builder** - Create custom layouts directly on your Karoo 2
 - **74 real-time metrics** - All data you need (HR, Power, Speed, Cadence, Elevation, Laps, Navigation, and more)
-- **4 visualization styles** - Text, Gauge, Bar, and Zoned Bar
-- **7 professional templates** - From minimal (1 field) to data-dense (6 fields)
-- **Karoo Sync** — auto-switch profiles and import layouts from your active Karoo ride profile
+- **2 visualization styles** - Text and Zoned Bar
+- **3 full-width templates** - Single, Two, and Three rows
+- **Karoo profile auto-switch** — automatically activates the matching K2Look profile when your Karoo ride profile changes
 - **Training zone support** - HR zones (Z1-Z5) and Power zones (Z1-Z7 based on FTP)
 
 **No smartphone app required!**  
 Configure everything directly on your Karoo 2 using the intuitive
 DataField Builder interface. Control your display with hand gestures for safer, hands-free riding!
 
-> **See [DataField Builder Guide](./docs/DataFieldBuilder.md)** for complete documentation on
-> creating custom layouts, choosing visualization styles, and configuring training zones.
-
 ## Screenshots
 
-![Status Tab](docs/images/status.png)  
+![Status Tab](docs/images/tab0_status.png)  
 *Status Tab: Connect to ActiveLook glasses and view connection status.*
 
-![DataFields Tab](docs/images/datafields.png)  
+![DataFields Tab](docs/images/tab1_Fields.png)  
 *DataFields Tab: Create and manage custom display profiles with the built-in DataField Builder.*
-
-![Profiles](docs/images/custom-profiles.png)  
-*Custom Profiles: Create multiple profiles for different bikes or activities.*
-
-![Layouts](docs/images/layouts.png)  
-*Layout Templates: Choose from 6 layout templates (1-6 data fields).*
-
-![Metric Selector](docs/images/metric-selector.png)  
 *Metric Selector: Choose from 74 real-time metrics from your Karoo2.*
 
-![Gesture Tab](docs/images/gestures.png)  
+![Profiles](docs/images/tab1_Fields_ActiveProfile.png)  
+*Custom Profiles: Create multiple profiles for different bikes or activities.*
+
+![Layouts](docs/images/tab2_Layouts.png)  
+*Layout Templates: Choose from 6 layout templates (1-6 data fields).*
+
+![Gesture Tab](docs/images/tab2_Gestures.png)  
 *Gesture Tab: Configure hand gesture and touch button actions for hands-free control.*
 
-![About Tab](docs/images/about.png)  
+![About Tab](docs/images/tab3_About.png)  
 *About Tab: View app version, enable debug.*
 
 ![Debug view](docs/images/debug.png)  
@@ -300,12 +294,12 @@ This folder contains:
 
 **Container Runtime (choose one):**
 
-- **[Docker Desktop](https://www.docker.com/products/docker-desktop)** (Recommended)
+- **[Docker Desktop](https://www.docker.com/products/docker-desktop)**
     - Available for Windows, macOS, and Linux
     - GUI management interface
     - Easy to install and configure
 
-- **[Podman Desktop](https://podman-desktop.io/)** (Alternative)
+- **[Podman Desktop](https://podman-desktop.io/)*
     - Open-source Docker alternative
     - Rootless containers (better security)
     - Compatible with Docker commands
@@ -401,25 +395,17 @@ Transfer the APK to your Karoo2 and install it.
 6. **Start a ride** - Your custom layout appears on your glasses automatically!
 7. **During ride** - Wave hand or tap button to control display without touching Karoo!
 
-> **💡 Karoo Sync — Profile Auto-Switch & Import**
+> **💡 Karoo Profile Auto-Switch**
 >
-> K2Look can only see the **currently active** Karoo ride profile — it has no access to other
-> profiles stored on the Karoo. This has two practical consequences:
+> Name your K2Look profiles to match your Karoo ride profiles (e.g. both named "Gravel").
+> When you switch to that Karoo profile, K2Look activates the matching K2Look profile automatically.
 >
-> **Auto-switching:** Name your K2Look profiles to match your Karoo ride profiles (e.g. both named
-> "Gravel"). When you switch to that Karoo profile, K2Look switches automatically.
->
-> **Importing a Karoo layout:** To import the fields from a specific Karoo profile (e.g. "Mtb"),
-> first switch to that profile **in Karoo**, then go to K2Look → Fields → Profiles → **+** and type
-> "Mtb". K2Look will detect the matching active profile and offer **Import from Karoo** to copy its
-> fields automatically.
+> ⚙️ **Possible future implementation:** Auto-importing fields from a Karoo ride profile directly into a K2Look profile.
 
 ## Documentation
 
 ### Getting Started
 
-- 🎨 [DataField Builder Guide](./docs/DataFieldBuilder.md) - **Complete guide to creating custom
-  layouts**
 - 🛠️ [Development Setup Guide](./docs/Karoo2-ActiveLook-Dev-Setup.md)
 
 ## External Resources

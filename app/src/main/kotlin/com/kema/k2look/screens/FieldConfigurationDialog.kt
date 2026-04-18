@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.kema.k2look.layout.LayoutTemplateRegistry
 import com.kema.k2look.model.DataField
 import com.kema.k2look.model.IconSize
 import com.kema.k2look.model.LayoutDataField
@@ -135,7 +136,8 @@ fun FieldConfigurationDialog(
                     VisualizationTypeSelector(
                             dataField = selectedDataField,
                             currentType = visualizationType,
-                            onTypeSelected = { newType -> visualizationType = newType }
+                            onTypeSelected = { newType -> visualizationType = newType },
+                            zoneHeight = LayoutTemplateRegistry.getZoneHeight(field.zoneId)
                     )
 
                     HorizontalDivider()

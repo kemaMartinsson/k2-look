@@ -59,6 +59,7 @@ class GlassesGattCallbackImpl extends GlassesGatt {
     private Consumer<Integer> onBatteryLevelEvent;
     private Consumer<FlowControlStatus> onFlowControlEvent;
     private Runnable onSensorInterfaceEvent;
+    private Runnable onUserInterfaceEvent;
     private ScheduledFuture<?> repairFlowControl;
     private boolean connectionLocked;
 
@@ -79,6 +80,7 @@ class GlassesGattCallbackImpl extends GlassesGatt {
         this.onBatteryLevelEvent = null;
         this.onFlowControlEvent = null;
         this.onSensorInterfaceEvent = null;
+        this.onUserInterfaceEvent = null;
         this.repairFlowControl = null;
         this.setOnConnect(onConnected);
         this.setOnConnectionFail(onConnectionFail);
@@ -191,6 +193,7 @@ class GlassesGattCallbackImpl extends GlassesGatt {
     @Override
     public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
         super.onCharacteristicChanged(gatt, characteristic);
+        Log.d("GlassesGattCallback", "onCharacteristicChanged: " + characteristic.getUuid());
         if (characteristic.getUuid().equals(BleUUID.ActiveLookTxCharacteristic)) {
             byte[] buffer = characteristic.getValue();
             if (this.pendingBuffer != null) {
@@ -216,6 +219,11 @@ class GlassesGattCallbackImpl extends GlassesGatt {
         } else if (characteristic.getUuid().equals(BleUUID.ActiveLookSensorInterfaceCharacteristic)) {
             if (this.onSensorInterfaceEvent != null) {
                 this.onSensorInterfaceEvent.run();
+            }
+        } else if (characteristic.getUuid().equals(BleUUID.ActiveLookUICharacteristic)) {
+            Log.d("GlassesGattCallback", "Touch button pressed (CBC notification)");
+            if (this.onUserInterfaceEvent != null) {
+                this.onUserInterfaceEvent.run();
             }
         } else if (characteristic.getUuid().equals(BleUUID.ActiveLookFlowControlCharacteristic)) {
             final byte state = characteristic.getValue()[0];
@@ -264,15 +272,19 @@ class GlassesGattCallbackImpl extends GlassesGatt {
     @Override
     public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
         super.onDescriptorWrite(gatt, descriptor, status);
+        final String charUuid = descriptor.getCharacteristic().getUuid().toString();
+        Log.i("GlassesGattCallback", "onDescriptorWrite: char=" + charUuid + " status=" + status);
         if (descriptor.getCharacteristic().getUuid().equals(BleUUID.ActiveLookFlowControlCharacteristic)) {
             this.activateNotification(this.getTxCharacteristic());
         } else if (descriptor.getCharacteristic().getUuid().equals(BleUUID.ActiveLookTxCharacteristic)) {
             this.activateNotification(this.getUiCharacteristic());
         } else if (descriptor.getCharacteristic().getUuid().equals(BleUUID.ActiveLookUICharacteristic)) {
+            Log.i("GlassesGattCallback", "Touch (UI/CBC) notification " + (status == 0 ? "ENABLED" : "FAILED status=" + status));
             this.activateNotification(this.getBatteryCharacteristic());
         } else if (descriptor.getCharacteristic().getUuid().equals(BleUUID.BatteryLevelCharacteristic)) {
             this.activateNotification(this.getSensorCharacteristic());
         } else if (descriptor.getCharacteristic().getUuid().equals(BleUUID.ActiveLookSensorInterfaceCharacteristic)) {
+            Log.i("GlassesGattCallback", "Gesture (Sensor/CBB) notification " + (status == 0 ? "ENABLED" : "FAILED status=" + status));
             final BluetoothGattService diService = this.gatt.getService(BleUUID.DeviceInformationService);
             this.gatt.readCharacteristic(diService.getCharacteristic(BleUUID.ManufacturerNameCharacteristic));
         }
@@ -559,6 +571,10 @@ class GlassesGattCallbackImpl extends GlassesGatt {
 
     public void subscribeToSensorInterfaceNotifications(Runnable onEvent) {
         this.onSensorInterfaceEvent = onEvent;
+    }
+
+    public void subscribeToUserInterfaceNotifications(Runnable onEvent) {
+        this.onUserInterfaceEvent = onEvent;
     }
 
 }

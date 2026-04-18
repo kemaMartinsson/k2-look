@@ -31,6 +31,11 @@ them → `ActiveLookService` sends display commands to glasses.
 **Profile storage**: `ProfileRepository` (Gson + SharedPreferences key `user_profiles`).
 `DataFieldProfile` → `LayoutScreen[]` → `LayoutDataField[]`.
 
+**ViewModel wiring**: `MainScreen` wires both VMs at startup via `LaunchedEffect(Unit)`:
+`layoutBuilderViewModel.setBridge(bridge)` + `viewModel.setLayoutBuilderViewModel(lbvm)`.
+This must happen at `MainScreen` level (not inside `DataFieldBuilderTab`) so gesture cycling
+works without requiring the user to visit the Fields tab first.
+
 ---
 
 ## ActiveLook Display & Coordinate System
@@ -158,16 +163,16 @@ Without it, the bitmap command is silently ignored with no error.
 
 ```
 saveAndActivateProfile(profile)
-  ├── cfgWrite(configName, version, 0)         // open user config for writing
-  ├── saveProfileLayouts(profile)
-  │     ├── screen.getTemplate()                // LayoutTemplateRegistry → zone heights
+  ├── precomputeLayoutIdsAndGeometry(profile)   // FIRST: assign IDs in screens[] order, populate screenGeometry
+  ├── [fast path] cfgSet(configName)            // if version matches — done
+  ├── [slow path] cfgWrite(configName, version, 0)
+  ├── saveProfileLayouts(profile)               // IDs already assigned; screenGeometry already populated
   │     ├── glasses.layoutDeleteAll()           // clear stale layout definitions in this config
   │     ├── glasses.clear()                     // erase stale pixels from old template
-  │     ├── for each field:
-  │     │     ├── zone = template.zones.find { it.id == field.zoneId }  // use template coords directly
+  │     ├── for each field on every screen:
+  │     │     ├── zone = template.zones.find { it.id == field.zoneId }
   │     │     ├── DynamicLayoutRenderer.buildLayoutParams(layoutId, x0, y0, width, zoneHeight, font, hasIcon)
   │     │     └── glasses.layoutSave(params)
-  │     └── cache geometry in screenGeometry[zoneId] (x0, y0, width, height, font)
   ├── saveProfileGauges(profile)
   └── glasses.cfgSet(configName)                // activate the config
 
@@ -253,7 +258,7 @@ finalX = unitXLookup[unit] + unitXFontOffset[font] + unitXIconOffset[iconPx]
 
 | Unit | X | Unit | X |
 |------|---|------|---|
-| km/h | 165 | w | 179 |
+| km/h | 165 | w | 165 |
 | bpm | 165 | m | 179 |
 | rpm | 165 | % | 178 |
 | km | 173 | ft | 179 |
@@ -322,8 +327,9 @@ the ALooK system config. The display loop:
    icon area to erase it, then `renderPendingIcons`.
 4. Restores user config. Updates `activeIconsByZone = currentIconsByZone` for next frame.
 
-**`activeIconsByZone`** is cleared on `saveProfileLayouts` so stale erase data from a
-previous profile cannot accidentally erase pixels on the new layout.
+**`activeIconsByZone`** is cleared on `precomputeLayoutIdsAndGeometry` (which runs before
+`saveProfileLayouts`) so stale erase data from a previous profile cannot accidentally erase
+pixels on the new layout.
 
 ---
 
@@ -354,7 +360,7 @@ intentionally clips the bottom of text. Do NOT "fix" this by enlarging heights.
 
 **Branch**: `feature/import-k2-profiles`
 **Spec**: `docs/Feature-Profile-Import.md`
-**Status**: Core implemented. Display pipeline working. Unit tweaks in progress.
+**Status**: Core implemented. Multi-screen cycling working. Display pipeline working. Unit calibration ongoing (w unit = 165).
 
 ### What It Does
 Reads the user's Karoo ride profile (pages + fields) from the SDK and auto-generates a matching
@@ -434,6 +440,125 @@ K2Look/ActiveLook layout. Eliminates manual setup.
     pyramid → 3-row), zones that no longer exist leave visible garbage. Always call
     `glasses.clear()` immediately after `layoutDeleteAll()` in `saveProfileLayouts()` to
     blank the screen before uploading the new layout definitions.
+
+16. **Ghost GATT state: battery alive but gesture/touch dead.** If `2a19` (battery) notifications
+    arrive every 30s but `cbb` (gesture) and `cbc` (touch) are completely silent even after
+    confirmed gestures/button presses, the GATT connection is in a half-alive ghost state. Fix:
+    full power-cycle the ENGO 2 glasses + force-close K2Look + reconnect WITHOUT tapping the
+    Scan button. The ghost state is caused by a scan race condition where a manual scan collides
+    with an auto-reconnect in progress, breaking the Commands Interface service subscription.
+
+17. **Scan race condition corrupts gesture/touch subscriptions.** If the user taps the Scan
+    button at the same moment an auto-reconnect fires, the resulting scan→disconnect→scan loop
+    can leave `cbb`/`cbc` descriptor writes in an inconsistent state. Even though logcat shows
+    all 5 descriptors ENABLED (status=0), the firmware-side subscription is broken. Only a clean
+    power-cycle restores them. Do not trigger a scan while a connection is already in progress.
+
+18. **`onCharacteristicChanged` UUID → channel map** (for debugging BLE delivery):
+    | UUID suffix | Channel |
+    |-------------|---------|
+    | `...cb8` | Tx (command responses) |
+    | `...cb9` | FlowControl |
+    | `...cba` | Rx (write target) |
+    | `...cbb` | SensorInterface (gesture) |
+    | `...cbc` | UICharacteristic (touch button) |
+    | `...2a19` | BatteryLevel |
+    If a UUID never appears in `onCharacteristicChanged` despite the descriptor write showing
+    ENABLED, the OS is not delivering that notification — ghost state or firmware issue.
+
+19. **Double `enableGestureSensor` race risk.** `observeGesturePreferences` (StateFlow) emits
+    `gestureEnabled=true` immediately on subscription, causing `glasses.gesture(true)` to be
+    called from a UI-thread coroutine at the same time as the synchronous call in `onConnected`
+    on the BLE thread. If this causes issues, guard with a flag or call only from `onConnected`.
+
+20. **`sensor(false)` kills ALS (auto-brightness) — NEVER call it.** `sensor(0x20)` is a master
+    power switch for the ENTIRE optical subsystem (IR gesture hardware + ALS auto-brightness).
+    Calling `sensor(false)` turns off ALS and makes the display snap to 100% maximum brightness.
+    When the user disables the "Hand Gesture" setting, call only `gesture(false)` — leave the
+    sensor (and ALS) running. Pattern in `enableGestureSensor(enable)`:
+    ```kotlin
+    if (enable) glasses.sensor(true)  // only arm on enable
+    glasses.gesture(enable)           // toggle gesture-only
+    ```
+
+21. **Gesture firmware uses a one-shot detection window — must re-arm after each event.**
+    After the firmware fires a CBB notification, it disarms the gesture detector. Without
+    re-arming, gestures stop being detected after the first burst (~20 events then silent).
+    Re-arm is dispatched on `Dispatchers.IO` from inside the callback, and `gestureArmTime`
+    is stamped first so the 500ms cooldown window covers the spurious event the firmware fires
+    after each `gesture(true)` call:
+    ```kotlin
+    glasses.subscribeToSensorInterfaceNotifications {
+        val now = System.currentTimeMillis()
+        if (now - gestureArmTime < GESTURE_ARM_COOLDOWN_MS) return@subscribe  // discard spurious
+        _gestureEvents.value += 1
+        serviceScope.launch(Dispatchers.IO) {
+            gestureArmTime = System.currentTimeMillis()
+            try { glasses.gesture(true) } catch (_: Exception) {}
+        }
+    }
+    ```
+
+22. **`gesture(true)` fires a spurious CBB notification — use a cooldown.** Calling
+    `glasses.gesture(true)` (either at connect via `enableGestureSensor` or during re-arm)
+    causes the firmware to immediately send one CBB notification. Without a cooldown guard
+    this spurious event reaches `executeGestureAction` and triggers the configured action
+    (e.g. `TOGGLE_DISPLAY`). Fix: stamp `gestureArmTime = System.currentTimeMillis()` before
+    calling `gesture(true)`, and in the CBB callback discard events received within
+    `GESTURE_ARM_COOLDOWN_MS = 500L` of `gestureArmTime`. This is implemented in
+    `ActiveLookService.kt`.
+
+23. **Display-off mode: suppress BLE writes or they wake the display.** Calling
+    `setDisplayPower(false)` sends `power(false)` to the glasses but the next
+    `layoutClearAndDisplayExtended` call in `flushToGlasses()` immediately wakes it again.
+    Fix: `KarooActiveLookBridge` has a `displayOn: Boolean` flag (default `true`). When
+    `false`, `flushToGlasses()` returns immediately. `toggleDisplay()` in `MainViewModel`
+    calls `bridge.setDisplayOn(displayPowerOn)` before sending the power command so all
+    data writes are suppressed while the display is off. When turned back on, the existing
+    `applyProfileToGlasses()` call in `toggleDisplay()` redraws the current layout.
+
+24. **Layout IDs scramble on restart if assigned lazily.** Layout IDs are assigned by a
+    counter via `getOrPut` in `getLayoutIdForZone`. If `displayAllFieldValues` for screen 2
+    runs before screen 1 (e.g. user was on screen 2 before reboot), screen 2's zones claim
+    IDs 10-12, but the glasses have screen 1's geometry stored at those IDs. Fix:
+    `saveAndActivateProfile` calls `precomputeLayoutIdsAndGeometry(profile)` **before**
+    the fast/full path split. This resets the counter and assigns IDs in
+    `profile.screens` list order, making them deterministic regardless of display order.
+    `screenGeometry` is also fully populated here so the fast path has correct geometry.
+
+---
+
+## Gesture & Touch BLE Debugging Reference
+
+### UUID Map
+| UUID suffix | Name | Direction |
+|-------------|------|-----------|
+| `...cb8` | Tx | notify (command responses) |
+| `...cb9` | FlowControl | notify |
+| `...cba` | Rx | write target |
+| `...cbb` | SensorInterface | notify (gesture sensor output) |
+| `...cbc` | UICharacteristic | notify (touch button presses) |
+| `...2a19` | BatteryLevel | notify (every 30s) |
+
+### Confirmed Working Subscription Chain
+All 5 GATT descriptors must show `status=0` in `onDescriptorWrite` (logged by `GlassesGattCallbackImpl`):
+```
+onDescriptorWrite: char=...cb9 status=0   (FlowControl)
+onDescriptorWrite: char=...cb8 status=0   (Tx)
+onDescriptorWrite: char=...cbc status=0   (UICharacteristic/Touch)
+onDescriptorWrite: char=...2a19 status=0  (Battery)
+onDescriptorWrite: char=...cbb status=0   (SensorInterface/Gesture)
+```
+Then: `Setting up gesture and touch listeners...` and `✓ Gesture sensor enabled` must appear.
+
+### Diagnostic Logging
+`GlassesGattCallbackImpl.java` has a `Log.d("GlassesGattCallback", "onCharacteristicChanged: " + characteristic.getUuid())` at the top of `onCharacteristicChanged` — fires for every UUID received. Use this to confirm delivery at the OS level. If `cbb`/`cbc` never appear despite confirmed input, it is a ghost state or firmware issue, not a code bug.
+
+### Spam Logs Silenced (keep commented out)
+These 5 log lines fired at 1Hz and were commented out to make gesture/touch events visible:
+- `KarooActiveLookBridge.kt`: `Log.v("Flushing: profile=...")` and `Log.d("✓ Data flushed to glasses")`
+- `ActiveLookLayoutService.kt`: `Log.v("Layout $layoutId (zone $zoneId font=...)...")`
+- `DynamicLayoutRenderer.kt`: `Log.v("queueIcon: ...")` and `Log.i("renderPendingIcons: ...")`
 
 ---
 

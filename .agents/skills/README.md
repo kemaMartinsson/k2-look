@@ -1,0 +1,1 @@
+Info on using skills at [superpowers](https://skills.sh/obra/superpowers)
