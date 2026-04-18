@@ -11,20 +11,20 @@ class KarooProfileImporterTest {
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private fun element(dataTypeId: String) =
-        RideProfile.Page.Element(dataTypeId = dataTypeId, gridSize = Pair(60, 15))
+            RideProfile.Page.Element(dataTypeId = dataTypeId, gridSize = Pair(60, 15))
 
     private fun page(vararg dataTypeIds: String, mapPage: Boolean = false) =
-        RideProfile.Page(mapPage = mapPage, elements = dataTypeIds.map { element(it) })
+            RideProfile.Page(mapPage = mapPage, elements = dataTypeIds.map { element(it) })
 
     private fun profile(vararg pages: RideProfile.Page, name: String = "Test") =
-        RideProfile(
-            id = "test-id",
-            name = name,
-            pages = pages.toList(),
-            indoor = false,
-            defaultActivityType = "RIDE",
-            routingPreference = "ROAD"
-        )
+            RideProfile(
+                    id = "test-id",
+                    name = name,
+                    pages = pages.toList(),
+                    indoor = false,
+                    defaultActivityType = "RIDE",
+                    routingPreference = "ROAD"
+            )
 
     // ── Template selection ────────────────────────────────────────────────────
 
@@ -37,21 +37,30 @@ class KarooProfileImporterTest {
 
     @Test
     fun `two field page uses 2D template`() {
-        val result = KarooProfileImporter.import(
-            profile(page(DataType.Type.SPEED, DataType.Type.HEART_RATE))
-        )
+        val result =
+                KarooProfileImporter.import(
+                        profile(page(DataType.Type.SPEED, DataType.Type.HEART_RATE))
+                )
         assertEquals("2D", result.screens.first().templateId)
     }
 
     @Test
     fun `three field page uses 3D_FULL template`() {
-        val result = KarooProfileImporter.import(
-            profile(page(DataType.Type.SPEED, DataType.Type.HEART_RATE, DataType.Type.POWER))
-        )
+        val result =
+                KarooProfileImporter.import(
+                        profile(
+                                page(
+                                        DataType.Type.SPEED,
+                                        DataType.Type.HEART_RATE,
+                                        DataType.Type.POWER
+                                )
+                        )
+                )
         assertEquals("3D_FULL", result.screens.first().templateId)
     }
 
-    // TODO: 4D/5D/6D layouts are not yet selectable — re-enable when these templates are added to the UI
+    // TODO: 4D/5D/6D layouts are not yet selectable — re-enable when these templates are added to
+    // the UI
     // @Test fun `four field page uses 4D template`() { ... }
     // @Test fun `five field page uses 5D template`() { ... }
     // @Test fun `six field page uses 6D template`() { ... }
@@ -65,12 +74,13 @@ class KarooProfileImporterTest {
 
     @Test
     fun `map pages are skipped`() {
-        val result = KarooProfileImporter.import(
-            profile(
-                page(DataType.Type.SPEED, mapPage = true),
-                page(DataType.Type.HEART_RATE)
-            )
-        )
+        val result =
+                KarooProfileImporter.import(
+                        profile(
+                                page(DataType.Type.SPEED, mapPage = true),
+                                page(DataType.Type.HEART_RATE)
+                        )
+                )
         assertEquals(1, result.screens.size)
         assertEquals("Heart Rate", result.screens.first().dataFields.first().dataField.name)
     }
@@ -79,9 +89,10 @@ class KarooProfileImporterTest {
 
     @Test
     fun `unknown third-party fields are silently skipped`() {
-        val result = KarooProfileImporter.import(
-            profile(page(DataType.Type.SPEED, "com.thirdparty.extension.field"))
-        )
+        val result =
+                KarooProfileImporter.import(
+                        profile(page(DataType.Type.SPEED, "com.thirdparty.extension.field"))
+                )
         // Only Speed should be mapped; unknown field skipped → 1 field → 1D template
         assertEquals(1, result.screens.first().dataFields.size)
         assertEquals("Speed", result.screens.first().dataFields.first().dataField.name)
@@ -90,12 +101,10 @@ class KarooProfileImporterTest {
 
     @Test
     fun `page with only unknown fields is skipped`() {
-        val result = KarooProfileImporter.import(
-            profile(
-                page("com.unknown.a", "com.unknown.b"),
-                page(DataType.Type.POWER)
-            )
-        )
+        val result =
+                KarooProfileImporter.import(
+                        profile(page("com.unknown.a", "com.unknown.b"), page(DataType.Type.POWER))
+                )
         assertEquals(1, result.screens.size)
         assertEquals("Power", result.screens.first().dataFields.first().dataField.name)
     }
@@ -104,19 +113,21 @@ class KarooProfileImporterTest {
 
     @Test
     fun `imported profile name matches Karoo profile name`() {
-        val result = KarooProfileImporter.import(profile(page(DataType.Type.SPEED), name = "Race Day"))
+        val result =
+                KarooProfileImporter.import(profile(page(DataType.Type.SPEED), name = "Race Day"))
         assertEquals("Race Day", result.name)
     }
 
     @Test
     fun `each non-map page becomes one screen`() {
-        val result = KarooProfileImporter.import(
-            profile(
-                page(DataType.Type.SPEED, mapPage = true),
-                page(DataType.Type.SPEED),
-                page(DataType.Type.HEART_RATE, DataType.Type.POWER)
-            )
-        )
+        val result =
+                KarooProfileImporter.import(
+                        profile(
+                                page(DataType.Type.SPEED, mapPage = true),
+                                page(DataType.Type.SPEED),
+                                page(DataType.Type.HEART_RATE, DataType.Type.POWER)
+                        )
+                )
         assertEquals(2, result.screens.size)
         assertEquals(1, result.screens[0].id)
         assertEquals(2, result.screens[1].id)
@@ -126,9 +137,7 @@ class KarooProfileImporterTest {
 
     @Test
     fun `profile with no recognisable pages produces single fallback screen`() {
-        val result = KarooProfileImporter.import(
-            profile(page("com.unknown.a", mapPage = false))
-        )
+        val result = KarooProfileImporter.import(profile(page("com.unknown.a", mapPage = false)))
         assertEquals(1, result.screens.size)
         assertTrue(result.screens.first().dataFields.isEmpty())
     }
@@ -137,11 +146,12 @@ class KarooProfileImporterTest {
 
     @Test
     fun `fields are assigned to template zones in order`() {
-        val result = KarooProfileImporter.import(
-            profile(page(DataType.Type.SPEED, DataType.Type.HEART_RATE))
-        )
+        val result =
+                KarooProfileImporter.import(
+                        profile(page(DataType.Type.SPEED, DataType.Type.HEART_RATE))
+                )
         val fields = result.screens.first().dataFields
-        assertEquals("2D_H", fields[0].zoneId)  // first zone of 2D template
-        assertEquals("2D_L", fields[1].zoneId)  // second zone of 2D template
+        assertEquals("2D_H", fields[0].zoneId) // first zone of 2D template
+        assertEquals("2D_L", fields[1].zoneId) // second zone of 2D template
     }
 }
