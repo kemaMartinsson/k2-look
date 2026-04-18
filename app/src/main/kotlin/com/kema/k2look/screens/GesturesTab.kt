@@ -29,85 +29,80 @@ import androidx.compose.ui.unit.dp
 import com.kema.k2look.model.GestureAction
 import com.kema.k2look.model.TouchAction
 import com.kema.k2look.viewmodel.MainViewModel
+import com.kema.k2look.viewmodel.setGestureAction
+import com.kema.k2look.viewmodel.setGestureEnabled
+import com.kema.k2look.viewmodel.setTouchAction
+import com.kema.k2look.viewmodel.setTouchEnabled
 
 @Composable
 fun GesturesTab(viewModel: MainViewModel, uiState: MainViewModel.UiState) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(12.dp)
-            .verticalScroll(rememberScrollState())
-    ) {
+    Column(modifier = Modifier.fillMaxSize().padding(12.dp).verticalScroll(rememberScrollState())) {
         // ── Hand Gesture ──────────────────────────────────────────────────
         Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 2.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.background
-            ),
-            shape = androidx.compose.ui.graphics.RectangleShape
+                modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                colors =
+                        CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.background
+                        ),
+                shape = androidx.compose.ui.graphics.RectangleShape
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp)
-            ) {
+            Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
                 // Title row with enable switch
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Hand Gesture",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.weight(1f)
+                            text = "Hand Gesture",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.weight(1f)
                     )
                     Switch(
-                        checked = uiState.gestureEnabled,
-                        onCheckedChange = { viewModel.setGestureEnabled(it) }
+                            checked = uiState.gestureEnabled,
+                            onCheckedChange = { viewModel.setGestureEnabled(it) }
                     )
                 }
 
                 Text(
-                    text = "Wave your hand in front of the glasses sensor.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 2.dp, bottom = 4.dp)
+                        text = "Wave your hand in front of the glasses sensor.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 2.dp, bottom = 4.dp)
                 )
 
                 // Options — only visible when enabled
                 AnimatedVisibility(visible = uiState.gestureEnabled) {
                     Column {
                         Spacer(modifier = Modifier.height(8.dp))
-                        var selectedGesture by remember(uiState.gestureAction) {
-                            mutableStateOf(uiState.gestureAction)
-                        }
+                        var selectedGesture by
+                                remember(uiState.gestureAction) {
+                                    mutableStateOf(uiState.gestureAction)
+                                }
                         GestureAction.entries.forEach { action ->
                             Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
                             ) {
                                 RadioButton(
-                                    selected = selectedGesture == action,
-                                    onClick = {
-                                        selectedGesture = action
-                                        viewModel.setGestureAction(action)
-                                    }
+                                        selected = selectedGesture == action,
+                                        onClick = {
+                                            selectedGesture = action
+                                            viewModel.setGestureAction(action)
+                                        }
                                 )
                                 Column(modifier = Modifier.padding(start = 8.dp)) {
                                     Text(
-                                        text = action.displayName,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = if (selectedGesture == action) FontWeight.Bold else FontWeight.Normal
+                                            text = action.displayName,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight =
+                                                    if (selectedGesture == action) FontWeight.Bold
+                                                    else FontWeight.Normal
                                     )
                                     Text(
-                                        text = action.description,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            text = action.description,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
@@ -116,10 +111,11 @@ fun GesturesTab(viewModel: MainViewModel, uiState: MainViewModel.UiState) {
                         if (uiState.gestureEventCount > 0) {
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "✓ Gesture events detected: ${uiState.gestureEventCount}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Medium
+                                    text =
+                                            "✓ Gesture events detected: ${uiState.gestureEventCount}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Medium
                             )
                         }
                     }
@@ -128,83 +124,77 @@ fun GesturesTab(viewModel: MainViewModel, uiState: MainViewModel.UiState) {
         }
 
         HorizontalDivider(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 6.dp),
-            thickness = 1.dp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                thickness = 1.dp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
         )
 
         // ── Touch Button ──────────────────────────────────────────────────
         Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 2.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.background
-            ),
-            shape = androidx.compose.ui.graphics.RectangleShape
+                modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                colors =
+                        CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.background
+                        ),
+                shape = androidx.compose.ui.graphics.RectangleShape
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp)
-            ) {
+            Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
                 // Title row with enable switch
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Touch Button",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.weight(1f)
+                            text = "Touch Button",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.weight(1f)
                     )
                     Switch(
-                        checked = uiState.touchEnabled,
-                        onCheckedChange = { viewModel.setTouchEnabled(it) }
+                            checked = uiState.touchEnabled,
+                            onCheckedChange = { viewModel.setTouchEnabled(it) }
                     )
                 }
 
                 Text(
-                    text = "Short tap (<3s) on the capacitive button on the glasses frame.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 2.dp, bottom = 4.dp)
+                        text = "Short tap (<3s) on the capacitive button on the glasses frame.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 2.dp, bottom = 4.dp)
                 )
 
                 // Options — only visible when enabled
                 AnimatedVisibility(visible = uiState.touchEnabled) {
                     Column {
                         Spacer(modifier = Modifier.height(8.dp))
-                        var selectedTouch by remember(uiState.touchAction) {
-                            mutableStateOf(uiState.touchAction)
-                        }
+                        var selectedTouch by
+                                remember(uiState.touchAction) {
+                                    mutableStateOf(uiState.touchAction)
+                                }
                         TouchAction.entries.forEach { action ->
                             Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
                             ) {
                                 RadioButton(
-                                    selected = selectedTouch == action,
-                                    onClick = {
-                                        selectedTouch = action
-                                        viewModel.setTouchAction(action)
-                                    }
+                                        selected = selectedTouch == action,
+                                        onClick = {
+                                            selectedTouch = action
+                                            viewModel.setTouchAction(action)
+                                        }
                                 )
                                 Column(modifier = Modifier.padding(start = 8.dp)) {
                                     Text(
-                                        text = action.displayName,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = if (selectedTouch == action) FontWeight.Bold else FontWeight.Normal
+                                            text = action.displayName,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight =
+                                                    if (selectedTouch == action) FontWeight.Bold
+                                                    else FontWeight.Normal
                                     )
                                     Text(
-                                        text = action.description,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            text = action.description,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
@@ -213,10 +203,10 @@ fun GesturesTab(viewModel: MainViewModel, uiState: MainViewModel.UiState) {
                         if (uiState.touchEventCount > 0) {
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "✓ Touch events detected: ${uiState.touchEventCount}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Medium
+                                    text = "✓ Touch events detected: ${uiState.touchEventCount}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Medium
                             )
                         }
                     }
@@ -225,4 +215,3 @@ fun GesturesTab(viewModel: MainViewModel, uiState: MainViewModel.UiState) {
         }
     }
 }
-

@@ -34,13 +34,13 @@ import kotlinx.coroutines.launch
 class KarooActiveLookBridge(context: Context) {
 
     private val context = context
-    private val karooDataService = KarooDataService(context)
-    private val activeLookService = ActiveLookService(context)
+    internal val karooDataService = KarooDataService(context)
+    internal val activeLookService = ActiveLookService(context)
     private val layoutService = ActiveLookLayoutService(activeLookService)
     private val preferencesManager = PreferencesManager(context)
     private val profileRepository = ProfileRepository(context)
 
-    private val scope = CoroutineScope(Dispatchers.Main + Job())
+    internal val scope = CoroutineScope(Dispatchers.Main + Job())
     private var updateJob: Job? = null
     private var reconnectJob: Job? = null
     private var scanJob: Job? = null
@@ -51,17 +51,17 @@ class KarooActiveLookBridge(context: Context) {
     private var bluetoothRequested = false
 
     // Simulator mode (for Debug tab)
-    private var simulatorJob: Job? = null
+    internal var simulatorJob: Job? = null
 
     // Bridge state
     private val _bridgeState = MutableStateFlow<BridgeState>(BridgeState.Idle)
     val bridgeState: StateFlow<BridgeState> = _bridgeState.asStateFlow()
 
     // Accumulated data for hold/flush pattern (see BridgeCurrentData.kt)
-    private val currentData = CurrentData()
+    internal val currentData = CurrentData()
 
     // Active DataField profile for dynamic layouts
-    private var activeProfile: com.kema.k2look.model.DataFieldProfile? = null
+    internal var activeProfile: com.kema.k2look.model.DataFieldProfile? = null
 
     // Currently displayed screen ID (updated by gesture cycling / profile selection)
     private var activeScreenId: Int? = null
@@ -536,7 +536,7 @@ class KarooActiveLookBridge(context: Context) {
      * Convenience: collect [flow] in a new coroutine, apply [update] to [currentData], and mark the
      * frame dirty. Eliminates 3-line boilerplate per metric.
      */
-    private fun observe(
+    internal fun observe(
             flow: kotlinx.coroutines.flow.Flow<StreamState?>,
             update: CurrentData.(StreamState?) -> Unit
     ) {
@@ -619,29 +619,7 @@ class KarooActiveLookBridge(context: Context) {
         }
     }
 
-    // ── Core cycling metrics ───────────────────────────────────────────────
-    private fun observeCoreMetrics() {
-        observe(karooDataService.speedData) { speed = formatStreamData(it, "km/h") }
-        observe(karooDataService.maxSpeedData) { maxSpeed = formatStreamData(it, "km/h") }
-        observe(karooDataService.averageSpeedData) { avgSpeed = formatStreamData(it, "km/h") }
-        observe(karooDataService.heartRateData) { heartRate = formatStreamData(it, "bpm") }
-        observe(karooDataService.maxHeartRateData) { maxHeartRate = formatStreamData(it, "bpm") }
-        observe(karooDataService.averageHeartRateData) {
-            avgHeartRate = formatStreamData(it, "bpm")
-        }
-        observe(karooDataService.hrZoneData) { hrZone = formatHRZoneData(it) }
-        observe(karooDataService.cadenceData) { cadence = formatStreamDataInt(it, "rpm") }
-        observe(karooDataService.maxCadenceData) { maxCadence = formatStreamDataInt(it, "rpm") }
-        observe(karooDataService.averageCadenceData) { avgCadence = formatStreamDataInt(it, "rpm") }
-        observe(karooDataService.powerData) { power = formatStreamDataInt(it, "w") }
-        observe(karooDataService.maxPowerData) { maxPower = formatStreamDataInt(it, "w") }
-        observe(karooDataService.averagePowerData) { avgPower = formatStreamDataInt(it, "w") }
-        observe(karooDataService.smoothed3sPowerData) { power3s = formatStreamDataInt(it, "w") }
-        observe(karooDataService.distanceData) { distance = formatStreamData(it, "km") }
-        observe(karooDataService.timeData) { time = formatTimeData(it) }
-        observe(karooDataService.vamData) { vam = formatStreamData(it, "m/h") }
-        observe(karooDataService.avgVamData) { avgVam = formatStreamData(it, "m/h") }
-    }
+    // ── Core cycling metrics → KarooActiveLookBridgeMetrics.kt ─────────────
 
     // ── Radar (multi-field DataPoint — handled separately) ─────────────────
     private fun getWarningBitmapSmall(): android.graphics.Bitmap =
@@ -781,133 +759,8 @@ class KarooActiveLookBridge(context: Context) {
         }
     }
 
-    // ── General additions ──────────────────────────────────────────────────
-    private fun observeGeneralMetrics() {
-        observe(karooDataService.clockTimeData) { clockTime = formatClockTime(it) }
-        observe(karooDataService.temperatureData) { temperature = formatStreamData(it, "°C") }
-        observe(karooDataService.batteryPercentData) { batteryPercent = formatPercent(it) }
-        observe(karooDataService.rideTimeData) { rideTime = formatTimeData(it) }
-    }
-
-    // ── Heart Rate additions ───────────────────────────────────────────────
-    private fun observeHeartRateMetrics() {
-        observe(karooDataService.percentMaxHrData) { percentMaxHr = formatPercent(it) }
-        observe(karooDataService.percentHrrData) { percentHrr = formatPercent(it) }
-    }
-
-    // ── Power additions ────────────────────────────────────────────────────
-    private fun observePowerMetrics() {
-        observe(karooDataService.powerZoneData) { powerZone = formatZoneData(it, 7) }
-        observe(karooDataService.smoothed5sPowerData) { power5s = formatStreamDataInt(it, "w") }
-        observe(karooDataService.smoothed10sPowerData) { power10s = formatStreamDataInt(it, "w") }
-        observe(karooDataService.smoothed30sPowerData) { power30s = formatStreamDataInt(it, "w") }
-        observe(karooDataService.normalizedPowerData) {
-            normalizedPower = formatStreamDataInt(it, "w")
-        }
-        observe(karooDataService.percentFtpData) { percentFtp = formatPercent(it) }
-        observe(karooDataService.intensityFactorData) { intensityFactor = formatStreamData(it, "") }
-        observe(karooDataService.trainingStressScoreData) { tss = formatStreamData(it, "") }
-        observe(karooDataService.powerToWeightData) { wPerKg = formatStreamData(it, "w/kg") }
-    }
-
-    // ── Energy ────────────────────────────────────────────────────────────
-    private fun observeEnergyMetrics() {
-        observe(karooDataService.energyOutputData) { energyOutput = formatStreamDataInt(it, "kJ") }
-        observe(karooDataService.caloriesData) { calories = formatStreamDataInt(it, "kcal") }
-        observe(karooDataService.caloriesPerHourData) {
-            caloriesPerHour = formatStreamDataInt(it, "kcal/h")
-        }
-    }
-
-    // ── Speed and Cadence additions ────────────────────────────────────────
-    private fun observeSpeedCadenceMetrics() {
-        observe(karooDataService.smoothed3sSpeedData) { speed3s = formatStreamData(it, "km/h") }
-        observe(karooDataService.smoothed3sCadenceData) { cadence3s = formatStreamData(it, "rpm") }
-    }
-
-    // ── Elevation ─────────────────────────────────────────────────────────
-    private fun observeElevationMetrics() {
-        observe(karooDataService.elevationGradeData) { elevationGrade = formatGrade(it) }
-        observe(karooDataService.elevationGainData) { elevationGain = formatStreamData(it, "m") }
-        observe(karooDataService.elevationLossData) { elevationLoss = formatStreamData(it, "m") }
-        observe(karooDataService.altitudeData) { altitude = formatStreamData(it, "m") }
-        observe(karooDataService.vam30sData) { vam30s = formatStreamData(it, "m/h") }
-    }
-
-    // ── Lap ───────────────────────────────────────────────────────────────
-    private fun observeLapMetrics() {
-        observe(karooDataService.lapNumberData) { lapNumber = formatInteger(it) }
-        observe(karooDataService.lapTimeData) { lapTime = formatLapTime(it) }
-        observe(karooDataService.lapDistanceData) { lapDistance = formatStreamData(it, "km") }
-        observe(karooDataService.lapSpeedData) { lapSpeed = formatStreamData(it, "km/h") }
-        observe(karooDataService.lapHrData) { lapHr = formatStreamData(it, "bpm") }
-        observe(karooDataService.lapPowerData) { lapPower = formatStreamData(it, "w") }
-        observe(karooDataService.lapNpData) { lapNp = formatStreamData(it, "w") }
-        observe(karooDataService.lapCadenceData) { lapCadence = formatStreamData(it, "rpm") }
-        observe(karooDataService.lapAscentData) { lapAscent = formatStreamData(it, "m") }
-    }
-
-    // ── Last Lap ──────────────────────────────────────────────────────────
-    private fun observeLastLapMetrics() {
-        observe(karooDataService.lastLapTimeData) { lastLapTime = formatLapTime(it) }
-        observe(karooDataService.lastLapDistanceData) {
-            lastLapDistance = formatStreamData(it, "km")
-        }
-        observe(karooDataService.lastLapSpeedData) { lastLapSpeed = formatStreamData(it, "km/h") }
-        observe(karooDataService.lastLapHrData) { lastLapHr = formatStreamData(it, "bpm") }
-        observe(karooDataService.lastLapPowerData) { lastLapPower = formatStreamData(it, "w") }
-        observe(karooDataService.lastLapNpData) { lastLapNp = formatStreamData(it, "w") }
-    }
-
-    // ── Shifting (multi-field for gears, simple for count) ─────────────────
-    private fun observeShiftingMetrics() {
-        scope.launch {
-            karooDataService.shiftingFrontGearData.collect {
-                currentData.shiftingFrontGear =
-                        formatGear(
-                                it,
-                                DataType.Field.SHIFTING_FRONT_GEAR,
-                                DataType.Field.SHIFTING_FRONT_GEAR_MAX
-                        )
-                currentData.isDirty = true
-            }
-        }
-        scope.launch {
-            karooDataService.shiftingRearGearData.collect {
-                currentData.shiftingRearGear =
-                        formatGear(
-                                it,
-                                DataType.Field.SHIFTING_REAR_GEAR,
-                                DataType.Field.SHIFTING_REAR_GEAR_MAX
-                        )
-                currentData.isDirty = true
-            }
-        }
-        scope.launch {
-            karooDataService.shiftingBatteryData.collect {
-                currentData.shiftingBattery = formatShiftingBattery(it)
-                currentData.isDirty = true
-            }
-        }
-        observe(karooDataService.shiftingCountData) { shiftingCount = formatInteger(it) }
-    }
-
-    // ── Navigation ────────────────────────────────────────────────────────
-    private fun observeNavigationMetrics() {
-        observe(karooDataService.distanceToTurnData) { distanceToTurn = formatDistanceToTurn(it) }
-        observe(karooDataService.distanceToDestData) { distanceToDest = formatStreamData(it, "km") }
-        observe(karooDataService.timeOfArrivalData) { timeOfArrival = formatClockTime(it) }
-        observe(karooDataService.timeToDestData) { timeToDest = formatDuration(it) }
-        observe(karooDataService.headingData) { heading = formatHeading(it) }
-    }
-
-    // ── eBike ─────────────────────────────────────────────────────────────
-    private fun observeEBikeMetrics() {
-        observe(karooDataService.levBatteryData) { levBattery = formatPercent(it) }
-        observe(karooDataService.levRangeData) { levRange = formatStreamData(it, "km") }
-        observe(karooDataService.levAssistModeData) { levAssistMode = formatInteger(it) }
-        observe(karooDataService.levMotorPowerData) { levMotorPower = formatStreamData(it, "w") }
-    }
+    // ── General/HR/Power/Energy/Speed/Cadence/Elevation/Lap/Shifting/Navigation/eBike
+    // ── metric observers → KarooActiveLookBridgeMetrics.kt ───────────────────────────
 
     /** Observe ActiveLook connection state */
     private fun observeActiveLookState() {
@@ -1042,7 +895,7 @@ class KarooActiveLookBridge(context: Context) {
     }
 
     /** Flush accumulated data to ActiveLook glasses (hold/flush pattern) */
-    private fun flushToGlasses() {
+    internal fun flushToGlasses() {
         if (!displayOn) return // display toggled off — don't re-light it with data writes
         if (!currentData.isDirty) {
             val now = System.currentTimeMillis()
@@ -1129,193 +982,7 @@ class KarooActiveLookBridge(context: Context) {
     /** Get ActiveLookLayoutService for Phase 4.2 layout management */
     fun getLayoutService(): ActiveLookLayoutService = layoutService
 
-    /**
-     * Start a local simulator that periodically pushes sample values to the glasses. This uses the
-     * same flush pipeline as normal streaming.
-     */
-    fun startSimulator() {
-        Log.i(TAG, "🎮 startSimulator() called")
-        Log.i(TAG, "  simulatorJob?.isActive: ${simulatorJob?.isActive}")
-        Log.i(TAG, "  activeLookService.isConnected: ${activeLookService.isConnected}")
-
-        if (simulatorJob?.isActive == true) {
-            Log.d(TAG, "⚠️ Simulator already running")
-            return
-        }
-
-        if (!activeLookService.isConnected) {
-            Log.w(TAG, "❌ Cannot start simulator: glasses not connected")
-            return
-        }
-
-        Log.i(TAG, "✅ Starting simulator (profile-aware)")
-        simulatorJob =
-                scope.launch {
-                    var tick = 0
-                    Log.i(TAG, "🔁 Simulator coroutine loop started")
-                    while (true) {
-                        tick++
-                        Log.d(
-                                TAG,
-                                "📊 Simulator tick $tick (profile: ${activeProfile?.name ?: "none"})"
-                        )
-                        pushSimulatedFrame(tick)
-                        delay(2000)
-                    }
-                }
-        Log.i(TAG, "✅ Simulator job launched successfully")
-    }
-
-    /** Stop the simulator (if running). */
-    fun stopSimulator() {
-        if (simulatorJob?.isActive == true) {
-            Log.i(TAG, "⏹ Stopping simulator")
-        }
-        simulatorJob?.cancel()
-        simulatorJob = null
-    }
-
-    /**
-     * Simulate one frame: populate every field that appears in the active profile, then flush to
-     * the glasses. Falls back to the 6 core fields when no profile is set.
-     */
-    private fun pushSimulatedFrame(tick: Int) {
-        val fieldIds =
-                activeProfile
-                        ?.screens
-                        ?.flatMap { it.dataFields }
-                        ?.map { it.dataField.id }
-                        ?.distinct()
-                        ?.takeIf { it.isNotEmpty() }
-                        ?: listOf(
-                                1,
-                                2,
-                                4,
-                                7,
-                                12,
-                                18
-                        ) // fallback: time, distance, HR, power, speed, cadence
-
-        for (id in fieldIds) {
-            applySimulatedValue(id, tick)
-        }
-        currentData.isDirty = true
-        flushToGlasses()
-    }
-
-    /** Write one simulated value into [currentData] for [id]. */
-    @Suppress("ComplexMethod")
-    private fun applySimulatedValue(id: Int, t: Int) {
-        when (id) {
-            // ── General ──────────────────────────────────────────────────
-            1 -> currentData.time = formatSimulatedTime(t * 2)
-            2 -> currentData.distance = "${t / 10}.${t % 10} km"
-            53 -> currentData.clockTime = String.format(java.util.Locale.ROOT, "14:%02d", t % 60)
-            54 -> currentData.temperature = "${18 + t % 10} °C"
-            55 -> currentData.batteryPercent = "${80 - t % 30}%"
-            56 -> currentData.rideTime = formatSimulatedTime(t * 2)
-            // ── Heart Rate ───────────────────────────────────────────────
-            4 -> currentData.heartRate = "${140 + t % 30}"
-            5 -> currentData.maxHeartRate = "175"
-            6 -> currentData.avgHeartRate = "145"
-            47 -> currentData.hrZone = "Z${2 + (t / 10) % 3}"
-            57 -> currentData.percentMaxHr = "${75 + t % 15}%"
-            58 -> currentData.percentHrr = "${65 + t % 20}%"
-            // ── Power ────────────────────────────────────────────────────
-            7 -> currentData.power = "${200 + t % 100}"
-            8 -> currentData.maxPower = "450"
-            9 -> currentData.avgPower = "210"
-            10 -> currentData.power3s = "${195 + t % 80}"
-            48 -> currentData.powerZone = "Z${2 + (t / 15) % 4}"
-            59 -> currentData.power5s = "${198 + t % 90}"
-            60 -> currentData.power10s = "${205 + t % 70}"
-            61 -> currentData.power30s = "${210 + t % 50}"
-            62 -> currentData.normalizedPower = "${215 + t % 40}"
-            63 -> currentData.percentFtp = "${85 + t % 30}%"
-            64 ->
-                    currentData.intensityFactor =
-                            String.format(java.util.Locale.ROOT, "%.2f", 0.85 + (t % 15) * 0.01)
-            65 -> currentData.tss = "${50 + t * 2}"
-            66 ->
-                    currentData.wPerKg =
-                            String.format(java.util.Locale.ROOT, "%.1f", 3.2 + (t % 10) * 0.1)
-            // ── Speed ────────────────────────────────────────────────────
-            12 -> currentData.speed = "${25 + t % 15}"
-            13 -> currentData.maxSpeed = "42"
-            14 -> currentData.avgSpeed = "28"
-            70 -> currentData.speed3s = "${24 + t % 12}"
-            // ── Cadence ──────────────────────────────────────────────────
-            18 -> currentData.cadence = "${85 + t % 20}"
-            19 -> currentData.maxCadence = "102"
-            20 -> currentData.avgCadence = "88"
-            71 -> currentData.cadence3s = "${83 + t % 18}"
-            // ── Energy ───────────────────────────────────────────────────
-            67 -> currentData.energyOutput = "${200 + t * 5} kJ"
-            68 -> currentData.calories = "${150 + t * 3}"
-            69 -> currentData.caloriesPerHour = "${600 + t % 200}"
-            // ── Climbing ─────────────────────────────────────────────────
-            24 -> currentData.vam = "${800 + t % 400}"
-            25 -> currentData.avgVam = "650"
-            // ── Elevation ────────────────────────────────────────────────
-            72 -> currentData.elevationGrade = "${-2 + t % 8}%"
-            73 -> currentData.elevationGain = "${100 + t * 2} m"
-            74 -> currentData.elevationLoss = "${30 + t} m"
-            75 -> currentData.altitude = "${250 + t * 3} m"
-            76 -> currentData.vam30s = "${700 + t % 300}"
-            // ── Lap ──────────────────────────────────────────────────────
-            77 -> currentData.lapNumber = "${1 + t / 30}"
-            78 -> currentData.lapTime = formatSimulatedTime(t * 2 % 3600)
-            79 ->
-                    currentData.lapDistance =
-                            String.format(java.util.Locale.ROOT, "%.1f km", (t % 50) * 0.1 + 0.1)
-            80 -> currentData.lapSpeed = "${26 + t % 10}"
-            81 -> currentData.lapHr = "${138 + t % 25}"
-            82 -> currentData.lapPower = "${205 + t % 80}"
-            83 -> currentData.lapNp = "${210 + t % 70}"
-            84 -> currentData.lapCadence = "${87 + t % 15}"
-            85 -> currentData.lapAscent = "${20 + t % 80} m"
-            // ── Last Lap ─────────────────────────────────────────────────
-            86 -> currentData.lastLapTime = "00:45:12"
-            87 -> currentData.lastLapDistance = "22.5 km"
-            88 -> currentData.lastLapSpeed = "29"
-            89 -> currentData.lastLapHr = "142"
-            90 -> currentData.lastLapPower = "215"
-            91 -> currentData.lastLapNp = "220"
-            // ── Radar ────────────────────────────────────────────────────
-            50 -> currentData.radarThreatLevel = "${t % 3}"
-            51 -> currentData.radarTargetCount = "${1 + t % 4}"
-            52 -> currentData.radarClosestRange = "${15 + t % 50} m"
-            // ── Shifting ─────────────────────────────────────────────────
-            92 -> currentData.shiftingFrontGear = "3/3"
-            93 -> currentData.shiftingRearGear = "${1 + t % 11}/11"
-            94 -> currentData.shiftingBattery = "${85 - t % 20}%"
-            95 -> currentData.shiftingCount = "${t * 3}"
-            // ── Navigation ───────────────────────────────────────────────
-            96 -> currentData.distanceToTurn = "${(2000 - t * 10).coerceAtLeast(0)} m"
-            97 ->
-                    currentData.distanceToDest =
-                            String.format(
-                                    java.util.Locale.ROOT,
-                                    "%.1f km",
-                                    (50.0 - t * 0.1).coerceAtLeast(0.0)
-                            )
-            98 -> currentData.timeOfArrival = "15:30"
-            99 -> currentData.timeToDest = formatSimulatedTime((5400 - t * 2).coerceAtLeast(0))
-            100 -> currentData.heading = listOf("N", "NE", "E", "SE", "S", "SW", "W", "NW")[t % 8]
-            // ── eBike ────────────────────────────────────────────────────
-            101 -> currentData.levBattery = "${80 - t % 30}%"
-            102 -> currentData.levRange = "${(60 - t).coerceAtLeast(0)} km"
-            103 -> currentData.levAssistMode = listOf("OFF", "ECO", "TRAIL", "BOOST")[t % 4]
-            104 -> currentData.levMotorPower = "${80 + t % 120} w"
-        }
-    }
-
-    private fun formatSimulatedTime(seconds: Int): String {
-        val h = seconds / 3600
-        val m = (seconds % 3600) / 60
-        val s = seconds % 60
-        return String.format(java.util.Locale.ROOT, "%02d:%02d:%02d", h, m, s)
-    }
+    // startSimulator() / stopSimulator() → KarooActiveLookBridgeSimulator.kt
 
     /** Clean up resources */
     fun cleanup() {

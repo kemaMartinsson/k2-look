@@ -1,5 +1,6 @@
 package com.kema.k2look.viewmodel
 
+// DisplayDebugService extension functions (split from DisplayDebugService.kt)
 import android.app.Application
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
@@ -10,9 +11,24 @@ import com.kema.k2look.service.ActiveLookService
 import com.kema.k2look.service.DisplayDebugService
 import com.kema.k2look.service.KarooActiveLookBridge
 import com.kema.k2look.service.KarooDataService
+import com.kema.k2look.service.deleteGauge
+import com.kema.k2look.service.startSimulator
+import com.kema.k2look.service.stopSimulator
+import com.kema.k2look.service.testClippingSemantics
+import com.kema.k2look.service.testDisplayBounds
+import com.kema.k2look.service.testDynamicLayout
+import com.kema.k2look.service.testExtraCommands
+import com.kema.k2look.service.testGauge270
+import com.kema.k2look.service.testIconValueUnit
+import com.kema.k2look.service.testK2LookVsOfficial
+import com.kema.k2look.service.testProductionLayout
+import com.kema.k2look.service.testRealisticLayout
+import com.kema.k2look.service.testTextRotations
+import com.kema.k2look.service.testTextXPosition
+import com.kema.k2look.service.testThreeFieldLayout
+import com.kema.k2look.service.testZoneBar
 import com.kema.k2look.util.PreferencesManager
 import io.hammerhead.karooext.models.RideState
-import io.hammerhead.karooext.models.StreamState
 import io.hammerhead.karooext.models.UserProfile
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,9 +40,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // Bridge is owned by K2LookApplication — shared with K2LookExtension.
     // The UI observes the live connection; closing the UI never tears it down.
-    private val bridge = (application as K2LookApplication).bridge
-    private val karooDataService = bridge.getKarooDataService()
-    private val activeLookService = bridge.getActiveLookService()
+    internal val bridge = (application as K2LookApplication).bridge
+    internal val karooDataService = bridge.getKarooDataService()
+    internal val activeLookService = bridge.getActiveLookService()
 
     /** Display debug / calibration test patterns on glasses */
     val displayDebug = DisplayDebugService(activeLookService)
@@ -35,7 +51,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val preferencesManager = PreferencesManager(application)
 
     // Reference to LayoutBuilderViewModel for gesture actions
-    private var layoutBuilderViewModel: LayoutBuilderViewModel? = null
+    internal var layoutBuilderViewModel: LayoutBuilderViewModel? = null
 
     /** Set the LayoutBuilderViewModel instance for gesture screen cycling */
     fun setLayoutBuilderViewModel(viewModel: LayoutBuilderViewModel) {
@@ -60,7 +76,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // UI State
-    private val _uiState = MutableStateFlow(UiState())
+    internal val _uiState = MutableStateFlow(UiState())
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
     data class UiState(
@@ -113,7 +129,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private var simulatorJob: kotlinx.coroutines.Job? = null
 
-    private val gesturePreferences = com.kema.k2look.data.GesturePreferencesRepository(application)
+    // Owned here; accessed by MainViewModelGestureHandlers.kt extension functions
+    internal var currentBrightness = 8 // 0-15, default mid-level
+    internal var displayPowerOn = true
+
+    internal val gesturePreferences = com.kema.k2look.data.GesturePreferencesRepository(application)
 
     init {
         Log.i(TAG, "MainViewModel initialized — attaching to application-scoped bridge")
@@ -250,198 +270,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         Log.d(TAG, "Loaded reconnect timeout: ${timeout}min")
     }
 
-    /** Observe gesture/touch events from ActiveLook service */
-    private fun observeGestureEvents() {
-        viewModelScope.launch {
-            activeLookService.gestureEvents.collect { count ->
-                _uiState.value = _uiState.value.copy(gestureEventCount = count)
-                if (count == 0) return@collect // skip initial StateFlow value
-                Log.i(TAG, "🖐️ Gesture event #$count received")
-
-                if (_uiState.value.gestureEnabled) {
-                    executeGestureAction(_uiState.value.gestureAction)
-                }
-            }
-        }
-
-        viewModelScope.launch {
-            activeLookService.touchEvents.collect { count ->
-                _uiState.value = _uiState.value.copy(touchEventCount = count)
-                if (count == 0) return@collect // skip initial StateFlow value
-                Log.i(TAG, "👆 Touch event #$count received")
-
-                if (_uiState.value.touchEnabled) {
-                    executeTouchAction(_uiState.value.touchAction)
-                }
-            }
-        }
-    }
-
-    /** Observe gesture/touch action preferences */
-    private fun observeGesturePreferences() {
-        viewModelScope.launch {
-            gesturePreferences.gestureAction.collect { action ->
-                Log.d(TAG, "Gesture action preference changed: ${action.displayName}")
-                _uiState.value = _uiState.value.copy(gestureAction = action)
-            }
-        }
-        viewModelScope.launch {
-            gesturePreferences.touchAction.collect { action ->
-                Log.d(TAG, "Touch action preference changed: ${action.displayName}")
-                _uiState.value = _uiState.value.copy(touchAction = action)
-            }
-        }
-        viewModelScope.launch {
-            gesturePreferences.gestureEnabled.collect { enabled ->
-                _uiState.value = _uiState.value.copy(gestureEnabled = enabled)
-                bridge.getActiveLookService().enableGestureSensor(enabled)
-            }
-        }
-        viewModelScope.launch {
-            gesturePreferences.touchEnabled.collect { enabled ->
-                _uiState.value = _uiState.value.copy(touchEnabled = enabled)
-            }
-        }
-    }
-
-    /** Execute the configured gesture action */
-    private fun executeGestureAction(action: com.kema.k2look.model.GestureAction) {
-        Log.i(TAG, "👋 Executing gesture action: ${action.displayName}")
-
-        when (action) {
-            com.kema.k2look.model.GestureAction.CYCLE_SCREENS -> {
-                cycleToNextScreen()
-            }
-            com.kema.k2look.model.GestureAction.ADJUST_BRIGHTNESS -> {
-                adjustBrightness()
-            }
-            com.kema.k2look.model.GestureAction.TOGGLE_DISPLAY -> {
-                toggleDisplay()
-            }
-        }
-    }
-
-    /** Execute the configured touch action */
-    private fun executeTouchAction(action: com.kema.k2look.model.TouchAction) {
-        Log.i(TAG, "👆 Executing touch action: ${action.displayName}")
-
-        when (action) {
-            com.kema.k2look.model.TouchAction.SHOW_HIDE_DISPLAY -> {
-                toggleDisplay()
-            }
-            com.kema.k2look.model.TouchAction.CYCLE_SCREENS -> {
-                cycleToNextScreen()
-            }
-            com.kema.k2look.model.TouchAction.ADJUST_BRIGHTNESS -> {
-                adjustBrightness()
-            }
-        }
-    }
-
-    // Current brightness level (0-15)
-    private var currentBrightness = 8 // Default mid-level
-
-    // Display power state
-    private var displayPowerOn = true
-
-    /** Cycle to the next screen in the current profile */
-    private fun cycleToNextScreen() {
-        val layoutViewModel = layoutBuilderViewModel
-        if (layoutViewModel == null) {
-            Log.w(TAG, "Cannot cycle screens - LayoutBuilderViewModel not set")
-            return
-        }
-
-        val success = layoutViewModel.cycleToNextScreen()
-        if (!success) {
-            Log.d(TAG, "Screen cycling not performed (single screen or no profile)")
-        }
-    }
-
-    /** Cycle to the next profile (REMOVED - not useful during rides) */
-    private fun cycleToNextProfile() {
-        // Removed - cycling K2Look profiles during a ride doesn't make sense
-        Log.d(TAG, "Profile cycling removed - not needed during rides")
-    }
-
-    /**
-     * Adjust brightness (cycle through levels: 8 -> 12 -> 15 -> 4 -> 8) Using common brightness
-     * levels for cycling
-     */
-    private fun adjustBrightness() {
-        viewModelScope.launch {
-            try {
-                // Cycle through useful brightness levels
-                currentBrightness =
-                        when (currentBrightness) {
-                            in 0..7 -> 8 // Low -> Medium
-                            8 -> 12 // Medium -> High
-                            in 9..12 -> 15 // High -> Max
-                            in 13..15 -> 4 // Max -> Low
-                            else -> 8 // Default to medium
-                        }
-
-                Log.i(TAG, "✓ Adjusting brightness to level $currentBrightness (0=min, 15=max)")
-
-                // Send luma command to glasses (command 0x10)
-                val activeLookService = bridge.getActiveLookService()
-                activeLookService.setLuminance(currentBrightness)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to adjust brightness: ${e.message}", e)
-            }
-        }
-    }
-
-    /** Toggle display on/off */
-    private fun toggleDisplay() {
-        viewModelScope.launch {
-            try {
-                displayPowerOn = !displayPowerOn
-
-                Log.i(TAG, "✓ Toggling display ${if (displayPowerOn) "ON" else "OFF"}")
-
-                // Tell the bridge to suppress/resume data flushes so display writes
-                // don't immediately re-light the screen after the user turned it off.
-                bridge.setDisplayOn(displayPowerOn)
-
-                // Send display power command to glasses (command 0x00)
-                val activeLookService = bridge.getActiveLookService()
-                activeLookService.setDisplayPower(displayPowerOn)
-
-                if (displayPowerOn) {
-                    // Redraw current layout by re-applying the active profile
-                    layoutBuilderViewModel?.applyProfileToGlasses()
-                    Log.d(TAG, "Display turned on - layout refreshed")
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to toggle display: ${e.message}", e)
-            }
-        }
-    }
-
-    /** Set gesture action preference */
-    fun setGestureAction(action: com.kema.k2look.model.GestureAction) {
-        Log.i(TAG, "Setting gesture action to: ${action.displayName}")
-        gesturePreferences.setGestureAction(action)
-    }
-
-    /** Set touch action preference */
-    fun setTouchAction(action: com.kema.k2look.model.TouchAction) {
-        Log.i(TAG, "Setting touch action to: ${action.displayName}")
-        gesturePreferences.setTouchAction(action)
-    }
-
-    /** Enable or disable gesture sensor */
-    fun setGestureEnabled(enabled: Boolean) {
-        Log.i(TAG, "Setting gesture enabled: $enabled")
-        gesturePreferences.setGestureEnabled(enabled)
-    }
-
-    /** Enable or disable touch button actions */
-    fun setTouchEnabled(enabled: Boolean) {
-        Log.i(TAG, "Setting touch enabled: $enabled")
-        gesturePreferences.setTouchEnabled(enabled)
-    }
+    // observeGestureEvents / observeGesturePreferences / executeGestureAction /
+    // executeTouchAction / cycleToNextScreen / adjustBrightness / toggleDisplay /
+    // setGestureAction / setTouchAction / setGestureEnabled / setTouchEnabled
+    // → MainViewModelGestureHandlers.kt as extension functions
 
     /** Update reconnect timeout */
     fun setReconnectTimeout(minutes: Int) {
@@ -587,316 +419,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return String.format(java.util.Locale.ROOT, "%02d:%02d:%02d", h, m, s)
     }
 
-    /** Observe bridge state */
-    private fun observeBridgeState() {
-        viewModelScope.launch {
-            bridge.bridgeState.collect { state ->
-                Log.d(TAG, "Bridge state changed: $state")
-                _uiState.value = _uiState.value.copy(bridgeState = state)
-            }
-        }
-    }
-
-    /** Observe ActiveLook data */
-    private fun observeActiveLookData() {
-        // Observe connection state
-        viewModelScope.launch {
-            activeLookService.connectionState.collect { state ->
-                Log.d(TAG, "ActiveLook connection state changed: $state")
-                _uiState.value = _uiState.value.copy(activeLookState = state)
-                // Re-apply gesture preference on every (re)connect.
-                // onConnected always calls enableGestureSensor(true); correct it here if the
-                // user has gesture disabled so the preference is respected after reconnects.
-                if (state is ActiveLookService.ConnectionState.Connected) {
-                    val gestureEnabled = gesturePreferences.gestureEnabled.value
-                    Log.d(
-                            TAG,
-                            "Re-applying gesture preference on connect: gestureEnabled=$gestureEnabled"
-                    )
-                    activeLookService.enableGestureSensor(gestureEnabled)
-                }
-            }
-        }
-
-        // Observe discovered glasses
-        viewModelScope.launch {
-            activeLookService.discoveredGlasses.collect { glasses ->
-                Log.d(TAG, "Discovered glasses updated: ${glasses.size} devices")
-                _uiState.value = _uiState.value.copy(discoveredGlasses = glasses)
-            }
-        }
-
-        // Observe scanning state
-        viewModelScope.launch {
-            activeLookService.isScanning.collect { scanning ->
-                Log.d(TAG, "Scanning state: $scanning")
-                _uiState.value = _uiState.value.copy(isScanning = scanning)
-            }
-        }
-    }
-
-    /** Observe user profile preferences from Karoo (including unit system) */
-    private fun observeUserProfile() {
-        viewModelScope.launch {
-            karooDataService.getKarooSystem().addConsumer<UserProfile> { profile ->
-                Log.d(
-                        TAG,
-                        "User profile updated: distance=${profile.preferredUnit.distance}, elevation=${profile.preferredUnit.elevation}"
-                )
-                val useImperial =
-                        profile.preferredUnit.distance ==
-                                UserProfile.PreferredUnit.UnitType.IMPERIAL
-                _uiState.value =
-                        _uiState.value.copy(userProfile = profile, useImperialUnits = useImperial)
-            }
-        }
-    }
-
-    /** Observe data from KarooDataService and update UI state */
-    private fun observeKarooData() {
-        // Observe connection state
-        viewModelScope.launch {
-            karooDataService.connectionState.collect { state ->
-                Log.d(TAG, "Connection state changed: $state")
-                _uiState.value = _uiState.value.copy(connectionState = state)
-            }
-        }
-
-        // Observe ride state
-        viewModelScope.launch {
-            karooDataService.rideState.collect { state ->
-                Log.d(TAG, "Ride state changed: $state")
-                _uiState.value = _uiState.value.copy(rideState = state)
-            }
-        }
-
-        // Observe speed data
-        viewModelScope.launch {
-            karooDataService.speedData.collect { streamState ->
-                val speedStr = formatStreamData(streamState, "km/h")
-                _uiState.value = _uiState.value.copy(speed = speedStr)
-            }
-        }
-
-        // Observe average speed data
-        viewModelScope.launch {
-            karooDataService.averageSpeedData.collect { streamState ->
-                val avgSpeedStr = formatStreamData(streamState, "km/h")
-                _uiState.value = _uiState.value.copy(avgSpeed = avgSpeedStr)
-            }
-        }
-
-        // Observe max speed data
-        viewModelScope.launch {
-            karooDataService.maxSpeedData.collect { streamState ->
-                val maxSpeedStr = formatStreamData(streamState, "km/h")
-                _uiState.value = _uiState.value.copy(maxSpeed = maxSpeedStr)
-            }
-        }
-
-        // Observe heart rate data
-        viewModelScope.launch {
-            karooDataService.heartRateData.collect { streamState ->
-                val hrStr = formatStreamData(streamState, "bpm")
-                _uiState.value = _uiState.value.copy(heartRate = hrStr)
-            }
-        }
-
-        // Observe average heart rate data
-        viewModelScope.launch {
-            karooDataService.averageHeartRateData.collect { streamState ->
-                val avgHrStr = formatStreamData(streamState, "bpm")
-                _uiState.value = _uiState.value.copy(avgHeartRate = avgHrStr)
-            }
-        }
-
-        // Observe max heart rate data
-        viewModelScope.launch {
-            karooDataService.maxHeartRateData.collect { streamState ->
-                val maxHrStr = formatStreamData(streamState, "bpm")
-                _uiState.value = _uiState.value.copy(maxHeartRate = maxHrStr)
-            }
-        }
-
-        // Observe cadence data
-        viewModelScope.launch {
-            karooDataService.cadenceData.collect { streamState ->
-                val cadenceStr = formatStreamDataInt(streamState, "rpm")
-                _uiState.value = _uiState.value.copy(cadence = cadenceStr)
-            }
-        }
-
-        // Observe average cadence data
-        viewModelScope.launch {
-            karooDataService.averageCadenceData.collect { streamState ->
-                val avgCadenceStr = formatStreamDataInt(streamState, "rpm")
-                _uiState.value = _uiState.value.copy(avgCadence = avgCadenceStr)
-            }
-        }
-
-        // Observe max cadence data
-        viewModelScope.launch {
-            karooDataService.maxCadenceData.collect { streamState ->
-                val maxCadenceStr = formatStreamDataInt(streamState, "rpm")
-                _uiState.value = _uiState.value.copy(maxCadence = maxCadenceStr)
-            }
-        }
-
-        // Observe power data
-        viewModelScope.launch {
-            karooDataService.powerData.collect { streamState ->
-                val powerStr = formatStreamDataInt(streamState, "w")
-                _uiState.value = _uiState.value.copy(power = powerStr)
-            }
-        }
-
-        // Observe average power data
-        viewModelScope.launch {
-            karooDataService.averagePowerData.collect { streamState ->
-                val avgPowerStr = formatStreamDataInt(streamState, "w")
-                _uiState.value = _uiState.value.copy(avgPower = avgPowerStr)
-            }
-        }
-
-        // Observe max power data
-        viewModelScope.launch {
-            karooDataService.maxPowerData.collect { streamState ->
-                val maxPowerStr = formatStreamDataInt(streamState, "w")
-                _uiState.value = _uiState.value.copy(maxPower = maxPowerStr)
-            }
-        }
-
-        // Observe distance data
-        viewModelScope.launch {
-            karooDataService.distanceData.collect { streamState ->
-                val distanceStr = formatStreamData(streamState, "km")
-                _uiState.value = _uiState.value.copy(distance = distanceStr)
-            }
-        }
-
-        // Observe time data
-        viewModelScope.launch {
-            karooDataService.timeData.collect { streamState ->
-                val timeStr = formatTimeData(streamState)
-                _uiState.value = _uiState.value.copy(time = timeStr)
-            }
-        }
-
-        // Observe HR zone data
-        viewModelScope.launch {
-            karooDataService.hrZoneData.collect { streamState ->
-                val zoneStr =
-                        when (streamState) {
-                            is StreamState.Streaming -> {
-                                val zoneValue = streamState.dataPoint.singleValue?.toInt()
-                                if (zoneValue != null && zoneValue > 0) "Z$zoneValue" else "--"
-                            }
-                            else -> "--"
-                        }
-                _uiState.value = _uiState.value.copy(hrZone = zoneStr)
-            }
-        }
-
-        // Observe 3s power data
-        viewModelScope.launch {
-            karooDataService.smoothed3sPowerData.collect { streamState ->
-                val power3sStr = formatStreamDataInt(streamState, "w")
-                _uiState.value = _uiState.value.copy(power3s = power3sStr)
-            }
-        }
-
-        // Observe 10s power data
-        viewModelScope.launch {
-            karooDataService.smoothed10sPowerData.collect { streamState ->
-                val power10sStr = formatStreamDataInt(streamState, "w")
-                _uiState.value = _uiState.value.copy(power10s = power10sStr)
-            }
-        }
-
-        // Observe 30s power data
-        viewModelScope.launch {
-            karooDataService.smoothed30sPowerData.collect { streamState ->
-                val power30sStr = formatStreamDataInt(streamState, "w")
-                _uiState.value = _uiState.value.copy(power30s = power30sStr)
-            }
-        }
-
-        // Observe VAM data
-        viewModelScope.launch {
-            karooDataService.vamData.collect { streamState ->
-                val vamStr = formatStreamData(streamState, "m/h")
-                _uiState.value = _uiState.value.copy(vam = vamStr)
-            }
-        }
-
-        // Observe average VAM data
-        viewModelScope.launch {
-            karooDataService.avgVamData.collect { streamState ->
-                val avgVamStr = formatStreamData(streamState, "m/h")
-                _uiState.value = _uiState.value.copy(avgVam = avgVamStr)
-            }
-        }
-    }
-
-    /** Format stream data for display */
-    private fun formatStreamData(streamState: StreamState?, unit: String): String {
-        return when (streamState) {
-            is StreamState.Streaming -> {
-                val value = streamState.dataPoint.singleValue
-                if (value != null) {
-                    "${formatValue(value)} $unit"
-                } else {
-                    "-- $unit"
-                }
-            }
-            is StreamState.Searching -> "Searching..."
-            is StreamState.Idle -> "-- $unit"
-            is StreamState.NotAvailable -> "N/A"
-            null -> "-- $unit"
-        }
-    }
-
-    /** Format time data (convert ms to HH:MM:SS) */
-    private fun formatTimeData(streamState: StreamState?): String {
-        return when (streamState) {
-            is StreamState.Streaming -> {
-                val ms = streamState.dataPoint.singleValue?.toLong()
-                if (ms != null) {
-                    val seconds = (ms / 1000) % 60
-                    val minutes = (ms / (1000 * 60)) % 60
-                    val hours = (ms / (1000 * 60 * 60))
-                    String.format(java.util.Locale.US, "%02d:%02d:%02d", hours, minutes, seconds)
-                } else {
-                    "--:--:--"
-                }
-            }
-            is StreamState.Searching -> "--:--:--"
-            is StreamState.Idle -> "--:--:--"
-            is StreamState.NotAvailable -> "N/A"
-            null -> "--:--:--"
-        }
-    }
-
-    /** Format numeric value for display */
-    private fun formatValue(value: Double): String {
-        return when {
-            value >= 100 -> "%.0f".format(value)
-            value >= 10 -> "%.1f".format(value)
-            else -> "%.2f".format(value)
-        }
-    }
-
-    /** Format an integer-only metric (cadence, power, calories, energy) — no decimals. */
-    private fun formatStreamDataInt(streamState: StreamState?, unit: String): String {
-        return when (streamState) {
-            is StreamState.Streaming ->
-                    streamState.dataPoint.singleValue?.let { "%.0f $unit".format(it) } ?: "-- $unit"
-            is StreamState.Searching -> "Searching..."
-            is StreamState.Idle -> "-- $unit"
-            is StreamState.NotAvailable -> "N/A"
-            null -> "-- $unit"
-        }
-    }
+    // observeBridgeState / observeActiveLookData / observeUserProfile / observeKarooData
+    // formatStreamData / formatTimeData / formatValue / formatStreamDataInt
+    // → MainViewModelDataObservers.kt as extension functions
 
     override fun onCleared() {
         super.onCleared()

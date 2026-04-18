@@ -39,6 +39,17 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kema.k2look.model.LayoutDataField
 import com.kema.k2look.viewmodel.LayoutBuilderViewModel
+import com.kema.k2look.viewmodel.addScreen
+import com.kema.k2look.viewmodel.applyProfileToGlasses
+import com.kema.k2look.viewmodel.assignMetricToZone
+import com.kema.k2look.viewmodel.changeScreenTemplate
+import com.kema.k2look.viewmodel.createProfile
+import com.kema.k2look.viewmodel.deleteProfile
+import com.kema.k2look.viewmodel.duplicateProfile
+import com.kema.k2look.viewmodel.removeMetricFromZone
+import com.kema.k2look.viewmodel.removeScreen
+import com.kema.k2look.viewmodel.selectProfile
+import com.kema.k2look.viewmodel.updateField
 
 /** Main DataField Builder tab */
 @Composable
