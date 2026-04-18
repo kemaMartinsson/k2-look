@@ -26,9 +26,9 @@ object DefaultVisualizations {
                 centerX = 152, // Center of 304px display
                 centerY = 128, // Center of 256px display
                 radiusOuter = 70, // Outer arc
-                radiusInner = 45, // Inner arc (thickness = 25px)
-                startPortion = 7, // Display 6-o'clock → viewer 12-o'clock
-                endPortion = 12, // Display 12-o'clock → viewer 6-o'clock
+                radiusInner = 55, // Inner arc (thickness = 15px)
+                startPortion = 3,
+                endPortion = 14,
                 clockwise = true,
                 minValue = 0f,
                 maxValue = 400f, // Typical FTP range
@@ -69,8 +69,8 @@ object DefaultVisualizations {
                 centerY = 128,
                 radiusOuter = 70,
                 radiusInner = 45,
-                startPortion = 7, // Display 6-o'clock → viewer 12-o'clock
-                endPortion = 12, // Display 12-o'clock → viewer 6-o'clock
+                startPortion = 0, // Full circle start
+                endPortion = 15, // Full circle end
                 clockwise = true,
                 minValue = 0f,
                 maxValue = 120f, // Typical cadence range
