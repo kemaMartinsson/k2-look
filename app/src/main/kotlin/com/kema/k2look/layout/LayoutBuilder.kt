@@ -1,166 +1,195 @@
 package com.kema.k2look.layout
 
 import android.util.Log
-import com.kema.k2look.model.FontSize
-import com.kema.k2look.model.IconSize
 import com.kema.k2look.model.LayoutDataField
 import com.kema.k2look.model.LayoutScreen
 
 /**
- * Builds ActiveLook layouts from DataField configurations using zone-based positioning
- * Handles precise zone positioning, icon placement, and text formatting based on
- * ActiveLook's official layout templates
+ * Builds ActiveLook layouts from DataField configurations using zone-based positioning Handles
+ * precise zone positioning, icon placement, and text formatting based on ActiveLook's official
+ * layout templates
  */
 class LayoutBuilder {
 
-    companion object {
-        private const val TAG = "LayoutBuilder"
+        companion object {
+                private const val TAG = "LayoutBuilder"
 
-        // ActiveLook display specifications
-        const val DISPLAY_WIDTH = 304
-        const val DISPLAY_HEIGHT = 256
+                // ActiveLook display specifications
+                const val DISPLAY_WIDTH = 304
+                const val DISPLAY_HEIGHT = 256
 
-        // Colors
-        const val COLOR_WHITE = 15
-        const val COLOR_BLACK = 0
+                // Colors
+                const val COLOR_WHITE = 15
+                const val COLOR_BLACK = 0
 
-        // Text rotation (see ActiveLook API)
-        const val ROTATION_TOP_LR = 4  // Top-to-bottom, left-to-right, centered
+                // Text rotation (see ActiveLook API)
+                const val ROTATION_TOP_LR = 4 // Top-to-bottom, left-to-right, centered
 
-        // Layout margins
-        const val ICON_MARGIN = 5
-        const val TEXT_MARGIN = 10
-    }
+                /**
+                 * Official text positions from ActiveLook Visual Assets README. Key = font ID.
+                 * Values = (txtX, txtY) relative to clipping region. With rotation 4 (TOP_LR), txtX
+                 * is the RIGHT edge of the rendered text.
+                 */
+                private data class TextPosition(val txtX: Int, val txtY: Int)
 
-    /**
-     * Build a layout for a specific field in a zone
-     * @param layoutId Layout ID (1-15) for ActiveLook glasses
-     * @param field The data field configuration
-     * @return ActiveLookLayout ready to be encoded and sent to glasses
-     */
-    fun buildLayout(
-        layoutId: Int,
-        field: LayoutDataField,
-        screen: LayoutScreen
-    ): ActiveLookLayout {
-        val template = screen.getTemplate()
-        val zone = template.zones.find { it.id == field.zoneId }
-            ?: throw IllegalArgumentException("Zone ${field.zoneId} not found in template ${template.id}")
+                private val officialTextPositions =
+                        mapOf(
+                                1 to TextPosition(62, 22), // Font 1 (24px) — e.g. battery, time
+                                2 to TextPosition(87, 38), // Font 2 (38px) — half-width zones
+                                3 to TextPosition(194, 64), // Font 3 (64px) — full-width zones
+                                4 to TextPosition(172, 75), // Font 4 (75px) — two-data zones
+                                5 to TextPosition(187, 106) // Font 5 (82px) — one-data zones
+                        )
 
-        Log.d(
-            TAG,
-            "Building layout $layoutId for zone ${zone.displayName} (${zone.id}), field: ${field.dataField.name}"
-        )
+                /**
+                 * Returns the ExtraCmd y position for a font-1 annotation (unit label, secondary
+                 * value such as seconds) that is top-aligned with the main value text for a given
+                 * zone font.
+                 *
+                 * ActiveLook TOP_LR rotation: txtY is the top of the rendered text. So a font-1
+                 * annotation drawn at y = officialTextPositions[zoneFont].txtY shares the same top
+                 * edge as the main value — making it visually top-aligned regardless of the main
+                 * font's character height.
+                 *
+                 * ALWAYS use font 1 for the annotation itself (addSubCommandFont(1) before the
+                 * text).
+                 *
+                 * Examples: zoneFont=1 → y=22 (font1 value, font1 unit — same size, naturally
+                 * aligned) zoneFont=2 → y=38 (font2 value 38px, font1 unit 24px — unit sits at
+                 * value top) zoneFont=3 → y=64 (font3 value 64px, font1 unit 24px — unit sits at
+                 * value top)
+                 *
+                 * Also applies to secondary time components: e.g. "seconds" shown in font 1
+                 * alongside a font-2 "HH:MM" value.
+                 */
+                fun annotationTextY(zoneFont: Int): Int =
+                        officialTextPositions[zoneFont]?.txtY ?: 22
+        }
 
-        return ActiveLookLayout(
-            layoutId = layoutId,
-            clippingRegion = ClippingRegion(
-                x = zone.x,
-                y = zone.y,
-                width = zone.width,
-                height = zone.height
-            ),
-            foreColor = COLOR_WHITE,
-            backColor = COLOR_BLACK,
-            font = zone.font,
-            textConfig = TextConfig(
-                x = zone.width - TEXT_MARGIN,  // Right-aligned
-                y = zone.height / 2,  // Vertically centered
-                rotation = ROTATION_TOP_LR,
-                opacity = true
-            ),
-            additionalCommands = buildAdditionalCommands(field, zone)
-        )
-    }
+        /**
+         * Build a layout for a specific field in a zone
+         * @param layoutId Layout ID (1-15) for ActiveLook glasses
+         * @param field The data field configuration
+         * @return ActiveLookLayout ready to be encoded and sent to glasses
+         */
+        fun buildLayout(
+                layoutId: Int,
+                field: LayoutDataField,
+                screen: LayoutScreen
+        ): ActiveLookLayout {
+                val template = screen.getTemplate()
+                val zone =
+                        template.zones.find { it.id == field.zoneId }
+                                ?: throw IllegalArgumentException(
+                                        "Zone ${field.zoneId} not found in template ${template.id}"
+                                )
 
-    /**
-     * Build all layouts for a screen
-     * @return Map of zone ID to ActiveLookLayout
-     */
-    fun buildScreenLayouts(
-        startLayoutId: Int,
-        screen: LayoutScreen
-    ): Map<String, ActiveLookLayout> {
-        Log.i(
-            TAG,
-            "Building all layouts for screen ${screen.id} (template: ${screen.templateId}), starting at layout ID $startLayoutId"
-        )
-
-        return screen.dataFields.mapIndexed { index, field ->
-            field.zoneId to buildLayout(startLayoutId + index, field, screen)
-        }.toMap()
-    }
-
-    /**
-     * Build additional graphic commands (icons, labels)
-     */
-    private fun buildAdditionalCommands(
-        field: LayoutDataField,
-        zone: com.kema.k2look.model.LayoutZone
-    ): List<GraphicCommand> {
-        val commands = mutableListOf<GraphicCommand>()
-
-        var textOffsetX = 0
-
-        // Add icon if enabled
-        if (field.showIcon) {
-            val iconId = when (field.iconSize) {
-                IconSize.SMALL -> field.dataField.icon28
-                IconSize.LARGE -> field.dataField.icon40
-            }
-
-            if (iconId != null) {
-                val iconSize = field.iconSize.pixels
-                val iconX = ICON_MARGIN
-                val iconY = (zone.height - iconSize) / 2  // Vertically center in zone
-
-                Log.d(TAG, "Adding icon $iconId at ($iconX, $iconY), size: ${iconSize}px")
-
-                commands.add(
-                    GraphicCommand.Image(
-                        id = iconId,
-                        x = iconX,
-                        y = iconY
-                    )
+                Log.d(
+                        TAG,
+                        "Building layout $layoutId for zone ${zone.displayName} (${zone.id}), field: ${field.dataField.name}"
                 )
 
-                textOffsetX = iconSize + ICON_MARGIN * 2
-            }
-        }
-
-        // Add label if enabled
-        if (field.showLabel) {
-            val labelText = buildLabelText(field)
-            val labelX = textOffsetX + 5
-            val labelY = 5  // Near top of zone
-
-            Log.d(TAG, "Adding label '$labelText' at ($labelX, $labelY)")
-
-            commands.add(
-                GraphicCommand.Text(
-                    x = labelX,
-                    y = labelY,
-                    rotation = 0,  // Left-aligned
-                    font = FontSize.SMALL.fontId,  // Labels always use small font
-                    text = labelText
+                return ActiveLookLayout(
+                        layoutId = layoutId,
+                        clippingRegion =
+                                ClippingRegion(
+                                        x = zone.x,
+                                        y = zone.y,
+                                        width = zone.width,
+                                        height = zone.height
+                                ),
+                        foreColor = COLOR_WHITE,
+                        backColor = COLOR_BLACK,
+                        font = zone.font,
+                        textConfig =
+                                run {
+                                        val pos = officialTextPositions[zone.font]
+                                        if (pos != null) {
+                                                // Use calibrated txtXWithIcon when the field will
+                                                // show an icon,
+                                                // so the value text does not overlap the
+                                                // viewer-left icon bitmap.
+                                                val hasIcon =
+                                                        field.showIcon &&
+                                                                (field.dataField.icon28 != null ||
+                                                                        field.dataField.icon40 !=
+                                                                                null)
+                                                val txtX =
+                                                        if (hasIcon) {
+                                                                LayoutPositionDefaults.fontConfigs[
+                                                                                zone.font]
+                                                                        ?.txtXWithIcon
+                                                                        ?.toInt()
+                                                                        ?: pos.txtX
+                                                        } else {
+                                                                pos.txtX
+                                                        }
+                                                TextConfig(
+                                                        x = txtX,
+                                                        y = pos.txtY,
+                                                        rotation = ROTATION_TOP_LR,
+                                                        opacity = true
+                                                )
+                                        } else {
+                                                Log.w(
+                                                        TAG,
+                                                        "No official text position for font ${zone.font}, using fallback"
+                                                )
+                                                TextConfig(
+                                                        x = zone.width - 10,
+                                                        y = zone.height / 2,
+                                                        rotation = ROTATION_TOP_LR,
+                                                        opacity = true
+                                                )
+                                        }
+                                },
+                        additionalCommands = buildAdditionalCommands(field, zone)
                 )
-            )
         }
 
-        Log.d(TAG, "Built ${commands.size} additional commands for zone ${zone.id}")
-        return commands
-    }
+        /**
+         * Build all layouts for a screen
+         * @return Map of zone ID to ActiveLookLayout
+         */
+        fun buildScreenLayouts(
+                startLayoutId: Int,
+                screen: LayoutScreen
+        ): Map<String, ActiveLookLayout> {
+                Log.i(
+                        TAG,
+                        "Building all layouts for screen ${screen.id} (template: ${screen.templateId}), starting at layout ID $startLayoutId"
+                )
 
-    /**
-     * Build label text (name + optional unit)
-     */
-    private fun buildLabelText(field: LayoutDataField): String {
-        val name = field.dataField.name.uppercase()
-        return if (field.showUnit && field.dataField.unit.isNotEmpty()) {
-            "$name (${field.dataField.unit})"
-        } else {
-            name
+                return screen.dataFields
+                        .mapIndexed { index, field ->
+                                field.zoneId to buildLayout(startLayoutId + index, field, screen)
+                        }
+                        .toMap()
         }
-    }
+
+        /**
+         * Build additional graphic commands saved with the layout definition.
+         *
+         * Currently returns an empty list. Labels and icons are NOT included as saved sub-commands
+         * because:
+         * 1. Saved sub-commands render BEFORE the main text value on the glasses.
+         * 2. The main text with opacity=true draws a black background behind each
+         * ```
+         *     character, overwriting any previously drawn sub-commands (icons, labels).
+         * ```
+         * 3. Official ActiveLook layouts do not use saved sub-commands for labels.
+         *
+         * TODO: Implement labels/icons via LayoutExtraCmd sent at display time
+         * ```
+         *       (layoutClearAndDisplayExtended). ExtraCmd draws AFTER the main text,
+         *       so labels would remain visible. See reference/android-sdk/debugapp
+         *       DebugActivity.java for the pattern.
+         * ```
+         */
+        private fun buildAdditionalCommands(
+                @Suppress("UNUSED_PARAMETER") field: LayoutDataField,
+                @Suppress("UNUSED_PARAMETER") zone: com.kema.k2look.model.LayoutZone
+        ): List<GraphicCommand> {
+                return emptyList()
+        }
 }
-

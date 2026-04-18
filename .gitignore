@@ -51,3 +51,7 @@ reference/karoo-ext/local.properties
 reference/karoo-ext/**/build/
 
 /build_output.txt
+
+/calibration/*
+/tools/preview/*
+gesture_log.txt

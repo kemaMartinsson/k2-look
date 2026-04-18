@@ -4,7 +4,7 @@
     <string name="extension_name">K2Look Extension</string>
 
     <!-- App Info / About -->
-    <string name="app_description">Connect your ActiveLook smart glasses and display ride metrics in real-time on your glasses display.</string>
+    <string name="app_description">Display ride metrics on your ActiveLook glasses display.</string>
     <string name="app_developer">Kenneth M</string>
     <string name="app_website">https://github.com/kema/k2look</string>
 

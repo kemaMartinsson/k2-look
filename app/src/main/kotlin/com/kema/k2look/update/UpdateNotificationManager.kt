@@ -59,16 +59,25 @@ class UpdateNotificationManager(private val context: Context) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        // Action button uses a distinct request code so it's a separate PendingIntent
+        val actionPendingIntent = PendingIntent.getActivity(
+            context,
+            1,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle("K2Look Update Available")
-            .setContentText("Version ${update.version} is now available")
+            .setContentTitle("UPDATE K2LOOK")
+            .setContentText("Update available for K2Look, version ${update.version}.")
             .setStyle(
                 NotificationCompat.BigTextStyle()
-                    .bigText("Version ${update.version} is now available. Tap to view details and install.")
+                    .bigText("Update available for K2Look, version ${update.version}.")
             )
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setContentIntent(pendingIntent)
+            .addAction(0, "UPDATE", actionPendingIntent)
             .setAutoCancel(true)
             .build()
 

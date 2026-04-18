@@ -125,6 +125,12 @@ public interface Glasses extends Parcelable {
      */
     void subscribeToSensorInterfaceNotifications(Runnable onEvent);
     /**
+     * Set the callback to call on user interface (capacitive touch button) notifications.
+     *
+     * @param onEvent The callback to call on touch button press
+     */
+    void subscribeToUserInterfaceNotifications(Runnable onEvent);
+    /**
      * Unset the callback to call on battery level notifications.
      */
     default void unsubscribeToBatteryLevelNotifications() {

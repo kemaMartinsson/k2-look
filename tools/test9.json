@@ -1,0 +1,58 @@
+[
+  {
+    "id": 99,
+    "x0": 0, "y0": 190, "width": 304, "height": 40,
+    "font": 1, "txt_x": 235, "txt_y": 10,
+    "value": "25.1",
+    "extra_cmds": [
+      {"type": "bitmap", "icon_id": 26, "x": 250, "y": 5},
+      {"type": "font",   "font_id": 1},
+      {"type": "text",   "x": 135, "y": 10, "text": "km/h"}
+    ]
+  },
+  {
+    "id": 991,
+    "x0": 0, "y0": 190, "width": 130, "height": 40,
+    "font": 1, "txt_x": 90, "txt_y": 10,
+    "value": "125.1",
+    "extra_cmds": [
+      {"type": "bitmap", "icon_id": 9, "x": 95, "y": 5},
+      {"type": "font",   "font_id": 1},
+      {"type": "text",   "x": 0, "y": 10, "text": "km"}
+    ]
+  },
+  {
+    "id": 100,
+    "x0": 0, "y0": 150, "width": 304, "height": 40,
+    "font": 2, "txt_x": 235, "txt_y": 5,
+    "value": "01:50",
+    "extra_cmds": [
+      {"type": "bitmap", "icon_id": 8, "x": 250, "y": 5},
+      {"type": "font",   "font_id": 1},
+      {"type": "text",   "x": 120, "y": 15, "text": "10"}
+    ]
+  },
+  {
+    "id": 101,
+    "x0": 0, "y0": 110, "width": 304, "height": 40,
+    "font": 2, "txt_x": 235, "txt_y": 7,
+    "value": "250",
+    "extra_cmds": [
+      {"type": "bitmap", "icon_id": 51, "x": 244, "y": 0},
+      {"type": "font",   "font_id": 1},
+      {"type": "text",   "x": 150, "y": 15, "text": "W"}
+    ]
+  },
+
+  {
+    "id": 103,
+    "x0": 0, "y0": 25, "width": 304, "height": 40,
+    "font": 3, "txt_x": 230, "txt_y": 0,
+    "value": "150",
+    "extra_cmds": [
+        {"type": "bitmap", "icon_id": 44, "x": 236, "y": 0},
+        {"type": "font",   "font_id": 1},
+        {"type": "text",   "x": 80, "y": 25, "text": "bpm"}
+    ]
+  }
+]

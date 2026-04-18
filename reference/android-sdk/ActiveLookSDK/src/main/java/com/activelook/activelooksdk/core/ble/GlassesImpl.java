@@ -180,6 +180,11 @@ class GlassesImpl extends AbstractGlasses implements Glasses {
         this.gattCallbacks.subscribeToSensorInterfaceNotifications(onEvent);
     }
 
+    @Override
+    public void subscribeToUserInterfaceNotifications(Runnable onEvent) {
+        this.gattCallbacks.subscribeToUserInterfaceNotifications(onEvent);
+    }
+
     void callCallback(Command command) {
         this.delegateToCallback(command);
     }

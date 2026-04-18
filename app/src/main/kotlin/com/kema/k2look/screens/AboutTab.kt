@@ -30,6 +30,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -130,7 +131,9 @@ fun parseSimpleMarkdown(text: String): AnnotatedString {
 @Composable
 fun AboutTab(
     viewModel: com.kema.k2look.viewmodel.MainViewModel,
-    uiState: com.kema.k2look.viewmodel.MainViewModel.UiState
+    uiState: com.kema.k2look.viewmodel.MainViewModel.UiState,
+    openUpdateDialogOnStart: Boolean = false,
+    onUpdateDialogHandled: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -145,6 +148,19 @@ fun AboutTab(
     var downloadProgress by remember { mutableStateOf(0) }
     var autoCheckEnabled by remember { mutableStateOf(prefsManager.isAutoCheckUpdatesEnabled()) }
     var showDebugDialog by remember { mutableStateOf(false) }
+
+    // Auto-check for update when launched from the system notification
+    LaunchedEffect(openUpdateDialogOnStart) {
+        if (openUpdateDialogOnStart && !isCheckingUpdate && availableUpdate == null) {
+            isCheckingUpdate = true
+            val update = updateChecker.checkForUpdate()
+            isCheckingUpdate = false
+            if (update != null) {
+                availableUpdate = update
+            }
+            onUpdateDialogHandled()
+        }
+    }
 
     Column(
         modifier = Modifier

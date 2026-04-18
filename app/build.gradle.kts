@@ -141,6 +141,7 @@ android {
         buildConfig = true
     }
     testOptions {
+        unitTests.isReturnDefaultValues = true
         unitTests.all {
             it.reports.junitXml.required.set(true)
         }

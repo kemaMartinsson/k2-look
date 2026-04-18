@@ -124,6 +124,10 @@ class GlassesImpl extends AbstractGlasses implements Glasses {
     }
 
     @Override
+    public void subscribeToUserInterfaceNotifications(Runnable onEvent) {
+    }
+
+    @Override
     public void isWriteWithResponse(boolean on) {
     }
 

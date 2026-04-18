@@ -1,4 +1,4 @@
-package com.kema.k2look.service
+﻿package com.kema.k2look.service
 
 import android.content.Context
 import android.util.Log
@@ -24,84 +24,214 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 class KarooDataService(context: Context) {
 
-    private val karooSystem = KarooSystemService(context)
+    internal val karooSystem = KarooSystemService(context)
 
     // Consumer IDs for cleanup
-    private val consumerIds = mutableListOf<String>()
+    internal val consumerIds = mutableListOf<String>()
 
     // Connection state
-    private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
+    internal val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
 
     // Ride state
-    private val _rideState = MutableStateFlow<RideState>(RideState.Idle)
+    internal val _rideState = MutableStateFlow<RideState>(RideState.Idle)
     val rideState: StateFlow<RideState> = _rideState.asStateFlow()
 
     // Active ride profile (profile selected by user on launcher)
-    private val _activeRideProfile = MutableStateFlow<RideProfile?>(null)
+    internal val _activeRideProfile = MutableStateFlow<RideProfile?>(null)
     val activeRideProfile: StateFlow<RideProfile?> = _activeRideProfile.asStateFlow()
 
     // Metric streams
-    private val _speedData = MutableStateFlow<StreamState?>(null)
+    internal val _speedData = MutableStateFlow<StreamState?>(null)
     val speedData: StateFlow<StreamState?> = _speedData.asStateFlow()
 
-    private val _averageSpeedData = MutableStateFlow<StreamState?>(null)
+    internal val _averageSpeedData = MutableStateFlow<StreamState?>(null)
     val averageSpeedData: StateFlow<StreamState?> = _averageSpeedData.asStateFlow()
 
-    private val _maxSpeedData = MutableStateFlow<StreamState?>(null)
+    internal val _maxSpeedData = MutableStateFlow<StreamState?>(null)
     val maxSpeedData: StateFlow<StreamState?> = _maxSpeedData.asStateFlow()
 
-    private val _heartRateData = MutableStateFlow<StreamState?>(null)
+    internal val _heartRateData = MutableStateFlow<StreamState?>(null)
     val heartRateData: StateFlow<StreamState?> = _heartRateData.asStateFlow()
 
-    private val _averageHeartRateData = MutableStateFlow<StreamState?>(null)
+    internal val _averageHeartRateData = MutableStateFlow<StreamState?>(null)
     val averageHeartRateData: StateFlow<StreamState?> = _averageHeartRateData.asStateFlow()
 
-    private val _maxHeartRateData = MutableStateFlow<StreamState?>(null)
+    internal val _maxHeartRateData = MutableStateFlow<StreamState?>(null)
     val maxHeartRateData: StateFlow<StreamState?> = _maxHeartRateData.asStateFlow()
 
-    private val _cadenceData = MutableStateFlow<StreamState?>(null)
+    internal val _cadenceData = MutableStateFlow<StreamState?>(null)
     val cadenceData: StateFlow<StreamState?> = _cadenceData.asStateFlow()
 
-    private val _averageCadenceData = MutableStateFlow<StreamState?>(null)
+    internal val _averageCadenceData = MutableStateFlow<StreamState?>(null)
     val averageCadenceData: StateFlow<StreamState?> = _averageCadenceData.asStateFlow()
 
-    private val _maxCadenceData = MutableStateFlow<StreamState?>(null)
+    internal val _maxCadenceData = MutableStateFlow<StreamState?>(null)
     val maxCadenceData: StateFlow<StreamState?> = _maxCadenceData.asStateFlow()
 
-    private val _powerData = MutableStateFlow<StreamState?>(null)
+    internal val _powerData = MutableStateFlow<StreamState?>(null)
     val powerData: StateFlow<StreamState?> = _powerData.asStateFlow()
 
-    private val _averagePowerData = MutableStateFlow<StreamState?>(null)
+    internal val _averagePowerData = MutableStateFlow<StreamState?>(null)
     val averagePowerData: StateFlow<StreamState?> = _averagePowerData.asStateFlow()
 
-    private val _maxPowerData = MutableStateFlow<StreamState?>(null)
+    internal val _maxPowerData = MutableStateFlow<StreamState?>(null)
     val maxPowerData: StateFlow<StreamState?> = _maxPowerData.asStateFlow()
 
-    private val _distanceData = MutableStateFlow<StreamState?>(null)
+    internal val _distanceData = MutableStateFlow<StreamState?>(null)
     val distanceData: StateFlow<StreamState?> = _distanceData.asStateFlow()
 
-    private val _timeData = MutableStateFlow<StreamState?>(null)
+    internal val _timeData = MutableStateFlow<StreamState?>(null)
     val timeData: StateFlow<StreamState?> = _timeData.asStateFlow()
 
     // Advanced metrics
-    private val _hrZoneData = MutableStateFlow<StreamState?>(null)
+    internal val _hrZoneData = MutableStateFlow<StreamState?>(null)
     val hrZoneData: StateFlow<StreamState?> = _hrZoneData.asStateFlow()
 
-    private val _smoothed3sPowerData = MutableStateFlow<StreamState?>(null)
+    internal val _smoothed3sPowerData = MutableStateFlow<StreamState?>(null)
     val smoothed3sPowerData: StateFlow<StreamState?> = _smoothed3sPowerData.asStateFlow()
 
-    private val _smoothed10sPowerData = MutableStateFlow<StreamState?>(null)
+    internal val _smoothed10sPowerData = MutableStateFlow<StreamState?>(null)
     val smoothed10sPowerData: StateFlow<StreamState?> = _smoothed10sPowerData.asStateFlow()
 
-    private val _smoothed30sPowerData = MutableStateFlow<StreamState?>(null)
+    internal val _smoothed30sPowerData = MutableStateFlow<StreamState?>(null)
     val smoothed30sPowerData: StateFlow<StreamState?> = _smoothed30sPowerData.asStateFlow()
 
-    private val _vamData = MutableStateFlow<StreamState?>(null)
+    internal val _vamData = MutableStateFlow<StreamState?>(null)
     val vamData: StateFlow<StreamState?> = _vamData.asStateFlow()
 
-    private val _avgVamData = MutableStateFlow<StreamState?>(null)
+    internal val _avgVamData = MutableStateFlow<StreamState?>(null)
     val avgVamData: StateFlow<StreamState?> = _avgVamData.asStateFlow()
+
+    // Radar (threat level, target count, closest range — all come from one multi-field stream)
+    internal val _radarData = MutableStateFlow<StreamState?>(null)
+    val radarData: StateFlow<StreamState?> = _radarData.asStateFlow()
+
+    // General additions
+    internal val _clockTimeData = MutableStateFlow<StreamState?>(null)
+    val clockTimeData: StateFlow<StreamState?> = _clockTimeData.asStateFlow()
+    internal val _temperatureData = MutableStateFlow<StreamState?>(null)
+    val temperatureData: StateFlow<StreamState?> = _temperatureData.asStateFlow()
+    internal val _batteryPercentData = MutableStateFlow<StreamState?>(null)
+    val batteryPercentData: StateFlow<StreamState?> = _batteryPercentData.asStateFlow()
+    internal val _rideTimeData = MutableStateFlow<StreamState?>(null)
+    val rideTimeData: StateFlow<StreamState?> = _rideTimeData.asStateFlow()
+
+    // Heart Rate additions
+    internal val _percentMaxHrData = MutableStateFlow<StreamState?>(null)
+    val percentMaxHrData: StateFlow<StreamState?> = _percentMaxHrData.asStateFlow()
+    internal val _percentHrrData = MutableStateFlow<StreamState?>(null)
+    val percentHrrData: StateFlow<StreamState?> = _percentHrrData.asStateFlow()
+
+    // Power additions (note: smoothed10s and 30s already exist above)
+    internal val _powerZoneData = MutableStateFlow<StreamState?>(null)
+    val powerZoneData: StateFlow<StreamState?> = _powerZoneData.asStateFlow()
+    internal val _smoothed5sPowerData = MutableStateFlow<StreamState?>(null)
+    val smoothed5sPowerData: StateFlow<StreamState?> = _smoothed5sPowerData.asStateFlow()
+    internal val _normalizedPowerData = MutableStateFlow<StreamState?>(null)
+    val normalizedPowerData: StateFlow<StreamState?> = _normalizedPowerData.asStateFlow()
+    internal val _percentFtpData = MutableStateFlow<StreamState?>(null)
+    val percentFtpData: StateFlow<StreamState?> = _percentFtpData.asStateFlow()
+    internal val _intensityFactorData = MutableStateFlow<StreamState?>(null)
+    val intensityFactorData: StateFlow<StreamState?> = _intensityFactorData.asStateFlow()
+    internal val _trainingStressScoreData = MutableStateFlow<StreamState?>(null)
+    val trainingStressScoreData: StateFlow<StreamState?> = _trainingStressScoreData.asStateFlow()
+    internal val _powerToWeightData = MutableStateFlow<StreamState?>(null)
+    val powerToWeightData: StateFlow<StreamState?> = _powerToWeightData.asStateFlow()
+
+    // Energy
+    internal val _energyOutputData = MutableStateFlow<StreamState?>(null)
+    val energyOutputData: StateFlow<StreamState?> = _energyOutputData.asStateFlow()
+    internal val _caloriesData = MutableStateFlow<StreamState?>(null)
+    val caloriesData: StateFlow<StreamState?> = _caloriesData.asStateFlow()
+    internal val _caloriesPerHourData = MutableStateFlow<StreamState?>(null)
+    val caloriesPerHourData: StateFlow<StreamState?> = _caloriesPerHourData.asStateFlow()
+
+    // Speed additions
+    internal val _smoothed3sSpeedData = MutableStateFlow<StreamState?>(null)
+    val smoothed3sSpeedData: StateFlow<StreamState?> = _smoothed3sSpeedData.asStateFlow()
+
+    // Cadence additions
+    internal val _smoothed3sCadenceData = MutableStateFlow<StreamState?>(null)
+    val smoothed3sCadenceData: StateFlow<StreamState?> = _smoothed3sCadenceData.asStateFlow()
+
+    // Elevation
+    internal val _elevationGradeData = MutableStateFlow<StreamState?>(null)
+    val elevationGradeData: StateFlow<StreamState?> = _elevationGradeData.asStateFlow()
+    internal val _elevationGainData = MutableStateFlow<StreamState?>(null)
+    val elevationGainData: StateFlow<StreamState?> = _elevationGainData.asStateFlow()
+    internal val _elevationLossData = MutableStateFlow<StreamState?>(null)
+    val elevationLossData: StateFlow<StreamState?> = _elevationLossData.asStateFlow()
+    internal val _altitudeData = MutableStateFlow<StreamState?>(null)
+    val altitudeData: StateFlow<StreamState?> = _altitudeData.asStateFlow()
+    internal val _vam30sData = MutableStateFlow<StreamState?>(null)
+    val vam30sData: StateFlow<StreamState?> = _vam30sData.asStateFlow()
+
+    // Lap
+    internal val _lapNumberData = MutableStateFlow<StreamState?>(null)
+    val lapNumberData: StateFlow<StreamState?> = _lapNumberData.asStateFlow()
+    internal val _lapTimeData = MutableStateFlow<StreamState?>(null)
+    val lapTimeData: StateFlow<StreamState?> = _lapTimeData.asStateFlow()
+    internal val _lapDistanceData = MutableStateFlow<StreamState?>(null)
+    val lapDistanceData: StateFlow<StreamState?> = _lapDistanceData.asStateFlow()
+    internal val _lapSpeedData = MutableStateFlow<StreamState?>(null)
+    val lapSpeedData: StateFlow<StreamState?> = _lapSpeedData.asStateFlow()
+    internal val _lapHrData = MutableStateFlow<StreamState?>(null)
+    val lapHrData: StateFlow<StreamState?> = _lapHrData.asStateFlow()
+    internal val _lapPowerData = MutableStateFlow<StreamState?>(null)
+    val lapPowerData: StateFlow<StreamState?> = _lapPowerData.asStateFlow()
+    internal val _lapNpData = MutableStateFlow<StreamState?>(null)
+    val lapNpData: StateFlow<StreamState?> = _lapNpData.asStateFlow()
+    internal val _lapCadenceData = MutableStateFlow<StreamState?>(null)
+    val lapCadenceData: StateFlow<StreamState?> = _lapCadenceData.asStateFlow()
+    internal val _lapAscentData = MutableStateFlow<StreamState?>(null)
+    val lapAscentData: StateFlow<StreamState?> = _lapAscentData.asStateFlow()
+
+    // Last Lap
+    internal val _lastLapTimeData = MutableStateFlow<StreamState?>(null)
+    val lastLapTimeData: StateFlow<StreamState?> = _lastLapTimeData.asStateFlow()
+    internal val _lastLapDistanceData = MutableStateFlow<StreamState?>(null)
+    val lastLapDistanceData: StateFlow<StreamState?> = _lastLapDistanceData.asStateFlow()
+    internal val _lastLapSpeedData = MutableStateFlow<StreamState?>(null)
+    val lastLapSpeedData: StateFlow<StreamState?> = _lastLapSpeedData.asStateFlow()
+    internal val _lastLapHrData = MutableStateFlow<StreamState?>(null)
+    val lastLapHrData: StateFlow<StreamState?> = _lastLapHrData.asStateFlow()
+    internal val _lastLapPowerData = MutableStateFlow<StreamState?>(null)
+    val lastLapPowerData: StateFlow<StreamState?> = _lastLapPowerData.asStateFlow()
+    internal val _lastLapNpData = MutableStateFlow<StreamState?>(null)
+    val lastLapNpData: StateFlow<StreamState?> = _lastLapNpData.asStateFlow()
+
+    // Shifting
+    internal val _shiftingFrontGearData = MutableStateFlow<StreamState?>(null)
+    val shiftingFrontGearData: StateFlow<StreamState?> = _shiftingFrontGearData.asStateFlow()
+    internal val _shiftingRearGearData = MutableStateFlow<StreamState?>(null)
+    val shiftingRearGearData: StateFlow<StreamState?> = _shiftingRearGearData.asStateFlow()
+    internal val _shiftingBatteryData = MutableStateFlow<StreamState?>(null)
+    val shiftingBatteryData: StateFlow<StreamState?> = _shiftingBatteryData.asStateFlow()
+    internal val _shiftingCountData = MutableStateFlow<StreamState?>(null)
+    val shiftingCountData: StateFlow<StreamState?> = _shiftingCountData.asStateFlow()
+
+    // Navigation
+    internal val _distanceToTurnData = MutableStateFlow<StreamState?>(null)
+    val distanceToTurnData: StateFlow<StreamState?> = _distanceToTurnData.asStateFlow()
+    internal val _distanceToDestData = MutableStateFlow<StreamState?>(null)
+    val distanceToDestData: StateFlow<StreamState?> = _distanceToDestData.asStateFlow()
+    internal val _timeOfArrivalData = MutableStateFlow<StreamState?>(null)
+    val timeOfArrivalData: StateFlow<StreamState?> = _timeOfArrivalData.asStateFlow()
+    internal val _timeToDestData = MutableStateFlow<StreamState?>(null)
+    val timeToDestData: StateFlow<StreamState?> = _timeToDestData.asStateFlow()
+    internal val _headingData = MutableStateFlow<StreamState?>(null)
+    val headingData: StateFlow<StreamState?> = _headingData.asStateFlow()
+
+    // eBike
+    internal val _levBatteryData = MutableStateFlow<StreamState?>(null)
+    val levBatteryData: StateFlow<StreamState?> = _levBatteryData.asStateFlow()
+    internal val _levRangeData = MutableStateFlow<StreamState?>(null)
+    val levRangeData: StateFlow<StreamState?> = _levRangeData.asStateFlow()
+    internal val _levAssistModeData = MutableStateFlow<StreamState?>(null)
+    val levAssistModeData: StateFlow<StreamState?> = _levAssistModeData.asStateFlow()
+    internal val _levMotorPowerData = MutableStateFlow<StreamState?>(null)
+    val levMotorPowerData: StateFlow<StreamState?> = _levMotorPowerData.asStateFlow()
 
     // Reconnection management
     private var reconnectAttempts = 0
@@ -184,270 +314,8 @@ class KarooDataService(context: Context) {
     val isConnected: Boolean
         get() = karooSystem.connected && _connectionState.value is ConnectionState.Connected
 
-    /**
-     * Register all data consumers
-     */
-    private fun registerConsumers() {
-        Log.i(TAG, "Registering data consumers...")
+    // registerConsumers / registerStream → KarooDataServiceConsumers.kt
 
-        try {
-            // Register RideState consumer
-            val rideStateId = karooSystem.addConsumer(
-                onError = { error ->
-                    Log.e(TAG, "RideState consumer error: $error")
-                },
-                onComplete = {
-                    Log.i(TAG, "RideState consumer completed")
-                }
-            ) { state: RideState ->
-                Log.d(TAG, "RideState update: $state")
-                _rideState.value = state
-            }
-            consumerIds.add(rideStateId)
-
-            // Register ActiveRideProfile consumer (monitors profile selected by user)
-            val profileId = karooSystem.addConsumer(
-                onError = { error ->
-                    Log.e(TAG, "ActiveRideProfile consumer error: $error")
-                },
-                onComplete = {
-                    Log.i(TAG, "ActiveRideProfile consumer completed")
-                }
-            ) { event: ActiveRideProfile ->
-                Log.i(
-                    TAG,
-                    "Active ride profile changed: ${event.profile.name} (${event.profile.id})"
-                )
-                _activeRideProfile.value = event.profile
-            }
-            consumerIds.add(profileId)
-
-            // Register Speed stream
-            val speedId = karooSystem.addConsumer(
-                OnStreamState.StartStreaming(DataType.Type.SPEED),
-                onError = { error ->
-                    Log.e(TAG, "Speed stream error: $error")
-                }
-            ) { event: OnStreamState ->
-                _speedData.value = event.state
-            }
-            consumerIds.add(speedId)
-
-            // Register Average Speed stream
-            val avgSpeedId = karooSystem.addConsumer(
-                OnStreamState.StartStreaming(DataType.Type.AVERAGE_SPEED),
-                onError = { error ->
-                    Log.e(TAG, "Average Speed stream error: $error")
-                }
-            ) { event: OnStreamState ->
-                _averageSpeedData.value = event.state
-            }
-            consumerIds.add(avgSpeedId)
-
-            // Register Max Speed stream
-            val maxSpeedId = karooSystem.addConsumer(
-                OnStreamState.StartStreaming(DataType.Type.MAX_SPEED),
-                onError = { error ->
-                    Log.e(TAG, "Max Speed stream error: $error")
-                }
-            ) { event: OnStreamState ->
-                _maxSpeedData.value = event.state
-            }
-            consumerIds.add(maxSpeedId)
-
-            // Register Heart Rate stream
-            val hrId = karooSystem.addConsumer(
-                OnStreamState.StartStreaming(DataType.Type.HEART_RATE),
-                onError = { error ->
-                    Log.e(TAG, "Heart Rate stream error: $error")
-                }
-            ) { event: OnStreamState ->
-                _heartRateData.value = event.state
-            }
-            consumerIds.add(hrId)
-
-            // Register Average Heart Rate stream
-            val avgHrId = karooSystem.addConsumer(
-                OnStreamState.StartStreaming(DataType.Type.AVERAGE_HR),
-                onError = { error ->
-                    Log.e(TAG, "Average Heart Rate stream error: $error")
-                }
-            ) { event: OnStreamState ->
-                _averageHeartRateData.value = event.state
-            }
-            consumerIds.add(avgHrId)
-
-            // Register Max Heart Rate stream
-            val maxHrId = karooSystem.addConsumer(
-                OnStreamState.StartStreaming(DataType.Type.MAX_HR),
-                onError = { error ->
-                    Log.e(TAG, "Max Heart Rate stream error: $error")
-                }
-            ) { event: OnStreamState ->
-                _maxHeartRateData.value = event.state
-            }
-            consumerIds.add(maxHrId)
-
-            // Register Cadence stream
-            val cadenceId = karooSystem.addConsumer(
-                OnStreamState.StartStreaming(DataType.Type.CADENCE),
-                onError = { error ->
-                    Log.e(TAG, "Cadence stream error: $error")
-                }
-            ) { event: OnStreamState ->
-                _cadenceData.value = event.state
-            }
-            consumerIds.add(cadenceId)
-
-            // Register Average Cadence stream
-            val avgCadenceId = karooSystem.addConsumer(
-                OnStreamState.StartStreaming(DataType.Type.AVERAGE_CADENCE),
-                onError = { error ->
-                    Log.e(TAG, "Average Cadence stream error: $error")
-                }
-            ) { event: OnStreamState ->
-                _averageCadenceData.value = event.state
-            }
-            consumerIds.add(avgCadenceId)
-
-            // Register Max Cadence stream
-            val maxCadenceId = karooSystem.addConsumer(
-                OnStreamState.StartStreaming(DataType.Type.MAX_CADENCE),
-                onError = { error ->
-                    Log.e(TAG, "Max Cadence stream error: $error")
-                }
-            ) { event: OnStreamState ->
-                _maxCadenceData.value = event.state
-            }
-            consumerIds.add(maxCadenceId)
-
-            // Register Power stream
-            val powerId = karooSystem.addConsumer(
-                OnStreamState.StartStreaming(DataType.Type.POWER),
-                onError = { error ->
-                    Log.e(TAG, "Power stream error: $error")
-                }
-            ) { event: OnStreamState ->
-                _powerData.value = event.state
-            }
-            consumerIds.add(powerId)
-
-            // Register Average Power stream
-            val avgPowerId = karooSystem.addConsumer(
-                OnStreamState.StartStreaming(DataType.Type.AVERAGE_POWER),
-                onError = { error ->
-                    Log.e(TAG, "Average Power stream error: $error")
-                }
-            ) { event: OnStreamState ->
-                _averagePowerData.value = event.state
-            }
-            consumerIds.add(avgPowerId)
-
-            // Register Max Power stream
-            val maxPowerId = karooSystem.addConsumer(
-                OnStreamState.StartStreaming(DataType.Type.MAX_POWER),
-                onError = { error ->
-                    Log.e(TAG, "Max Power stream error: $error")
-                }
-            ) { event: OnStreamState ->
-                _maxPowerData.value = event.state
-            }
-            consumerIds.add(maxPowerId)
-
-            // Register Distance stream
-            val distanceId = karooSystem.addConsumer(
-                OnStreamState.StartStreaming(DataType.Type.DISTANCE),
-                onError = { error ->
-                    Log.e(TAG, "Distance stream error: $error")
-                }
-            ) { event: OnStreamState ->
-                _distanceData.value = event.state
-            }
-            consumerIds.add(distanceId)
-
-            // Register Time stream
-            val timeId = karooSystem.addConsumer(
-                OnStreamState.StartStreaming(DataType.Type.ELAPSED_TIME),
-                onError = { error ->
-                    Log.e(TAG, "Time stream error: $error")
-                }
-            ) { event: OnStreamState ->
-                _timeData.value = event.state
-            }
-            consumerIds.add(timeId)
-
-            // Register HR Zone stream
-            val hrZoneId = karooSystem.addConsumer(
-                OnStreamState.StartStreaming(DataType.Type.HR_ZONE),
-                onError = { error ->
-                    Log.e(TAG, "HR Zone stream error: $error")
-                }
-            ) { event: OnStreamState ->
-                _hrZoneData.value = event.state
-            }
-            consumerIds.add(hrZoneId)
-
-            // Register 3s Power stream
-            val power3sId = karooSystem.addConsumer(
-                OnStreamState.StartStreaming(DataType.Type.SMOOTHED_3S_AVERAGE_POWER),
-                onError = { error ->
-                    Log.e(TAG, "3s Power stream error: $error")
-                }
-            ) { event: OnStreamState ->
-                _smoothed3sPowerData.value = event.state
-            }
-            consumerIds.add(power3sId)
-
-            // Register 10s Power stream
-            val power10sId = karooSystem.addConsumer(
-                OnStreamState.StartStreaming(DataType.Type.SMOOTHED_10S_AVERAGE_POWER),
-                onError = { error ->
-                    Log.e(TAG, "10s Power stream error: $error")
-                }
-            ) { event: OnStreamState ->
-                _smoothed10sPowerData.value = event.state
-            }
-            consumerIds.add(power10sId)
-
-            // Register 30s Power stream
-            val power30sId = karooSystem.addConsumer(
-                OnStreamState.StartStreaming(DataType.Type.SMOOTHED_30S_AVERAGE_POWER),
-                onError = { error ->
-                    Log.e(TAG, "30s Power stream error: $error")
-                }
-            ) { event: OnStreamState ->
-                _smoothed30sPowerData.value = event.state
-            }
-            consumerIds.add(power30sId)
-
-            // Register VAM stream
-            val vamId = karooSystem.addConsumer(
-                OnStreamState.StartStreaming(DataType.Type.VERTICAL_SPEED),
-                onError = { error ->
-                    Log.e(TAG, "VAM stream error: $error")
-                }
-            ) { event: OnStreamState ->
-                _vamData.value = event.state
-            }
-            consumerIds.add(vamId)
-
-            // Register Average VAM stream
-            val avgVamId = karooSystem.addConsumer(
-                OnStreamState.StartStreaming(DataType.Type.AVERAGE_VERTICAL_SPEED),
-                onError = { error ->
-                    Log.e(TAG, "Average VAM stream error: $error")
-                }
-            ) { event: OnStreamState ->
-                _avgVamData.value = event.state
-            }
-            consumerIds.add(avgVamId)
-
-            Log.i(TAG, "Successfully registered ${consumerIds.size} data consumers")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error registering consumers: ${e.message}", e)
-            _connectionState.value = ConnectionState.Error("Failed to register consumers")
-        }
-    }
 
     /**
      * Handle disconnection with automatic reconnection logic
@@ -490,27 +358,52 @@ class KarooDataService(context: Context) {
      * Clear all metric data
      */
     private fun clearMetricData() {
-        _speedData.value = null
-        _averageSpeedData.value = null
-        _maxSpeedData.value = null
-        _heartRateData.value = null
-        _averageHeartRateData.value = null
-        _maxHeartRateData.value = null
-        _cadenceData.value = null
-        _averageCadenceData.value = null
-        _maxCadenceData.value = null
-        _powerData.value = null
-        _averagePowerData.value = null
-        _maxPowerData.value = null
-        _distanceData.value = null
-        _timeData.value = null
-        _hrZoneData.value = null
-        _smoothed3sPowerData.value = null
-        _smoothed10sPowerData.value = null
-        _smoothed30sPowerData.value = null
-        _vamData.value = null
-        _avgVamData.value = null
+        _speedData.value = null; _averageSpeedData.value = null; _maxSpeedData.value = null
+        _heartRateData.value = null; _averageHeartRateData.value = null; _maxHeartRateData.value = null
+        _cadenceData.value = null; _averageCadenceData.value = null; _maxCadenceData.value = null
+        _powerData.value = null; _averagePowerData.value = null; _maxPowerData.value = null
+        _distanceData.value = null; _timeData.value = null; _hrZoneData.value = null
+        _smoothed3sPowerData.value = null; _smoothed10sPowerData.value = null; _smoothed30sPowerData.value = null
+        _vamData.value = null; _avgVamData.value = null; _radarData.value = null
+        // General
+        _clockTimeData.value = null; _temperatureData.value = null
+        _batteryPercentData.value = null; _rideTimeData.value = null
+        // HR
+        _percentMaxHrData.value = null; _percentHrrData.value = null
+        // Power
+        _powerZoneData.value = null; _smoothed5sPowerData.value = null
+        _normalizedPowerData.value = null; _percentFtpData.value = null
+        _intensityFactorData.value = null; _trainingStressScoreData.value = null
+        _powerToWeightData.value = null
+        // Energy
+        _energyOutputData.value = null; _caloriesData.value = null; _caloriesPerHourData.value = null
+        // Speed / Cadence
+        _smoothed3sSpeedData.value = null; _smoothed3sCadenceData.value = null
+        // Elevation
+        _elevationGradeData.value = null; _elevationGainData.value = null
+        _elevationLossData.value = null; _altitudeData.value = null; _vam30sData.value = null
+        // Lap
+        _lapNumberData.value = null; _lapTimeData.value = null; _lapDistanceData.value = null
+        _lapSpeedData.value = null; _lapHrData.value = null; _lapPowerData.value = null
+        _lapNpData.value = null; _lapCadenceData.value = null; _lapAscentData.value = null
+        // Last Lap
+        _lastLapTimeData.value = null; _lastLapDistanceData.value = null
+        _lastLapSpeedData.value = null; _lastLapHrData.value = null
+        _lastLapPowerData.value = null; _lastLapNpData.value = null
+        // Shifting
+        _shiftingFrontGearData.value = null; _shiftingRearGearData.value = null
+        _shiftingBatteryData.value = null; _shiftingCountData.value = null
+        // Navigation
+        _distanceToTurnData.value = null; _distanceToDestData.value = null
+        _timeOfArrivalData.value = null; _timeToDestData.value = null; _headingData.value = null
+        // eBike
+        _levBatteryData.value = null; _levRangeData.value = null
+        _levAssistModeData.value = null; _levMotorPowerData.value = null
     }
+
+    /**
+     * Registers a standard single-value stream consumer.
+     */
 
     /**
      * Get the KarooSystemService instance for direct access

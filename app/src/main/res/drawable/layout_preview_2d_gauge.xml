@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp"
+    android:height="80dp"
+    android:viewportWidth="100"
+    android:viewportHeight="80">
+
+    <!-- Background -->
+    <path
+        android:fillColor="#E8EAF6"
+        android:pathData="M0,0h100v80h-100z" />
+
+    <!-- Gauge arc (approximate 270° arc using paths) -->
+    <path
+        android:strokeColor="#5C6BC0"
+        android:strokeWidth="5"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M50,62 A26,26 0 1 1 50,62.01" />
+    <!-- Filled arc segment (achieved portion) -->
+    <path
+        android:strokeColor="#5C6BC0"
+        android:strokeWidth="5"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M26,50 A26,26 0 0 1 74,50" />
+
+    <!-- Text row at top -->
+    <path
+        android:fillColor="#7986CB"
+        android:pathData="M15,8h70v14h-70z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M25,13h50v4h-50z" />
+</vector>

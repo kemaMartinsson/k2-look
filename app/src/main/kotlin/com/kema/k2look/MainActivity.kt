@@ -30,6 +30,7 @@ class MainActivity : ComponentActivity() {
     private var showRationaleDialog by mutableStateOf(false)
     private var showSettingsDialog by mutableStateOf(false)
     private var showInitialRationaleDialog by mutableStateOf(false)
+    private var openUpdateDialog by mutableStateOf(false)
 
     private val permsLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -64,7 +65,9 @@ class MainActivity : ComponentActivity() {
                         finish()
                     }
                     MainScreen(
-                        onBack = { finish() }
+                        onBack = { finish() },
+                        openUpdateDialog = openUpdateDialog,
+                        onUpdateDialogHandled = { openUpdateDialog = false }
                     )
                 }
 
@@ -119,6 +122,19 @@ class MainActivity : ComponentActivity() {
             requestPermissions()
         } else {
             onPermissionsGranted()
+        }
+
+        // Handle notification tap (app cold-started from notification)
+        if (intent?.getBooleanExtra("show_update", false) == true) {
+            openUpdateDialog = true
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // Handle notification tap when app is already running
+        if (intent.getBooleanExtra("show_update", false)) {
+            openUpdateDialog = true
         }
     }
 

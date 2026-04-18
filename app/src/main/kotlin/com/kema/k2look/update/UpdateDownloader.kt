@@ -1,6 +1,7 @@
 package com.kema.k2look.update
 
 import android.app.DownloadManager
+import android.content.ActivityNotFoundException
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -9,6 +10,8 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import android.util.Log
+import android.os.Handler
+import android.os.Looper
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import java.io.File
@@ -94,13 +97,16 @@ class UpdateDownloader(private val context: Context) {
     private fun startProgressMonitoring() {
         val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
 
+        val mainHandler = Handler(Looper.getMainLooper())
         Thread {
             var downloading = true
+            var emptyCursorCount = 0
             while (downloading) {
                 val query = DownloadManager.Query().setFilterById(downloadId)
                 val cursor = downloadManager.query(query)
 
                 if (cursor.moveToFirst()) {
+                    emptyCursorCount = 0
                     val bytesDownloaded = cursor.getLong(
                         cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)
                     )
@@ -110,7 +116,8 @@ class UpdateDownloader(private val context: Context) {
 
                     if (bytesTotal > 0) {
                         val progress = ((bytesDownloaded * 100) / bytesTotal).toInt()
-                        onDownloadProgress?.invoke(progress)
+                        // Bug fix: dispatch to main thread - Compose state must be updated on main thread
+                        mainHandler.post { onDownloadProgress?.invoke(progress) }
                         Log.d(
                             TAG,
                             "Download progress: $progress% ($bytesDownloaded / $bytesTotal bytes)"
@@ -122,6 +129,13 @@ class UpdateDownloader(private val context: Context) {
                     if (status == DownloadManager.STATUS_SUCCESSFUL ||
                         status == DownloadManager.STATUS_FAILED
                     ) {
+                        downloading = false
+                    }
+                } else {
+                    // Bug fix: cursor empty means download was cancelled/removed - stop thread
+                    emptyCursorCount++
+                    if (emptyCursorCount >= 3) {
+                        Log.w(TAG, "Download no longer tracked, stopping progress monitor")
                         downloading = false
                     }
                 }
@@ -165,8 +179,9 @@ class UpdateDownloader(private val context: Context) {
                 cursor.close()
 
                 if (uriString != null) {
-                    installApk(Uri.parse(uriString))
-                    onDownloadComplete?.invoke(true)
+                    // Bug fix: only report success if install intent actually launched
+                    val installed = installApk(Uri.parse(uriString))
+                    onDownloadComplete?.invoke(installed)
                 } else {
                     Log.e(TAG, "Download URI is null")
                     onDownloadComplete?.invoke(false)
@@ -199,8 +214,9 @@ class UpdateDownloader(private val context: Context) {
 
     /**
      * Install the downloaded APK
+     * @return true if the install intent was launched successfully, false otherwise
      */
-    private fun installApk(uri: Uri) {
+    private fun installApk(uri: Uri): Boolean {
         try {
             Log.d(TAG, "Installing APK from URI: $uri")
 
@@ -209,26 +225,30 @@ class UpdateDownloader(private val context: Context) {
                 val canInstall = context.packageManager.canRequestPackageInstalls()
                 if (!canInstall) {
                     Log.w(TAG, "Permission to install unknown apps not granted, opening settings")
-                    // Open settings to allow installing from this source
-                    val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
-                        data = Uri.parse("package:${context.packageName}")
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    try {
+                        val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                            data = Uri.parse("package:${context.packageName}")
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        }
+                        context.startActivity(intent)
+                    } catch (e: ActivityNotFoundException) {
+                        // Bug fix: Karoo/custom Android may not support this settings screen
+                        Log.e(TAG, "Cannot open install permission settings on this device", e)
                     }
-                    context.startActivity(intent)
-                    return
+                    return false
                 }
             }
 
             // Convert file:// URI to actual File
             val filePath = uri.path?.removePrefix("file://") ?: run {
                 Log.e(TAG, "Invalid URI path: ${uri.path}")
-                return
+                return false
             }
 
             val file = File(filePath)
             if (!file.exists()) {
                 Log.e(TAG, "APK file does not exist at: ${file.absolutePath}")
-                return
+                return false
             }
 
             Log.d(TAG, "APK file exists at: ${file.absolutePath}")
@@ -260,11 +280,13 @@ class UpdateDownloader(private val context: Context) {
 
             context.startActivity(intent)
             Log.d(TAG, "Install intent started successfully")
+            return true
 
         } catch (e: Exception) {
             Log.e(TAG, "Error installing APK", e)
             Log.e(TAG, "URI was: $uri")
             Log.e(TAG, "Stack trace: ${e.stackTraceToString()}")
+            return false
         }
     }
 

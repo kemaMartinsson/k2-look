@@ -10,8 +10,13 @@ enum class DataFieldCategory {
     SPEED_PACE,
     CADENCE,
     CLIMBING,
-    RUNNING_DYNAMICS,
+    RADAR,
     ELEVATION,
-    ENERGY
+    ENERGY,
+    LAP,
+    LAST_LAP,
+    SHIFTING,
+    NAVIGATION,
+    EBIKE
 }
 

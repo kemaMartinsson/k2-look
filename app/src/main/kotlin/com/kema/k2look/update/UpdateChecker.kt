@@ -57,11 +57,15 @@ class UpdateChecker(private val context: Context) {
             val responseCode = connection.responseCode
             if (responseCode != HttpsURLConnection.HTTP_OK) {
                 Log.e(TAG, "GitHub API returned: $responseCode")
+                connection.disconnect()
                 return@withContext null
             }
 
-            val response = connection.inputStream.bufferedReader().use { it.readText() }
-            connection.disconnect()
+            val response = try {
+                connection.inputStream.bufferedReader().use { it.readText() }
+            } finally {
+                connection.disconnect()
+            }
 
             parseReleaseJson(response)
 
@@ -115,7 +119,7 @@ class UpdateChecker(private val context: Context) {
             // Check if this version is newer - compare parsed version codes from version strings
             val isNewer = remoteVersionCode > currentVersionCode
 
-            if (isNewer) {
+            if (isNewer && !isPrerelease) {
                 Log.d(TAG, "Update available: $tagName (htmlUrl: $htmlUrl)")
                 return AppUpdate(
                     version = tagName,

@@ -2,6 +2,74 @@
 
 All notable changes to K2Look will be documented in this file.
 
+## [0.13.0] - 2026-03-22
+
+### Added
+
+- **Karoo Sync — Import your Karoo ride profile automatically**
+    - K2Look can now read your active Karoo ride profile and generate a matching display layout
+    - A **"From Karoo"** suggestion card appears in Profile Management whenever Karoo switches to a
+      profile that has no matching K2Look profile (only shown when not riding)
+    - An **Import Preview** dialog shows which screens and fields will be created before you confirm
+    - Karoo page order is preserved; each page becomes one screen with the correct template (1–6D)
+    - Unknown third-party extension fields are skipped gracefully with a log warning
+- **Karoo Sync toggle**
+    - A **Karoo Sync** switch at the top of Profile Management turns the auto-switch and
+      import suggestions on or off (default: on)
+    - Setting is persisted between app restarts
+- **Expanded metrics: 23 → 74 total across 14 categories**
+    - **Elevation** (new): Grade, Ascent, Descent, Altitude, VAM 30s
+    - **Energy** (new): Energy (kJ), Calories, Cal/hr
+    - **Lap** (new): Lap #, Lap Time, Lap Dist, Lap Speed, Lap HR, Lap Power, Lap NP, Lap Cadence, Lap Ascent
+    - **Last Lap** (new): L.Lap Time, L.Lap Dist, L.Lap Speed, L.Lap HR, L.Lap Power, L.Lap NP
+    - **Radar** (new): Radar Threat, Radar Targets, Radar Range *(requires Garmin Varia or compatible)*
+    - **Shifting** (new): Front Gear, Rear Gear, Drive Battery, Shift Count *(requires Di2/AXS/eTap)*
+    - **Navigation** (new): To Turn, To Finish, ETA, Time to End, Heading *(requires active route)*
+    - **eBike** (new): Bike Battery, Est. Range, Assist Mode, Motor Power *(requires LEV sensor)*
+    - **General** additions: Clock, Temperature, Karoo Battery, Ride Time
+    - **Heart Rate** additions: % Max HR, % HR Reserve
+    - **Power** additions: Power 5s, Power 10s, Power 30s, Norm. Power, % FTP, Intensity Factor, TSS, W/kg
+    - **Speed** addition: Speed 3s
+    - **Cadence** addition: Cadence 3s
+- **Five Data (5D) layout template** — one wide top field + 2×2 grid below (7 templates total)
+
+### Changed
+
+- **Profiles are now fully equal — no "system profile" or "read-only" concept**
+    - Removed `isDefault` and `isReadOnly` flags from the profile model
+    - The Default profile is seeded on first install and behaves exactly like any user profile
+    - Old installs are migrated transparently: the Default profile is written to storage once
+      on the first launch after update, with no duplicates
+- **Duplicate profile name validation**
+    - Creating or duplicating a profile with an existing name (case-insensitive) is now
+      rejected with a clear error message
+- **Last-profile guard**
+    - The delete button is disabled (greyed out) only when one profile remains, instead of
+      the previous logic that blocked deleting "the default" profile
+
+### Fixed
+
+- **"Send to Glasses" — button now works and gives feedback**
+    - Renamed from "Build & Send" to **"Send to Glasses"** — clearer description of what it does
+    - Pressing the button now immediately updates the glasses display: `--` placeholders when
+      not riding, live values during a ride
+    - A green confirmation banner appears in the app after a successful send
+    - Button shows "Send to Glasses (not connected)" when glasses are not connected
+
+### Technical
+
+- **KarooActiveLookBridge refactored** — formatter methods extracted to `BridgeMetricFormatters.kt`
+  as package-level functions; removed 15 duplicate private methods and one duplicate public accessor
+  that had been left behind from the original extraction
+
+## [0.12.5] - 2026-03-113
+
+### Fixed 
+
+- Fixed tabs. Text took too much space and made the UI look bad. Now the tabs are smaller and more compact, allowing more space for the content and improving the overall appearance of the app.
+- Fixed hardcoded disable button for sending config to glasses. Now the button is enabled and functional if glasses are connected, allowing users to send their custom configurations to the glasses directly from the app.
+- Changed default profile. Not readonly anymore, since, well. You can have a profile named `Default` so... yeah. It's just a default profile that you can edit and customize as you wish, and it will be the one used when you don't have any other profile selected or active on Karoo 2.
+
 ## [0.12.4] - 2026-01-01
 
 ### Fixed

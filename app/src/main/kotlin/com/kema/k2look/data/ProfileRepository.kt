@@ -52,6 +52,21 @@ class ProfileRepository(private val context: Context) {
         Log.i(TAG, "Saved profile: ${profile.name}")
     }
 
+    // ── Migration helpers ────────────────────────────────────────────────────
+
+    /**
+     * Returns true once [markSeedMigrationRan] has been called.
+     * Prevents the one-time "inject missing seed profile" logic from
+     * re-running every time the user deletes the Default profile.
+     */
+    fun hasSeedMigrationRun(): Boolean =
+        prefs.getBoolean("seed_migration_v1", false)
+
+    /** Call this after the seed-injection migration completes. */
+    fun markSeedMigrationRan() {
+        prefs.edit().putBoolean("seed_migration_v1", true).apply()
+    }
+
     /**
      * Delete a profile from storage
      */

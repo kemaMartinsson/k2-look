@@ -1,16 +1,23 @@
 package com.kema.k2look.service
 
+import android.bluetooth.BluetoothManager
 import android.content.Context
-import android.graphics.Point
+import android.graphics.BitmapFactory
 import android.util.Log
 import com.activelook.activelooksdk.DiscoveredGlasses
 import com.activelook.activelooksdk.Glasses
 import com.activelook.activelooksdk.Sdk
-import com.activelook.activelooksdk.types.Rotation
-import com.activelook.activelooksdk.types.holdFlushAction
+import com.activelook.activelooksdk.types.ImgStreamFormat
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 /**
  * Service responsible for managing ActiveLook glasses connection and communication.
@@ -25,8 +32,14 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 class ActiveLookService(private val context: Context) {
 
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
     private var sdk: Sdk? = null
-    private var connectedGlasses: Glasses? = null
+    internal var connectedGlasses: Glasses? = null
+
+    // Tracks the DiscoveredGlasses object currently being connected, for timeout cancellation
+    private var connectingGlasses: DiscoveredGlasses? = null
+    private var connectionTimeoutJob: Job? = null
 
     // Connection state
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
@@ -44,12 +57,15 @@ class ActiveLookService(private val context: Context) {
     private val _gestureEvents = MutableStateFlow(0) // Counter for gesture events
     val gestureEvents: StateFlow<Int> = _gestureEvents.asStateFlow()
 
+    // Cooldown: ignore CBB notifications for 500ms after gesture(true) is called to avoid
+    // the spurious event the firmware fires immediately after arming the sensor.
+    @Volatile private var gestureArmTime = 0L
+    private val GESTURE_ARM_COOLDOWN_MS = 500L
+
     private val _touchEvents = MutableStateFlow(0) // Counter for touch events
     val touchEvents: StateFlow<Int> = _touchEvents.asStateFlow()
 
-    /**
-     * Connection state enum
-     */
+    /** Connection state enum */
     sealed class ConnectionState {
         data object Disconnected : ConnectionState()
         data object Scanning : ConnectionState()
@@ -58,9 +74,9 @@ class ActiveLookService(private val context: Context) {
         data class Error(val message: String) : ConnectionState()
     }
 
-    /**
-     * Initialize the ActiveLook SDK
-     */
+    /** Initialize the ActiveLook SDK */
+    fun isSdkInitialized(): Boolean = sdk != null
+
     fun initializeSdk() {
         if (sdk != null) {
             Log.w(TAG, "SDK already initialized")
@@ -70,26 +86,19 @@ class ActiveLookService(private val context: Context) {
         Log.i(TAG, "Initializing ActiveLook SDK...")
 
         try {
-            sdk = Sdk.init(
-                context.applicationContext,
-                { update ->
-                    Log.i(TAG, "Firmware update started")
-                },
-                { pair ->
-                    Log.i(TAG, "Firmware update available")
-                    // For now, don't auto-update during rides
-                    // User can manually update through settings later
-                },
-                { update ->
-                    Log.d(TAG, "Firmware update progress")
-                },
-                { update ->
-                    Log.i(TAG, "Firmware update successful")
-                },
-                { update ->
-                    Log.e(TAG, "Firmware update error")
-                }
-            )
+            sdk =
+                    Sdk.init(
+                            context.applicationContext,
+                            { update -> Log.i(TAG, "Firmware update started") },
+                            { pair ->
+                                Log.i(TAG, "Firmware update available")
+                                // For now, don't auto-update during rides
+                                // User can manually update through settings later
+                            },
+                            { update -> Log.d(TAG, "Firmware update progress") },
+                            { update -> Log.i(TAG, "Firmware update successful") },
+                            { update -> Log.e(TAG, "Firmware update error") }
+                    )
 
             Log.i(TAG, "✓ ActiveLook SDK initialized successfully")
         } catch (e: Exception) {
@@ -98,9 +107,7 @@ class ActiveLookService(private val context: Context) {
         }
     }
 
-    /**
-     * Start scanning for ActiveLook glasses
-     */
+    /** Start scanning for ActiveLook glasses */
     fun startScanning() {
         val sdkInstance = sdk
         if (sdkInstance == null) {
@@ -113,6 +120,19 @@ class ActiveLookService(private val context: Context) {
             Log.w(TAG, "⚠️ Already scanning")
             return
         }
+
+        // Pre-check: is the BLE adapter actually enabled?
+        val btManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
+        val adapter = btManager?.adapter
+        if (adapter == null || !adapter.isEnabled) {
+            Log.e(
+                    TAG,
+                    "❌ BLE adapter is ${if (adapter == null) "unavailable" else "disabled"} — scan will likely find 0 devices"
+            )
+            _connectionState.value = ConnectionState.Error("Bluetooth is not enabled")
+            return
+        }
+        Log.d(TAG, "✅ BLE adapter enabled, state=${adapter.state}")
 
         Log.i(TAG, "🔍 === Starting BLE scan for ActiveLook glasses ===")
         Log.d(TAG, "SDK instance: $sdkInstance")
@@ -138,10 +158,7 @@ class ActiveLookService(private val context: Context) {
                     Log.i(TAG, "✅ Added to discovered list: ${discoveredGlasses.name}")
                     Log.d(TAG, "Total discovered devices: ${currentList.size}")
                 } else {
-                    Log.d(
-                        TAG,
-                        "⏭️ Device already in list, skipping: ${discoveredGlasses.name}"
-                    )
+                    Log.d(TAG, "⏭️ Device already in list, skipping: ${discoveredGlasses.name}")
                 }
             }
             Log.i(TAG, "✅ Scan started successfully, waiting for devices...")
@@ -154,9 +171,7 @@ class ActiveLookService(private val context: Context) {
         }
     }
 
-    /**
-     * Stop scanning for glasses
-     */
+    /** Stop scanning for glasses */
     fun stopScanning() {
         val sdkInstance = sdk
         if (sdkInstance == null) {
@@ -184,9 +199,7 @@ class ActiveLookService(private val context: Context) {
         }
     }
 
-    /**
-     * Connect to discovered glasses
-     */
+    /** Connect to discovered glasses */
     fun connect(glasses: DiscoveredGlasses) {
         Log.i(TAG, "🔌 === INITIATING CONNECTION ===")
         Log.i(TAG, "  Target Name: ${glasses.name}")
@@ -204,55 +217,122 @@ class ActiveLookService(private val context: Context) {
         Log.d(TAG, "Setting state to Connecting...")
         _connectionState.value = ConnectionState.Connecting
 
+        // Watchdog: if neither onConnected nor onConnectionFail fires within the timeout,
+        // the device was likely discovered from the Android BLE bonded cache rather than a
+        // live advertisement.  Cancel the attempt and surface an error so the caller can retry.
+        connectingGlasses = glasses
+        connectionTimeoutJob?.cancel()
+        connectionTimeoutJob =
+                serviceScope.launch {
+                    delay(CONNECTION_TIMEOUT_MS)
+                    if (_connectionState.value is ConnectionState.Connecting) {
+                        Log.w(
+                                TAG,
+                                "⏱️ Connection timed out for ${glasses.name} (${glasses.address}) — " +
+                                        "device may not be advertising (stale BLE cache entry?)"
+                        )
+                        try {
+                            connectingGlasses?.cancelConnection()
+                        } catch (e: Exception) {
+                            Log.w(TAG, "cancelConnection threw: ${e.message}")
+                        }
+                        connectingGlasses = null
+                        connectedGlasses = null
+                        _connectionState.value =
+                                ConnectionState.Error(
+                                        "Connection timed out — glasses not found advertising. " +
+                                                "Try scanning again when glasses are powered on."
+                                )
+                    }
+                }
+
         try {
             Log.d(TAG, "Calling glasses.connect()...")
             glasses.connect(
-                { connectedGlasses ->
-                    Log.i(TAG, "✅ === CONNECTION SUCCESS ===")
-                    Log.i(TAG, "  Connected Name: ${connectedGlasses.name}")
-                    Log.i(TAG, "  Connected Address: ${connectedGlasses.address}")
-                    Log.i(TAG, "  Manufacturer: ${connectedGlasses.manufacturer}")
-                    Log.i(TAG, "=========================")
+                    { connectedGlasses ->
+                        connectionTimeoutJob?.cancel()
+                        connectingGlasses = null
 
-                    this.connectedGlasses = connectedGlasses
-                    _connectionState.value = ConnectionState.Connected(connectedGlasses)
+                        Log.i(TAG, "✅ === CONNECTION SUCCESS ===")
+                        Log.i(TAG, "  Connected Name: ${connectedGlasses.name}")
+                        Log.i(TAG, "  Connected Address: ${connectedGlasses.address}")
+                        Log.i(TAG, "  Manufacturer: ${connectedGlasses.manufacturer}")
+                        Log.i(TAG, "=========================")
 
-                    // Subscribe to sensor interface notifications (gesture & touch events)
-                    setupGestureAndTouchListeners(connectedGlasses)
+                        this.connectedGlasses = connectedGlasses
+                        _connectionState.value = ConnectionState.Connected(connectedGlasses)
 
-                    // Enable gesture sensor on glasses
-                    enableGestureSensor(true)
+                        // Subscribe to sensor interface notifications (gesture & touch events)
+                        setupGestureAndTouchListeners(connectedGlasses)
 
-                    Log.i(TAG, "✓ Connection established successfully")
-                },
-                { failedGlasses ->
-                    Log.e(TAG, "=== CONNECTION FAILED ===")
-                    Log.e(TAG, "  Failed Name: ${failedGlasses.name}")
-                    Log.e(TAG, "  Failed Address: ${failedGlasses.address}")
-                    Log.e(TAG, "  Manufacturer: ${failedGlasses.manufacturer}")
-                    Log.e(TAG, "  Connection State: Failed")
-                    Log.e(TAG, "=========================")
+                        // Enable gesture sensor on glasses
+                        enableGestureSensor(true)
 
-                    _connectionState.value = ConnectionState.Error("Connection failed")
-                    this.connectedGlasses = null
+                        // Post-connect initialisation is done off the BLE callback thread.
+                        // Blocking the callback thread (Thread.sleep / BLE commands) prevents
+                        // the BLE stack from processing GATT responses and can cause the
+                        // firmware to consider the connection lost, leading to a spurious
+                        // disconnect while the logo is still displayed.
+                        serviceScope.launch(Dispatchers.IO) {
+                            try {
+                                // Brief delay for firmware startup, then clear boot screen.
+                                delay(500)
+                                connectedGlasses.clear()
+                                Log.i(TAG, "✓ Display cleared after connect")
 
-                    Log.e(TAG, "✗ Connection failed - check glasses power, BLE, and proximity")
-                },
-                { disconnectedGlasses ->
-                    Log.w(TAG, "=== DISCONNECTION EVENT ===")
-                    Log.w(TAG, "  Disconnected Name: ${disconnectedGlasses.name}")
-                    Log.w(TAG, "  Disconnected Address: ${disconnectedGlasses.address}")
-                    Log.w(TAG, "  Previous State: ${_connectionState.value}")
-                    Log.w(TAG, "===========================")
+                                // Play K2Look logo animation.
+                                displayLogoAnimation(frameDelayMs = 300L)
+                                delay(500)
+                                connectedGlasses.clear()
 
-                    _connectionState.value = ConnectionState.Disconnected
-                    this.connectedGlasses = null
+                                Log.i(TAG, "✓ Connection established successfully")
+                            } catch (e: Exception) {
+                                Log.w(TAG, "Post-connect init failed: ${e.message}")
+                            }
+                        }
+                    },
+                    { failedGlasses ->
+                        connectionTimeoutJob?.cancel()
+                        connectingGlasses = null
 
-                    Log.w(TAG, "Connection lost - glasses disconnected")
-                }
+                        Log.e(TAG, "=== CONNECTION FAILED ===")
+                        Log.e(TAG, "  Failed Name: ${failedGlasses.name}")
+                        Log.e(TAG, "  Failed Address: ${failedGlasses.address}")
+                        Log.e(TAG, "  Manufacturer: ${failedGlasses.manufacturer}")
+                        Log.e(TAG, "  Connection State: Failed")
+                        Log.e(TAG, "=========================")
+
+                        _connectionState.value = ConnectionState.Error("Connection failed")
+                        this.connectedGlasses = null
+
+                        Log.e(TAG, "✗ Connection failed - check glasses power, BLE, and proximity")
+                    },
+                    { disconnectedGlasses ->
+                        Log.w(TAG, "=== DISCONNECTION EVENT ===")
+                        Log.w(TAG, "  Disconnected Name: ${disconnectedGlasses.name}")
+                        Log.w(TAG, "  Disconnected Address: ${disconnectedGlasses.address}")
+                        Log.w(TAG, "  Previous State: ${_connectionState.value}")
+                        Log.w(TAG, "===========================")
+
+                        // Clear the display so the last frame (e.g. logo) doesn't persist
+                        // while the app shows "Searching for glasses".
+                        try {
+                            disconnectedGlasses.clear()
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Could not clear display on disconnect: ${e.message}")
+                        }
+
+                        _connectionState.value = ConnectionState.Disconnected
+                        this.connectedGlasses = null
+
+                        Log.w(TAG, "Connection lost - glasses disconnected")
+                    }
             )
             Log.d(TAG, "glasses.connect() call completed, waiting for callbacks...")
         } catch (e: Exception) {
+            connectionTimeoutJob?.cancel()
+            connectingGlasses = null
+
             Log.e(TAG, "=== CONNECTION EXCEPTION ===")
             Log.e(TAG, "  Exception Type: ${e.javaClass.name}")
             Log.e(TAG, "  Message: ${e.message}")
@@ -266,9 +346,7 @@ class ActiveLookService(private val context: Context) {
         }
     }
 
-    /**
-     * Disconnect from glasses
-     */
+    /** Disconnect from glasses */
     fun disconnect() {
         val glasses = connectedGlasses
         if (glasses == null) {
@@ -289,176 +367,7 @@ class ActiveLookService(private val context: Context) {
         }
     }
 
-    /**
-     * Display text on glasses
-     */
-    fun displayText(text: String, x: Int = 0, y: Int = 0) {
-        val glasses = connectedGlasses
-        if (glasses == null) {
-            Log.w(TAG, "Cannot display text: No glasses connected")
-            return
-        }
-
-        try {
-            // Clear display first
-            glasses.clear()
-
-            // Display text at position with default rotation, font size, and color
-            val position = Point(x, y)
-            val rotation = Rotation.TOP_LR
-            val fontSize: Byte = 3
-            val color: Byte = 15  // White/Full brightness (0-15)
-
-            glasses.txt(position, rotation, fontSize, color, text)
-
-            Log.d(TAG, "Displayed text: '$text' at ($x, $y)")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error displaying text: ${e.message}", e)
-        }
-    }
-
-    /**
-     * Clear the glasses display
-     */
-    fun clearDisplay() {
-        val glasses = connectedGlasses
-        if (glasses == null) {
-            Log.w(TAG, "Cannot clear display: No glasses connected")
-            return
-        }
-
-        try {
-            glasses.clear()
-            Log.d(TAG, "Display cleared")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error clearing display: ${e.message}", e)
-        }
-    }
-
-    /**
-     * Display a configured field with label, icon, and value at calculated position
-     * Uses zone-based positioning
-     */
-    fun displayField(
-        field: com.kema.k2look.model.LayoutDataField,
-        value: String,
-        sectionY: Int
-    ) {
-        val glasses = connectedGlasses
-        if (glasses == null) {
-            Log.w(TAG, "Cannot display field: No glasses connected")
-            return
-        }
-
-        try {
-            // Constants for this method (localized from removed LayoutBuilder constants)
-            val MARGIN_X = 10
-            val ICON_LEFT_MARGIN = 10
-            val ICON_LABEL_SPACING = 10
-            val LABEL_OFFSET_Y = 15
-            val VALUE_OFFSET_Y = 45
-            val DISPLAY_WIDTH = 304
-            val SECTION_HEIGHT = 85
-
-            // Calculate label X position based on icon display
-            var labelX = if (field.showIcon && field.dataField.icon28 != null) {
-                ICON_LEFT_MARGIN + field.iconSize.pixels + ICON_LABEL_SPACING
-            } else {
-                MARGIN_X + 5
-            }
-
-            // Display icon if enabled
-            if (field.showIcon) {
-                val iconId = when (field.iconSize) {
-                    com.kema.k2look.model.IconSize.SMALL -> field.dataField.icon28
-                    com.kema.k2look.model.IconSize.LARGE -> field.dataField.icon40
-                }
-
-                if (iconId != null) {
-                    val iconX = ICON_LEFT_MARGIN
-                    val iconY = sectionY + (SECTION_HEIGHT - field.iconSize.pixels) / 2
-                    glasses.imgDisplay(iconId.toByte(), iconX.toShort(), iconY.toShort())
-                    Log.v(TAG, "  Icon $iconId at ($iconX, $iconY)")
-                }
-            }
-
-            // Display label if enabled
-            if (field.showLabel) {
-                val labelText = buildLabelText(field)
-                val labelY = sectionY + LABEL_OFFSET_Y
-                glasses.txt(
-                    Point(labelX, labelY),
-                    Rotation.TOP_LR,
-                    1, // Small font for labels
-                    15, // White color
-                    labelText
-                )
-                Log.v(TAG, "  Label '$labelText' at ($labelX, $labelY)")
-            }
-
-            // Display value (centered) - font determined by zone in layout builder
-            val valueX = DISPLAY_WIDTH / 2
-            val valueY = sectionY + VALUE_OFFSET_Y
-            // Use medium font as default (font is now determined by zone in efficient mode)
-            val fontId = 2 // Medium font
-            glasses.txt(
-                Point(valueX, valueY),
-                Rotation.TOP_LR,
-                fontId.toByte(),
-                15, // White color
-                value
-            )
-            Log.v(TAG, "  Value '$value' at ($valueX, $valueY) font=$fontId")
-
-            // Draw separator line (except for bottom section)
-            if (sectionY < SECTION_HEIGHT * 2) {
-                val lineY = sectionY + SECTION_HEIGHT - 1
-                glasses.line(
-                    Point(MARGIN_X, lineY),
-                    Point(DISPLAY_WIDTH - MARGIN_X, lineY)
-                )
-            }
-
-        } catch (e: Exception) {
-            Log.e(TAG, "Error displaying field ${field.dataField.name}: ${e.message}", e)
-        }
-    }
-
-    /**
-     * Build label text with optional unit
-     */
-    private fun buildLabelText(field: com.kema.k2look.model.LayoutDataField): String {
-        val name = field.dataField.name.uppercase()
-        return if (field.showUnit && field.dataField.unit.isNotEmpty()) {
-            "$name (${field.dataField.unit})"
-        } else {
-            name
-        }
-    }
-
-
-    /**
-     * Display a value using a pre-saved layout (Phase 4.2)
-     * Much more efficient than txt() - only sends the value!
-     */
-    fun layoutDisplay(layoutId: Byte, value: String) {
-        val glasses = connectedGlasses
-        if (glasses == null) {
-            Log.w(TAG, "Cannot display layout: No glasses connected")
-            return
-        }
-
-        try {
-            glasses.layoutDisplay(layoutId, value)
-            Log.v(TAG, "Layout $layoutId displayed: '$value'")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error displaying layout $layoutId: ${e.message}", e)
-        }
-    }
-
-    /**
-     * Delete a layout from glasses memory (Phase 4.2)
-     */
+    /** Delete a layout from glasses memory (Phase 4.2) */
     fun layoutDelete(layoutId: Byte) {
         val glasses = connectedGlasses
         if (glasses == null) {
@@ -474,22 +383,26 @@ class ActiveLookService(private val context: Context) {
         }
     }
 
-    /**
-     * Check if connected to glasses
-     */
+    /** Delete all layouts in the current config namespace */
+    fun layoutDeleteAll() {
+        layoutDelete(0xFF.toByte())
+    }
+
+    /** Check if connected to glasses */
     val isConnected: Boolean
         get() = connectedGlasses != null && _connectionState.value is ConnectionState.Connected
 
-    /**
-     * Get the currently connected glasses
-     */
+    /** Get the currently connected glasses */
     fun getConnectedGlasses(): Glasses? = connectedGlasses
 
-    /**
-     * Clean up resources
-     */
+    /** Clean up resources */
     fun cleanup() {
         Log.i(TAG, "Cleaning up ActiveLook service...")
+
+        // Cancel any in-flight connection attempt
+        connectionTimeoutJob?.cancel()
+        connectionTimeoutJob = null
+        connectingGlasses = null
 
         // Stop scanning if active
         if (_isScanning.value) {
@@ -504,330 +417,72 @@ class ActiveLookService(private val context: Context) {
         // Clear state
         _discoveredGlasses.value = emptyList()
 
+        // Cancel the service-internal coroutine scope
+        serviceScope.cancel()
+
         Log.i(TAG, "✓ Cleanup complete")
     }
 
-    // ========== GAUGE COMMANDS ==========
+    // saveGauge / displayGauge / deleteGauge / displayProgressBar / displayZonedBar
+    // → ActiveLookGaugeBarCommands.kt as extension functions
 
-    /**
-     * Save gauge configuration to glasses memory
-     *
-     * @param gauge Gauge configuration
-     * @return true if successful
-     */
-    suspend fun saveGauge(gauge: com.kema.k2look.model.Gauge): Boolean {
-        val glasses = connectedGlasses
-        if (glasses == null) {
-            Log.w(TAG, "Cannot save gauge: No glasses connected")
-            return false
-        }
-
-        return try {
-            glasses.gaugeSave(
-                gauge.id.toByte(),
-                gauge.centerX.toShort(),
-                gauge.centerY.toShort(),
-                gauge.radiusOuter.toChar(),
-                gauge.radiusInner.toChar(),
-                gauge.startPortion.toByte(),
-                gauge.endPortion.toByte(),
-                gauge.clockwise
-            )
-            Log.i(TAG, "✓ Gauge ${gauge.id} saved (${gauge.dataField.name})")
-            true
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ Failed to save gauge ${gauge.id}", e)
-            false
-        }
-    }
-
-    /**
-     * Display gauge with percentage value
-     *
-     * @param gaugeId Gauge identifier
-     * @param percentage Value 0-100
-     * @return true if successful
-     */
-    suspend fun displayGauge(gaugeId: Int, percentage: Int): Boolean {
-        val glasses = connectedGlasses
-        if (glasses == null) {
-            Log.w(TAG, "Cannot display gauge: No glasses connected")
-            return false
-        }
-
-        return try {
-            val clampedPercentage = percentage.coerceIn(0, 100)
-            glasses.gaugeDisplay(
-                gaugeId.toByte(),
-                clampedPercentage.toByte()
-            )
-            Log.d(TAG, "Gauge $gaugeId: $clampedPercentage%")
-            true
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ Failed to display gauge $gaugeId", e)
-            false
-        }
-    }
-
-    /**
-     * Delete gauge from glasses memory
-     *
-     * @param gaugeId Gauge identifier (or 0xFF for all)
-     * @return true if successful
-     */
-    suspend fun deleteGauge(gaugeId: Int): Boolean {
-        val glasses = connectedGlasses
-        if (glasses == null) {
-            Log.w(TAG, "Cannot delete gauge: No glasses connected")
-            return false
-        }
-
-        return try {
-            glasses.gaugeDelete(gaugeId.toByte())
-            Log.i(TAG, "✓ Gauge $gaugeId deleted")
-            true
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ Failed to delete gauge $gaugeId", e)
-            false
-        }
-    }
-
-    // ========== PROGRESS BAR COMMANDS ==========
-
-    /**
-     * Display progress bar using rectangles
-     *
-     * @param bar Progress bar configuration
-     * @param percentage Value 0-100
-     * @return true if successful
-     */
-    suspend fun displayProgressBar(
-        bar: com.kema.k2look.model.ProgressBar,
-        percentage: Int
-    ): Boolean {
-        val glasses = connectedGlasses
-        if (glasses == null) {
-            Log.w(TAG, "Cannot display progress bar: No glasses connected")
-            return false
-        }
-
-        return try {
-            val clampedPercentage = percentage.coerceIn(0, 100)
-            val fillAmount = bar.calculateFillAmount(clampedPercentage.toFloat())
-
-            // Hold flush to prevent flickering
-            glasses.holdFlush(holdFlushAction.HOLD)
-
-            // Clear previous bar area
-            glasses.color(0) // Black
-            glasses.rectf(
-                bar.x.toShort(),
-                bar.y.toShort(),
-                (bar.x + bar.width).toShort(),
-                (bar.y + bar.height).toShort()
-            )
-
-            // Draw border if enabled
-            if (bar.showBorder) {
-                glasses.color(8) // Mid-grey border
-                glasses.rect(
-                    bar.x.toShort(),
-                    bar.y.toShort(),
-                    (bar.x + bar.width).toShort(),
-                    (bar.y + bar.height).toShort()
-                )
-            }
-
-            // Draw filled portion
-            glasses.color(15) // White fill
-            when (bar.orientation) {
-                com.kema.k2look.model.Orientation.HORIZONTAL -> {
-                    if (fillAmount > 0) {
-                        glasses.rectf(
-                            bar.x.toShort(),
-                            bar.y.toShort(),
-                            (bar.x + fillAmount).toShort(),
-                            (bar.y + bar.height).toShort()
-                        )
-                    }
-                }
-
-                com.kema.k2look.model.Orientation.VERTICAL -> {
-                    if (fillAmount > 0) {
-                        val fillY = bar.y + bar.height - fillAmount
-                        glasses.rectf(
-                            bar.x.toShort(),
-                            fillY.toShort(),
-                            (bar.x + bar.width).toShort(),
-                            (bar.y + bar.height).toShort()
-                        )
-                    }
-                }
-            }
-
-            // Flush to display
-            glasses.holdFlush(holdFlushAction.FLUSH)
-
-            Log.d(TAG, "Progress bar ${bar.id}: $clampedPercentage% (${bar.dataField.name})")
-            true
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ Failed to display progress bar ${bar.id}", e)
-            // Try to flush anyway to recover
-            try {
-                connectedGlasses?.holdFlush(holdFlushAction.FLUSH)
-            } catch (_: Exception) {
-            }
-            false
-        }
-    }
-
-    /**
-     * Display zoned progress bar with color-coded zones
-     *
-     * @param zonedBar Zoned bar configuration
-     * @param currentValue Current metric value
-     * @return true if successful
-     */
-    suspend fun displayZonedBar(
-        zonedBar: com.kema.k2look.model.ZonedProgressBar,
-        currentValue: Float
-    ): Boolean {
-        val glasses = connectedGlasses
-        if (glasses == null) {
-            Log.w(TAG, "Cannot display zoned bar: No glasses connected")
-            return false
-        }
-
-        return try {
-            val bar = zonedBar.bar
-
-            // Hold flush to prevent flickering
-            glasses.holdFlush(holdFlushAction.HOLD)
-
-            // Clear previous bar area
-            glasses.color(0) // Black
-            glasses.rectf(
-                bar.x.toShort(),
-                bar.y.toShort(),
-                (bar.x + bar.width).toShort(),
-                (bar.y + bar.height).toShort()
-            )
-
-            // Draw border
-            if (bar.showBorder) {
-                glasses.color(8) // Mid-grey border
-                glasses.rect(
-                    bar.x.toShort(),
-                    bar.y.toShort(),
-                    (bar.x + bar.width).toShort(),
-                    (bar.y + bar.height).toShort()
-                )
-            }
-
-            // Draw each zone as background
-            zonedBar.zones.forEach { zone ->
-                val zoneStartPx = zonedBar.valueToPixel(zone.minValue)
-                val zoneEndPx = zonedBar.valueToPixel(zone.maxValue)
-
-                // Draw zone background
-                glasses.color(zone.color.toByte())
-                when (bar.orientation) {
-                    com.kema.k2look.model.Orientation.HORIZONTAL -> {
-                        glasses.rectf(
-                            zoneStartPx.toShort(),
-                            (bar.y + 2).toShort(),
-                            zoneEndPx.toShort(),
-                            (bar.y + bar.height - 2).toShort()
-                        )
-                    }
-
-                    com.kema.k2look.model.Orientation.VERTICAL -> {
-                        glasses.rectf(
-                            (bar.x + 2).toShort(),
-                            zoneEndPx.toShort(),
-                            (bar.x + bar.width - 2).toShort(),
-                            zoneStartPx.toShort()
-                        )
-                    }
-                }
-            }
-
-            // Draw current value indicator (bright overlay)
-            val currentPx = zonedBar.valueToPixel(currentValue)
-            val currentZone = zonedBar.findZone(currentValue)
-
-            glasses.color(15) // White indicator
-            when (bar.orientation) {
-                com.kema.k2look.model.Orientation.HORIZONTAL -> {
-                    // Draw vertical line at current position
-                    glasses.rectf(
-                        (currentPx - 1).toShort(),
-                        bar.y.toShort(),
-                        (currentPx + 1).toShort(),
-                        (bar.y + bar.height).toShort()
-                    )
-                }
-
-                com.kema.k2look.model.Orientation.VERTICAL -> {
-                    // Draw horizontal line at current position
-                    glasses.rectf(
-                        bar.x.toShort(),
-                        (currentPx - 1).toShort(),
-                        (bar.x + bar.width).toShort(),
-                        (currentPx + 1).toShort()
-                    )
-                }
-            }
-
-            // Flush to display
-            glasses.holdFlush(holdFlushAction.FLUSH)
-
-            Log.d(
-                TAG,
-                "Zoned bar ${bar.id}: ${currentValue.toInt()} ${currentZone?.name ?: "?"} (${bar.dataField.name})"
-            )
-            true
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ Failed to display zoned bar ${zonedBar.bar.id}", e)
-            // Try to flush anyway to recover
-            try {
-                connectedGlasses?.holdFlush(holdFlushAction.FLUSH)
-            } catch (_: Exception) {
-            }
-            false
-        }
-    }
-
-    /**
-     * Setup listeners for gesture and touch events from glasses
-     */
+    /** Setup listeners for gesture and touch events from glasses */
     private fun setupGestureAndTouchListeners(glasses: Glasses) {
         try {
-            Log.i(TAG, "Setting up gesture and touch event listeners...")
+            Log.i(
+                    TAG,
+                    "Setting up gesture and touch event listeners... glasses=${glasses.javaClass.simpleName}@${Integer.toHexString(System.identityHashCode(glasses))}"
+            )
 
-            glasses.subscribeToSensorInterfaceNotifications {
-                // This callback is triggered for both gesture AND touch events
-                handleSensorEvent()
+            // Read and log current firmware settings to verify gestureEnable / alsEnable state
+            glasses.settings { s ->
+                Log.i(
+                        TAG,
+                        "Glasses settings at connect: gestureEnable=${s.isGestureEnable} alsEnable=${s.isAlsEnable} luma=${s.luma} x=${s.globalXShift} y=${s.globalYShift}"
+                )
             }
 
-            Log.i(TAG, "✓ Gesture/Touch event listeners enabled")
+            glasses.subscribeToSensorInterfaceNotifications {
+                // Gesture characteristic (UUID ...CBB): hand motion near glasses.
+                val now = System.currentTimeMillis()
+                if (now - gestureArmTime < GESTURE_ARM_COOLDOWN_MS) {
+                    // Spurious event fired immediately after arming — discard.
+                    Log.d(
+                            TAG,
+                            "Gesture event suppressed (arm cooldown ${now - gestureArmTime}ms < ${GESTURE_ARM_COOLDOWN_MS}ms)"
+                    )
+                    return@subscribeToSensorInterfaceNotifications
+                }
+                _gestureEvents.value += 1
+                Log.d(TAG, "Gesture event. Total: ${_gestureEvents.value}")
+                // Re-arm gesture detection dispatched off the GATT callback thread.
+                // Even though gesture(true) persists in firmware, empirical testing shows
+                // gestures stop being detected after the first event without explicit re-arm.
+                // Dispatching to IO avoids GATT operation overlap on the callback thread.
+                serviceScope.launch(Dispatchers.IO) {
+                    gestureArmTime = System.currentTimeMillis() // re-arm resets the cooldown window
+                    try {
+                        glasses.gesture(true)
+                    } catch (_: Exception) {}
+                }
+            }
+
+            glasses.subscribeToUserInterfaceNotifications {
+                // Touch characteristic (UUID ...CBC): capacitive button press
+                _touchEvents.value += 1
+                Log.d(TAG, "Touch event. Total: ${_touchEvents.value}")
+            }
+
+            Log.i(
+                    TAG,
+                    "✓ Gesture and touch event listeners enabled on glasses@${Integer.toHexString(System.identityHashCode(glasses))}"
+            )
         } catch (e: Exception) {
             Log.e(TAG, "Failed to setup gesture/touch listeners: ${e.message}", e)
         }
     }
 
-    /**
-     * Handle sensor interface events (gesture or touch)
-     */
-    private fun handleSensorEvent() {
-        Log.i(TAG, "🖐️ Sensor event detected (gesture or touch)")
-        _gestureEvents.value += 1
-        Log.d(TAG, "Total sensor events: ${_gestureEvents.value}")
-    }
-
-    /**
-     * Enable or disable the gesture sensor on the glasses
-     */
+    /** Enable or disable the gesture sensor on the glasses */
     fun enableGestureSensor(enable: Boolean) {
         val glasses = connectedGlasses
         if (glasses == null) {
@@ -837,9 +492,15 @@ class ActiveLookService(private val context: Context) {
 
         try {
             Log.i(TAG, "Enabling gesture sensor: $enable")
-            // The ActiveLook SDK should handle gesture sensor enabling through sensor commands
-            // For now, the gesture notifications will be received once subscribed
-            Log.i(TAG, "✓ Gesture sensor subscription active")
+            // sensor(0x20) powers the ENTIRE optical subsystem (ALS auto-brightness + gesture IR).
+            // It must only be called with `true` — calling sensor(false) also kills ALS and causes
+            // the display to snap to 100% brightness. Use gesture(0x21) to toggle gesture-only.
+            if (enable) {
+                gestureArmTime = System.currentTimeMillis() // start cooldown before arming
+                glasses.sensor(true)
+            }
+            glasses.gesture(enable)
+            Log.i(TAG, "✓ Gesture sensor ${if (enable) "enabled" else "disabled"}")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to enable gesture sensor: ${e.message}", e)
         }
@@ -886,8 +547,46 @@ class ActiveLookService(private val context: Context) {
         }
     }
 
+    /**
+     * Display the K2Look logo animation on the glasses using the 7 pre-extracted frames. Streams
+     * each frame directly; no glasses memory is consumed.
+     *
+     * @param x Left edge of the image on the display
+     * @param y Top edge of the image on the display
+     * @param frameDelayMs Delay between frames in milliseconds (default 100 ms → ~10 fps)
+     */
+    fun displayLogoAnimation(x: Short = 58, y: Short = 16, frameDelayMs: Long = 100L) {
+        val glasses = connectedGlasses
+        if (glasses == null) {
+            Log.w(TAG, "Cannot display logo animation: No glasses connected")
+            return
+        }
+
+        // Log.i(TAG, "▶ Playing K2Look logo animation")
+
+        var currentDelay = frameDelayMs
+        for (index in 0..6) {
+            val filename = "frame_%02d.png".format(index)
+            try {
+                context.assets.open(filename).use { stream ->
+                    val bitmap = BitmapFactory.decodeStream(stream)
+                    glasses.imgStream(bitmap, ImgStreamFormat.MONO_4BPP_HEATSHRINK, x, y)
+                }
+                if (currentDelay > 0L && index < 6) {
+                    Thread.sleep(currentDelay)
+                    currentDelay = (currentDelay * 0.9).toLong()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to stream frame $filename: ${e.message}", e)
+            }
+        }
+
+        Log.i(TAG, "✓ Logo animation complete")
+    }
+
     companion object {
         private const val TAG = "ActiveLookService"
+        /** How long to wait for a connect() callback before giving up (ms) */
+        private const val CONNECTION_TIMEOUT_MS = 15_000L
     }
 }
-

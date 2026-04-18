@@ -1,0 +1,10 @@
+{
+    "conventionalCommits.scopes": [
+        "Devcontainer",
+        "Documentation",
+        "Changelog",
+        "UpdateChecker",
+        "K2 Sync",
+        "Layout"
+    ]
+}
