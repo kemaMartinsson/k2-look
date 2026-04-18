@@ -162,4 +162,24 @@ class RadarWarningControllerTest {
         assertEquals(emptyList<String>(), renderSmallCalls)
         assertEquals(emptyList<String>(), renderLargeCalls)
     }
+
+    @Test
+    fun `velocity sample is cleared when threat disappears so new threat starts fresh`() {
+        // Establish a fast approach velocity: 200m → 160m in 1s = 40 m/s
+        controller.onRadarUpdate(threatLevel = 1, closestRangeM = 200f)
+        controller.onRadarUpdate(threatLevel = 1, closestRangeM = 160f, elapsedMs = 1000L)
+        eraseLargeCalls.clear()
+        renderLargeCalls.clear()
+        renderSmallCalls.clear()
+
+        // Threat clears
+        controller.onRadarUpdate(threatLevel = 0, closestRangeM = null)
+        eraseLargeCalls.clear()
+
+        // New threat appears at 150m — with stale velocity, TTA ≈ 3.75s → would wrongly escalate
+        // With cleared sample, it's the first packet → TTA = MAX_VALUE → VISIBLE_SMALL only
+        controller.onRadarUpdate(threatLevel = 1, closestRangeM = 150f)
+        assertEquals(listOf("render_small"), renderSmallCalls)
+        assertEquals(emptyList<String>(), renderLargeCalls)
+    }
 }
