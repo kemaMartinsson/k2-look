@@ -99,6 +99,8 @@ directly on your Karoo 2 - no smartphone app needed!
 - ✅ Create **multiple profiles** for different bikes or activities
 - ✅ **Karoo profile auto-switch** — automatically activates the matching K2Look profile when your Karoo ride profile changes
 - ✅ Configure everything **without glasses connected** - edit anytime, anywhere
+- ✅ Activate threat radar when using Garmin Varia or compatible radar devices.
+  Global setting and displays a 28 pixel warning icon in the lower right corner on the glasses when a threat is detected. Aprox 5sec before the threat catches up to you, the icon is replaced with a 40 pixel icon. The icon is removed at the same time as Karoo 2 detects threat passed.
 
 **📊 Supported Metrics (74 total):**
 

@@ -6,9 +6,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-/**
- * Repository for app-level settings stored in SharedPreferences.
- */
+/** Repository for app-level settings stored in SharedPreferences. */
 class SettingsRepository(context: Context) {
 
     companion object {

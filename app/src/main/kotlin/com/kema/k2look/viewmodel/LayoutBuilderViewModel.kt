@@ -61,7 +61,9 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
                 }
                 .launchIn(viewModelScope)
         _uiState.value =
-                _uiState.value.copy(radarWarningEnabled = settingsRepository.radarWarningEnabled.value)
+                _uiState.value.copy(
+                        radarWarningEnabled = settingsRepository.radarWarningEnabled.value
+                )
         settingsRepository
                 .radarWarningEnabled
                 .onEach { enabled ->

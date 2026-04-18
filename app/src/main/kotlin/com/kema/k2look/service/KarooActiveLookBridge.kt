@@ -645,19 +645,29 @@ class KarooActiveLookBridge(context: Context) {
 
     // ── Radar (multi-field DataPoint — handled separately) ─────────────────
     private fun getWarningBitmapSmall(): android.graphics.Bitmap =
-        warningBitmapSmall ?: android.graphics.BitmapFactory.decodeStream(
-            context.assets.open("warning_white_28.png")
-        ).also { warningBitmapSmall = it }
+            warningBitmapSmall
+                    ?: android.graphics.BitmapFactory.decodeStream(
+                                    context.assets.open("warning_white_28.png")
+                            )
+                            .also { warningBitmapSmall = it }
 
     private fun getWarningBitmapLarge(): android.graphics.Bitmap =
-        warningBitmapLarge ?: android.graphics.BitmapFactory.decodeStream(
-            context.assets.open("warning_white_40.png")
-        ).also { warningBitmapLarge = it }
+            warningBitmapLarge
+                    ?: android.graphics.BitmapFactory.decodeStream(
+                                    context.assets.open("warning_white_40.png")
+                            )
+                            .also { warningBitmapLarge = it }
 
     private val renderWarningSmall: () -> Unit = {
         try {
-            activeLookService.getConnectedGlasses()
-                ?.imgStream(getWarningBitmapSmall(), com.activelook.activelooksdk.types.ImgStreamFormat.MONO_4BPP_HEATSHRINK, 30, 25)
+            activeLookService
+                    .getConnectedGlasses()
+                    ?.imgStream(
+                            getWarningBitmapSmall(),
+                            com.activelook.activelooksdk.types.ImgStreamFormat.MONO_4BPP_HEATSHRINK,
+                            30,
+                            25
+                    )
         } catch (e: Exception) {
             Log.e(TAG, "renderWarningSmall failed: ${e.message}", e)
         }
@@ -679,8 +689,14 @@ class KarooActiveLookBridge(context: Context) {
 
     private val renderWarningLarge: () -> Unit = {
         try {
-            activeLookService.getConnectedGlasses()
-                ?.imgStream(getWarningBitmapLarge(), com.activelook.activelooksdk.types.ImgStreamFormat.MONO_4BPP_HEATSHRINK, 30, 25)
+            activeLookService
+                    .getConnectedGlasses()
+                    ?.imgStream(
+                            getWarningBitmapLarge(),
+                            com.activelook.activelooksdk.types.ImgStreamFormat.MONO_4BPP_HEATSHRINK,
+                            30,
+                            25
+                    )
         } catch (e: Exception) {
             Log.e(TAG, "renderWarningLarge failed: ${e.message}", e)
         }
@@ -700,12 +716,13 @@ class KarooActiveLookBridge(context: Context) {
         }
     }
 
-    private val radarWarningController = RadarWarningController(
-        renderSmall = renderWarningSmall,
-        eraseSmall  = eraseWarningSmall,
-        renderLarge = renderWarningLarge,
-        eraseLarge  = eraseWarningLarge
-    )
+    private val radarWarningController =
+            RadarWarningController(
+                    renderSmall = renderWarningSmall,
+                    eraseSmall = eraseWarningSmall,
+                    renderLarge = renderWarningLarge,
+                    eraseLarge = eraseWarningLarge
+            )
 
     /** Enable or disable the radar warning overlay. */
     fun setRadarWarningEnabled(enabled: Boolean) {

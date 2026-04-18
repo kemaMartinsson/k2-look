@@ -11,8 +11,9 @@ import android.util.Log
  * - [State.VISIBLE_LARGE] — vehicle within [TTA_THRESHOLD_S] seconds; warning_white_40 shown
  *
  * Render/erase is delegated to injected lambdas — no direct BLE or asset access here. All
- * transitions are synchronous within the calling coroutine; no background job is needed. *
- * ⚠️ NOT thread-safe. All calls must be made from the same coroutine/thread context. */
+ * transitions are synchronous within the calling coroutine; no background job is needed. * ⚠️ NOT
+ * thread-safe. All calls must be made from the same coroutine/thread context.
+ */
 class RadarWarningController(
         private val renderSmall: () -> Unit,
         private val eraseSmall: () -> Unit,

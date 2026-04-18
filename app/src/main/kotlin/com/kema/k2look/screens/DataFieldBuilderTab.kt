@@ -145,19 +145,14 @@ fun DataFieldBuilderTab(
 
         // Radar warning overlay toggle
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 2.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "⚠ Radar warning overlay",
-                style = MaterialTheme.typography.bodyMedium
-            )
+            Text(text = "⚠ Radar warning overlay", style = MaterialTheme.typography.bodyMedium)
             androidx.compose.material3.Switch(
-                checked = uiState.radarWarningEnabled,
-                onCheckedChange = { viewModel.setRadarWarningEnabled(it) }
+                    checked = uiState.radarWarningEnabled,
+                    onCheckedChange = { viewModel.setRadarWarningEnabled(it) }
             )
         }
 
