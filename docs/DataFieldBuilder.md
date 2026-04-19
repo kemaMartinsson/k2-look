@@ -1,58 +1,134 @@
 # DataField Builder Guide
 
-**K2Look Version 0.10+**
+**K2Look Version 1.0.0**
 
-The DataField Builder (select tab **Datafields**) allows you to create custom display layouts for
-your glasses using **6 professional templates**.  
-Configure which metrics appear on your glasses, choose from multiple layout templates, and customize
-how they're displayed.
+The DataField Builder (select tab *Fields**) allows you to create custom display layouts for
+your glasses using **3 templates**.  
+Configure which metrics appear on your glasses, choose from 3 layout templates, and customize how they're displayed.
 
 ---
 
 ## 📊 Available Metrics
 
-K2Look supports **23 real-time metrics** from your Karoo 2:
+K2Look supports **74 real-time metrics** from your Karoo 2:
 
-### General (2 metrics)
+### General (6 metrics)
 
 - **Elapsed Time** - Ride duration (HH:MM:SS)
+- **Ride Time** - Moving time only (HH:MM:SS)
 - **Distance** - Total distance (km or miles)
+- **Clock** - Current time (HH:MM)
+- **Temperature** - Ambient temperature (°C/°F)
+- **Karoo Battery** - Karoo 2 battery level (%)
 
-### Heart Rate (4 metrics)
+### Heart Rate (6 metrics)
 
 - **Heart Rate** - Current heart rate (bpm)
 - **Max Heart Rate** - Maximum HR this ride (bpm)
 - **Avg Heart Rate** - Average HR this ride (bpm)
 - **HR Zone** - Current training zone (Z1-Z5)
+- **% Max HR** - Percentage of max heart rate (%)
+- **% HR Reserve** - Percentage of HR reserve (%)
 
-### Power (5 metrics)
+### Power (13 metrics)
 
-- **Power** - Current power output (watts)
-- **Max Power** - Maximum power this ride (watts)
-- **Avg Power** - Average power this ride (watts)
-- **Power 3s** - 3-second smoothed power (watts)
-- **Power Zone** - Current power zone (Z1-Z7 based on FTP)
+- **Power** - Current power output (W)
+- **Max Power** - Maximum power this ride (W)
+- **Avg Power** - Average power this ride (W)
+- **Power 3s** - 3-second smoothed power (W)
+- **Power 5s** - 5-second smoothed power (W)
+- **Power 10s** - 10-second smoothed power (W)
+- **Power 30s** - 30-second smoothed power (W)
+- **Norm. Power** - Normalized power (W)
+- **Power Zone** - Current power zone (Z1-Z7, based on FTP)
+- **% FTP** - Percentage of Functional Threshold Power (%)
+- **Int. Factor** - Intensity Factor
+- **TSS** - Training Stress Score
+- **W/kg** - Watts per kilogram (w/kg)
 
-### Speed (3 metrics)
+### Speed (4 metrics)
 
 - **Speed** - Current speed (km/h or mph)
 - **Max Speed** - Maximum speed this ride (km/h or mph)
 - **Avg Speed** - Average speed this ride (km/h or mph)
+- **Speed 3s** - 3-second smoothed speed (km/h or mph)
 
-### Cadence (3 metrics)
+### Cadence (4 metrics)
 
 - **Cadence** - Current pedaling cadence (rpm)
 - **Max Cadence** - Maximum cadence this ride (rpm)
 - **Avg Cadence** - Average cadence this ride (rpm)
+- **Cadence 3s** - 3-second smoothed cadence (rpm)
 
 ### Climbing (2 metrics)
 
 - **VAM** - Vertical Ascent Meters per hour (m/h)
 - **Avg VAM** - Average VAM this ride (m/h)
 
-**Total: 23 metrics** - All update in real-time at 1 update per second during your ride.
+### Elevation (5 metrics)
 
-**Total: 22 metrics** - All update in real-time at 1 update per second during your ride.
+- **Grade** - Current road gradient (%)
+- **Ascent** - Total elevation gained (m or ft)
+- **Descent** - Total elevation lost (m or ft)
+- **Altitude** - Current elevation (m or ft)
+- **VAM 30s** - 30-second rolling VAM (m/h)
+
+### Energy (3 metrics)
+
+- **Energy** - Total energy output (kJ)
+- **Calories** - Estimated calories burned (kcal)
+- **Cal/hr** - Calorie burn rate (kcal/h)
+
+### Lap (9 metrics)
+
+- **Lap #** - Current lap number
+- **Lap Time** - Elapsed time in current lap
+- **Lap Dist** - Distance in current lap (km or miles)
+- **Lap Speed** - Average speed in current lap (km/h or mph)
+- **Lap HR** - Average heart rate in current lap (bpm)
+- **Lap Power** - Average power in current lap (W)
+- **Lap NP** - Normalized power in current lap (W)
+- **Lap Cadence** - Average cadence in current lap (rpm)
+- **Lap Ascent** - Elevation gained in current lap (m or ft)
+
+### Last Lap (6 metrics)
+
+- **L.Lap Time** - Elapsed time in last lap
+- **L.Lap Dist** - Distance in last lap (km or miles)
+- **L.Lap Speed** - Average speed in last lap (km/h or mph)
+- **L.Lap HR** - Average heart rate in last lap (bpm)
+- **L.Lap Power** - Average power in last lap (W)
+- **L.Lap NP** - Normalized power in last lap (W)
+
+### Radar (3 metrics) *(requires Garmin Varia or compatible)*
+
+- **Radar Threat** - Active threat indicator
+- **Radar Targets** - Number of approaching vehicles
+- **Radar Range** - Distance to nearest threat (m)
+
+### Shifting (4 metrics) *(requires AXS, eTap)* **Ki2 not supported**
+
+- **Front Gear** - Current front chainring
+- **Rear Gear** - Current rear sprocket
+- **Drive Battery** - Electronic drivetrain battery (%)
+- **Shift Count** - Total shifts this ride
+
+### Navigation (5 metrics) *(requires active route)*
+
+- **To Turn** - Distance to next turn (km or miles)
+- **To Finish** - Distance to finish (km or miles)
+- **ETA** - Estimated time of arrival
+- **Time to End** - Time remaining to finish
+- **Heading** - Current heading direction
+
+### eBike (4 metrics) *(requires LEV/eBike sensor)*
+
+- **Bike Battery** - eBike battery level (%)
+- **Est. Range** - Estimated remaining range (km or miles)
+- **Assist Mode** - Current assist mode
+- **Motor Power** - Motor power output (W)
+
+**Total: 74 metrics** across 14 categories — all update in real-time at 1 update per second during your ride.
 
 **Note:** Units (metric/imperial) automatically match your Karoo profile settings.
 
@@ -60,10 +136,10 @@ K2Look supports **23 real-time metrics** from your Karoo 2:
 
 ## 🎨 Creating a Profile
 
-### Step 1: Open the Datafields Tab
+### Step 1: Open the Fields Tab
 
 1. Launch K2Look on your Karoo 2
-2. Tap the **Datafields** tab at the top
+2. Tap the **Fields** tab at the top
 
 ### Step 2: Create a New Profile
 
@@ -78,8 +154,8 @@ If no match, it uses the last selected profile.
 
 ### Step 3: Choose a Layout Template
 
-Each profile can use one of **6 professional layout templates**. Each template determines how many
-data fields you can display and their positioning.
+Each profile can use one of **3 layout templates** (more planned). Each template determines how
+many data fields you can display and their positioning.
 
 **Available Templates:**
 
@@ -91,21 +167,12 @@ data fields you can display and their positioning.
     - Best for: Two equally important metrics
     - Example: Speed + Heart Rate
 
-3. **Triangle Layout (3D Triangle)** - 1 top + 2 bottom halves
-    - Best for: One primary + two secondary metrics
-    - Example: Speed (top), Power + HR (bottom)
-
-4. **Three Rows (3D Full)** - 3 full-width rows ✅ **Default**
+3. **Three Rows (3D Full)** - 3 full-width rows ✅ **Default**
     - Best for: Balanced view of 3 metrics
     - Example: Speed, Power, Heart Rate
 
-5. **Four Data (4D)** - 2 full + 2 half-width
-    - Best for: Multiple important metrics
-    - Example: Speed, HR, Power, Cadence
-
-6. **Six Data (6D)** - 6 half-width fields (3×2 grid)
-    - Best for: Maximum data density
-    - Example: Speed, HR, Power, Cadence, Time, Distance
+> ⚙️ **Possible future templates:** Triangle (1 top + 2 half-width), Four Data (4D),
+> Five Data (5D), Six Data (6D grid), and Gauge-style templates.
 
 **To Change Template:**
 
@@ -116,6 +183,29 @@ data fields you can display and their positioning.
 5. Your existing metrics are preserved where possible
 
 **💡 Tip:** Start with "Three Rows" (default) and adjust based on your needs!
+
+---
+
+## 📱 Multiple Screens
+
+Each profile supports **multiple screens** that you can cycle through during a ride using a hand
+gesture or touch button (see Gestures tab).
+
+### Managing Screens
+
+- **Add a screen**: Tap the **＋** icon in the tabs bar — a new screen is created with the default template.
+- **Remove a screen**: Tap the **🗑** icon (only visible when there are 2 or more screens).
+- **Switch screens**: Tap any **Screen N** tab to select it for editing.
+
+### Per-Screen Configuration
+
+Each screen is independent — you can use a different template and different metrics on every screen:
+
+- **Screen 1** — e.g. Three Rows: Speed, HR, Power (general riding)
+- **Screen 2** — e.g. Two Data: Avg Power + Elapsed Time (interval focus)
+- **Screen 3** — e.g. Single Data: HR (recovery monitoring)
+
+**During a ride**, use your configured gesture (wave) or touch (button tap) to cycle through screens.
 
 ---
 
@@ -152,7 +242,7 @@ After adding a metric, tap the **✏️ (edit)** icon to configure:
 
 #### 1. Select Metric
 
-Tap the metric card to change which data field is displayed. Choose from any of the 22 available
+Tap the metric card to change which data field is displayed. Choose from any of the 74 available
 metrics.
 
 #### 2. Choose Visualization Style
@@ -163,7 +253,7 @@ K2Look supports **4 visualization styles** for displaying metrics:
 
 Traditional text display with optional label, unit, and icon.
 
-**Supported Metrics:** ✅ ALL 22 metrics
+**Supported Metrics:** ✅ ALL 74 metrics
 
 **Display Options:**
 
@@ -178,7 +268,7 @@ Traditional text display with optional label, unit, and icon.
 
 ---
 
-##### ⊙ **Gauge**
+##### ⊙ **Gauge (coming feature)**
 
 Circular progress gauge showing current value as a percentage of max range.
 
@@ -301,65 +391,6 @@ When using **Text** visualization, customize the display:
 - ☐ Small icon (28×28px) ✅ **Default**
 - ☑️ Large icon (40×40px) - More prominent
 
-### Example Configuration
-
-**Using "Three Rows" Template:**
-
-**Top Zone - Speed (Text Style):**
-
-```
-Metric: Speed
-Visualization: 📝 Text
-Show Label: ✅
-Show Unit: ✅
-Show Icon: ✅
-Large Icon: ☐
-Font: LARGE (automatic)
-```
-
-**Middle Zone - Heart Rate (Gauge Style):**
-
-```
-Metric: Heart Rate
-Visualization: ⊙ Gauge
-Range: 40-200 bpm
-Display: Circular gauge with numeric value in center
-Font: N/A (gauge auto-displays value)
-```
-
-**Bottom Zone - Power (Bar Style):**
-
-```
-Metric: Power
-Visualization: ▬ Bar
-Range: 0-400W
-Display: Horizontal progress bar
-Font: N/A (bar auto-displays value)
-```
-
-**Display Result on Glasses:**
-
-```
-🚴 Speed              (Text with icon)
-   32.5 km/h
-
-   ⊙                 (Gauge showing 145 bpm)
-   145               (72% fill - in target zone)
-   
-▬▬▬▬▬▬▬▬▬ 245       (Bar showing 245W, 61% fill)
-```
-
-**Alternative: Using Zoned Bar for Heart Rate:**
-
-```
-Middle Zone:
-Metric: Heart Rate
-Visualization: ▦ Zoned Bar
-Zones: Z1-Z5 (based on Karoo HR zones)
-Display: Multi-segment bar with zone colors
-Current: Z3 (Tempo zone, 145 bpm)
-```
-
 ---
 
 ## 📐 Layout Template Reference
@@ -407,24 +438,6 @@ Zones: 2 full-width
 Best for: Two primary metrics
 ```
 
-#### 3D Triangle - Triangle Layout
-
-```
-┌─────────────────────┐
-│   ╔═══════════╗     │
-│   ║   32.5    ║     │ (LARGE font)
-│   ║   km/h    ║     │
-│   ╚═══════════╝     │
-│                     │
-│  ╔═════╗  ╔═════╗   │
-│  ║ 145 ║  ║ 245 ║   │ (MEDIUM font)
-│  ║ bpm ║  ║  W  ║   │
-│  ╚═════╝  ╚═════╝   │
-└─────────────────────┘
-Zones: 1 top + 2 bottom halves
-Best for: One primary + two supporting
-```
-
 #### 3D Full - Three Rows ✅ Default
 
 ```
@@ -446,48 +459,6 @@ Zones: 3 equal rows
 Best for: Balanced view
 ```
 
-#### 4D - Four Data
-
-```
-┌─────────────────────┐
-│   ╔═══════════╗     │
-│   ║   32.5    ║     │ (LARGE font)
-│   ║   km/h    ║     │
-│   ╚═══════════╝     │
-│   ╔═══════════╗     │
-│   ║    145    ║     │ (LARGE font)
-│   ║    bpm    ║     │
-│   ╚═══════════╝     │
-│  ╔═════╗  ╔═════╗   │
-│  ║ 245 ║  ║  89 ║   │ (MEDIUM font)
-│  ║  W  ║  ║ rpm ║   │
-│  ╚═════╝  ╚═════╝   │
-└─────────────────────┘
-Zones: 2 full + 2 half-width
-Best for: Multiple key metrics
-```
-
-#### 6D - Six Data
-
-```
-┌─────────────────────┐
-│  ╔═════╗  ╔═════╗   │
-│  ║ 32  ║  ║ 145 ║   │ (MEDIUM font)
-│  ║km/h ║  ║ bpm ║   │
-│  ╚═════╝  ╚═════╝   │
-│  ╔═════╗  ╔═════╗   │
-│  ║ 245 ║  ║  89 ║   │ (MEDIUM font)
-│  ║  W  ║  ║ rpm ║   │
-│  ╚═════╝  ╚═════╝   │
-│  ╔═════╗  ╔═════╗   │
-│  ║1:45 ║  ║ 25  ║   │ (MEDIUM font)
-│  ║     ║  ║ km  ║   │
-│  ╚═════╝  ╚═════╝   │
-└─────────────────────┘
-Zones: 3×2 grid
-Best for: Maximum data
-```
-
 ### Template Selection Guide
 
 **Choose based on your needs:**
@@ -496,12 +467,9 @@ Best for: Maximum data
 |------------|--------|------------------------------|-------------|
 | 1D         | 1      | TT, focused intervals        | ⭐⭐⭐⭐⭐       |
 | 2D         | 2      | Simple rides, two priorities | ⭐⭐⭐⭐        |
-| Triangle   | 3      | One main + two support       | ⭐⭐⭐⭐        |
 | Three Rows | 3      | Balanced general use         | ⭐⭐⭐⭐⭐       |
-| Four Data  | 4      | Multiple key metrics         | ⭐⭐⭐         |
-| Six Data   | 6      | Maximum information          | ⭐⭐          |
 
-**💡 Tip:** More fields = smaller text. Start with Three Rows and adjust based on your preference.
+**💡 Tip:** More fields = smaller text.
 
 ---
 
@@ -537,54 +505,6 @@ Road Bike" profile with Speed/Power/HR displayed on your glasses!
 ✅ **Case-insensitive matching** ("XC Bike" = "XC bike")  
 ✅ **No mid-ride switching** - stays on selected profile if you change Karoo profile during ride  
 ✅ **Manual override** - You can always manually select a different profile in Builder tab
-
----
-
-## 🎯 Example Profiles
-
-### Road Bike Profile
-
-**Template:** Four Data (4D)  
-**Focus:** Speed, power, heart rate, and cadence
-
-- **Top:** Power (large zone, auto-sized font, icon)
-- **Second Row:** Heart Rate (large zone, auto-sized font, icon)
-- **Bottom Right:** Speed (compact, auto-sized font, icon)
-- **Bottom Left:** Cadence (compact, auto-sized font, icon)
-
-### Climbing Profile
-
-**Template:** Triangle Layout (3D Triangle)  
-**Focus:** Climbing metrics with primary VAM display
-
-- **Top Center:** VAM (large display, auto-sized font, icon)
-- **Bottom Right:** Heart Rate (compact, auto-sized font, icon)
-- **Bottom Left:** Power (compact, auto-sized font, icon)
-
-### Endurance Profile
-
-**Template:** Three Rows (3D Full) ✅ Default  
-**Focus:** Balanced pacing metrics
-
-- **Top:** Avg Speed (auto-sized font, icon)
-- **Middle:** Heart Rate (auto-sized font, icon)
-- **Bottom:** Elapsed Time (auto-sized font, icon)
-
-### Training Profile
-
-**Template:** Six Data (6D)  
-**Focus:** Maximum data for intervals
-
-- **Top Row:** HR Zone | Power 3s
-- **Middle Row:** Avg Power | Speed
-- **Bottom Row:** Cadence | Elapsed Time
-
-### Minimalist Profile
-
-**Template:** Single Data (1D)  
-**Focus:** One primary metric only
-
-- **Center:** Speed (extra large display, auto-sized font, icon)
 
 ---
 
@@ -628,14 +548,17 @@ possible.
 
 ## 💡 Tips & Best Practices
 
+### Debug a layout
+
+- Use **Simulation Mode** in the Debug tab to see your layout on glasses without starting a ride  
+  Toggle debug mode and start **Simulation mode** to see live updates on glasses as you edit your profile.
+- Test different templates and visualization styles to find what works best for you
+
 ### Template Selection
 
 - **Single Data (1D)** - Perfect for TT/time trials focusing on one metric (power or speed)
 - **Two Data (2D)** - Great for simple rides with two priorities
-- **Triangle (3D Triangle)** - Excellent for one main + two supporting metrics
 - **Three Rows (3D Full)** - Best balanced option for most rides ✅ **Recommended**
-- **Four Data (4D)** - Ideal when you need 4 key metrics
-- **Six Data (6D)** - Maximum information for data-driven training
 
 ### Font Sizes (Automatic)
 
@@ -656,14 +579,14 @@ Choose the right visualization style for each metric:
 - ✅ You prefer traditional numeric display
 - ✅ Multiple metrics in small zones (compact)
 
-**⊙ Use GAUGE when:**
+**⊙ Use GAUGE (coming soon) when:**
 
 - ✅ Monitoring intensity (Heart Rate, Power)
 - ✅ You want quick visual feedback without reading numbers
 - ✅ Staying in target zones is important
 - ✅ Single focus metric (larger zones work best)
 
-**▬ Use BAR when:**
+**▬ Use BAR (coming soon) when:**
 
 - ✅ Linear progress visualization is intuitive for the metric
 - ✅ Compact display needed (bars use less space than gauges)
@@ -683,12 +606,9 @@ and Bar for Power (progress).
 - **Icons improve recognition** at a glance
 - **Small icons (28×28)** - Good for all metrics ✅
 - **Large icons (40×40)** - Use for main focus metric
-- **Note:** Icons only available with TEXT visualization
 
-### Label & Unit Display
+### Unit Display
 
-- **Show both** - Best clarity for beginners ✅
-- **Hide labels** - More space for larger values
 - **Hide units** - When metric is obvious (bpm for HR)
 - **Note:** Labels/units only configurable with TEXT visualization
 
@@ -771,48 +691,115 @@ and Bar for Power (progress).
     - Your custom layout appears on glasses
     - Focus on the road, not your Karoo screen
 
-**💡 Pro Tip:** Try mixing visualization styles - use Gauge for metrics you want to monitor by feel,
-Text for metrics you want precise values!
-
 ---
 
 ## 📊 Visualization Style Quick Reference
 
 | Style         | Symbol | Best For             | Metrics Supported                      | Key Features                            |
 |---------------|--------|----------------------|----------------------------------------|-----------------------------------------|
-| **Text**      | 📝     | All-purpose display  | ✅ All 23 metrics                       | Label, unit, icon, precise values       |
-| **Gauge**     | ⊙      | Intensity monitoring | ✅ 21 metrics (all except Elapsed Time) | Circular arc, visual zones, at-a-glance |
-| **Bar**       | ▬      | Progress tracking    | ✅ 21 metrics (all except Elapsed Time) | Linear fill, compact, stackable         |
-| **Zoned Bar** | ▦      | Training zones       | ✅ HR & Power zones (4 metrics)         | Color-coded zones, workout guidance     |
+| **Text**      | 📝     | All-purpose display  | ✅ All 74 metrics                                | Label, unit, icon, precise values       |
+| **Gauge (coming soon)**     | ⊙      | Intensity monitoring | ✅ Numeric metrics with a defined range           | Circular arc, visual zones, at-a-glance |
+| **Bar (coming soon)**       | ▬      | Progress tracking    | ✅ Numeric metrics with a defined range           | Linear fill, compact, stackable         |
+| **Zoned Bar** | ▦      | Training zones       | ✅ HR & Power zones (4 metrics)                  | Color-coded zones, workout guidance     |
 
 ### Metric Support Matrix
 
-| Metric         | TEXT | GAUGE | BAR | ZONED BAR |
-|----------------|------|-------|-----|-----------|
-| Elapsed Time   | ✅    | ❌     | ❌   | ❌         |
-| Distance       | ✅    | ✅     | ✅   | ❌         |
-| Heart Rate     | ✅    | ✅     | ✅   | ✅         |
-| Max Heart Rate | ✅    | ✅     | ✅   | ❌         |
-| Avg Heart Rate | ✅    | ✅     | ✅   | ❌         |
-| HR Zone        | ✅    | ❌     | ❌   | ✅         |
-| Power          | ✅    | ✅     | ✅   | ✅         |
-| Max Power      | ✅    | ✅     | ✅   | ❌         |
-| Avg Power      | ✅    | ✅     | ✅   | ❌         |
-| Power 3s       | ✅    | ✅     | ✅   | ❌         |
-| Power Zone     | ✅    | ❌     | ❌   | ✅         |
-| Speed          | ✅    | ✅     | ✅   | ❌         |
-| Max Speed      | ✅    | ✅     | ✅   | ❌         |
-| Avg Speed      | ✅    | ✅     | ✅   | ❌         |
-| Cadence        | ✅    | ✅     | ✅   | ❌         |
-| Max Cadence    | ✅    | ✅     | ✅   | ❌         |
-| Avg Cadence    | ✅    | ✅     | ✅   | ❌         |
-| VAM            | ✅    | ✅     | ✅   | ❌         |
-| Avg VAM        | ✅    | ✅     | ✅   | ❌         |
+| Metric | TEXT | GAUGE *(planned)* | ZONED BAR |
+|--------|------|-------------------|-----------|
+| **General** | | | |
+| Elapsed Time | ✅ | ❌ | ❌ |
+| Ride Time | ✅ | ❌ | ❌ |
+| Distance | ✅ | 🔜 | ❌ |
+| Clock | ✅ | ❌ | ❌ |
+| Temperature | ✅ | 🔜 | ❌ |
+| Karoo Battery | ✅ | 🔜 | ❌ |
+| **Heart Rate** | | | |
+| Heart Rate | ✅ | 🔜 | ✅ |
+| Max HR | ✅ | 🔜 | ❌ |
+| Avg HR | ✅ | 🔜 | ❌ |
+| HR Zone | ✅ | ❌ | ✅ |
+| % Max HR | ✅ | 🔜 | ❌ |
+| % HR Reserve | ✅ | 🔜 | ❌ |
+| **Power** | | | |
+| Power | ✅ | 🔜 | ❌ |
+| Max Power | ✅ | 🔜 | ❌ |
+| Avg Power | ✅ | 🔜 | ❌ |
+| Power 3s | ✅ | 🔜 | ❌ |
+| Power 5s | ✅ | 🔜 | ❌ |
+| Power 10s | ✅ | 🔜 | ❌ |
+| Power 30s | ✅ | 🔜 | ❌ |
+| Norm. Power | ✅ | 🔜 | ❌ |
+| Power Zone | ✅ | ❌ | ✅ |
+| % FTP | ✅ | 🔜 | ❌ |
+| Int. Factor | ✅ | 🔜 | ❌ |
+| TSS | ✅ | 🔜 | ❌ |
+| W/kg | ✅ | 🔜 | ❌ |
+| **Speed** | | | |
+| Speed | ✅ | 🔜 | ❌ |
+| Max Speed | ✅ | 🔜 | ❌ |
+| Avg Speed | ✅ | 🔜 | ❌ |
+| Speed 3s | ✅ | 🔜 | ❌ |
+| **Cadence** | | | |
+| Cadence | ✅ | 🔜 | ❌ |
+| Max Cadence | ✅ | 🔜 | ❌ |
+| Avg Cadence | ✅ | 🔜 | ❌ |
+| Cadence 3s | ✅ | 🔜 | ❌ |
+| **Climbing** | | | |
+| VAM | ✅ | 🔜 | ❌ |
+| Avg VAM | ✅ | 🔜 | ❌ |
+| **Elevation** | | | |
+| Grade | ✅ | 🔜 | ❌ |
+| Ascent | ✅ | 🔜 | ❌ |
+| Descent | ✅ | 🔜 | ❌ |
+| Altitude | ✅ | 🔜 | ❌ |
+| VAM 30s | ✅ | 🔜 | ❌ |
+| **Energy** | | | |
+| Energy | ✅ | 🔜 | ❌ |
+| Calories | ✅ | 🔜 | ❌ |
+| Cal/hr | ✅ | 🔜 | ❌ |
+| **Lap** | | | |
+| Lap # | ✅ | ❌ | ❌ |
+| Lap Time | ✅ | ❌ | ❌ |
+| Lap Dist | ✅ | 🔜 | ❌ |
+| Lap Speed | ✅ | 🔜 | ❌ |
+| Lap HR | ✅ | 🔜 | ❌ |
+| Lap Power | ✅ | 🔜 | ❌ |
+| Lap NP | ✅ | 🔜 | ❌ |
+| Lap Cadence | ✅ | 🔜 | ❌ |
+| Lap Ascent | ✅ | 🔜 | ❌ |
+| **Last Lap** | | | |
+| L.Lap Time | ✅ | ❌ | ❌ |
+| L.Lap Dist | ✅ | 🔜 | ❌ |
+| L.Lap Speed | ✅ | 🔜 | ❌ |
+| L.Lap HR | ✅ | 🔜 | ❌ |
+| L.Lap Power | ✅ | 🔜 | ❌ |
+| L.Lap NP | ✅ | 🔜 | ❌ |
+| **Radar** *(requires Garmin Varia or compatible)* | | | |
+| Radar Threat | ✅ | ❌ | ❌ |
+| Radar Targets | ✅ | ❌ | ❌ |
+| Radar Range | ✅ | 🔜 | ❌ |
+| **Shifting** *(requires AXS / eTap / Ki2)* | | | |
+| Front Gear | ✅ | ❌ | ❌ |
+| Rear Gear | ✅ | ❌ | ❌ |
+| Drive Battery | ✅ | 🔜 | ❌ |
+| Shift Count | ✅ | 🔜 | ❌ |
+| **Navigation** *(requires active route)* | | | |
+| To Turn | ✅ | 🔜 | ❌ |
+| To Finish | ✅ | 🔜 | ❌ |
+| ETA | ✅ | ❌ | ❌ |
+| Time to End | ✅ | ❌ | ❌ |
+| Heading | ✅ | ❌ | ❌ |
+| **eBike** *(requires LEV/eBike sensor)* | | | |
+| Bike Battery | ✅ | 🔜 | ❌ |
+| Est. Range | ✅ | 🔜 | ❌ |
+| Assist Mode | ✅ | ❌ | ❌ |
+| Motor Power | ✅ | 🔜 | ❌ |
 
 **Legend:**
 
 - ✅ Fully supported
-- ❌ Not available
+- 🔜 Planned (not yet available in UI)
+- ❌ Not applicable
 
 ---
 
@@ -829,8 +816,8 @@ Text for metrics you want precise values!
 
 **DataField Builder gives you:**
 
-- ✅ **6 professional layout templates** (1-6 data fields per screen)
-- ✅ **22 real-time metrics** from Karoo
+- ✅ **3 layout templates** (1-3 data fields per screen) + more planned
+- ✅ **74 real-time metrics** from Karoo across 14 categories
 - ✅ **Visual template selector** with preview images
 - ✅ **Automatic font sizing** optimized per zone
 - ✅ **Automatic profile switching** based on Karoo profile
@@ -842,7 +829,7 @@ Text for metrics you want precise values!
 
 ---
 
-**Version:** 0.7+  
-**Last Updated:** 2025-12-29  
+**Version:** 0.10+  
+**Last Updated:** 2026-04-19  
 **Compatible with:** Karoo 2 + ActiveLook Glasses
 

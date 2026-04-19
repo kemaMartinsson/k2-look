@@ -2,6 +2,49 @@
 
 All notable changes to K2Look will be documented in this file.
 
+## [1.0.0] - 2026-06-30
+
+### Added
+
+- Updated metrics
+  Total:74 metrics
+- Added global radar alert
+  Cross profile function.
+- Sync used K2 profile with K2Look
+  K2Look will switch to a profile with same name as K2 during a ride.
+
+### Fixed
+
+- Tab layout
+  Stacked instead of one row.
+- Fixed positioning of icons/text/units
+- Glasses reconnect sequence
+  Issues with scan caused constant BLE reconnects.
+- Slow down updates
+  Changed from 1Hz to 2Hz update rate.
+  This allows other commands to glasses BLE queue
+- Enable gestures
+  Added, but still glitchy.
+
+### Known issues
+
+- Gestures still glitchy, works but slow.
+- Touch seems intermittent, works sometime
+Both could be due to command que and delay.
+
+### Todo
+
+- Add more layouts, eg pyramid
+- Add gauge
+- Look into gesture/touch
+- Tweak icon/text/unit alignment
+
+### Technical
+
+- Massive refactoring of codebase making it more modular and maintainable.
+- Added comprehensive unit tests for all new features and critical code paths.
+- Improved error handling and logging throughout the app.
+
 ## [0.13.0] - 2026-03-22
 
 ### Added

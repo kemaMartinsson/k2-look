@@ -17,7 +17,9 @@ cycling metrics in your field of vision with hands-free gesture control.
 - [Features](#key-features)
 - [Screenshots](#screenshots)
 - [Installation](#-installation) - **For end users**
+- [Before a ride](#-before-a-ride) - **User configuration**
 - [Quick Start](#quick-start) - **For developers**
+- [Useful Commands](#-useful-commands) - **Build, test, CI, ADB**
 - [Development Setup](#️development-setup)
 - [Documentation](#documentation)
 - [Architecture](#architecture)
@@ -59,6 +61,9 @@ Engo 2 has been used to test core functionality.
 #### 🖐️ **Hands-Free Gesture & Touch Control**
 
 Control your display without touching your Karoo during rides - perfect for safety and convenience!
+
+> [!Note]
+> Gestures and touch are sluggish and further optimizations is planned, the current implementation is functional but may not be fully responsive.
 
 **✨ Gesture Actions (Wave Hand):**
 
@@ -227,6 +232,15 @@ cd k2-look
 
 ---
 
+## 💡 Before a Ride - User Configuration
+
+- Start K2Look
+- Connect glasses from the status tab
+- Configure your display in the Datafields tab (select metrics, visualization styles, and layout)
+- Configure gesture and touch actions in the Gestures tab
+- Exit K2Look, it will continue to run in the background.
+- Start your ride and enjoy your custom glasses display!
+
 ## 📥 Installation
 
 ### For End Users
@@ -353,6 +367,100 @@ The devcontainer provides a complete Android development environment:
 > **Note:** The devcontainer is disabled by default to avoid confusion for Android Studio users who
 > typically prefer the native IDE experience. It's most useful for developers working on multiple
 > projects or those who prefer VSCode's workflow.
+
+---
+
+## 🧰 Useful Commands
+
+All commands assume you are in the repository root. On Linux/macOS replace `.\gradlew.bat` with
+`./gradlew`.
+
+### Build
+
+| Goal | Command |
+|------|---------|
+| Assemble debug APK | `.\gradlew.bat :app:assembleDebug` |
+| Assemble release APK | `.\gradlew.bat :app:assembleRelease` |
+| Build everything (debug + release) | `.\gradlew.bat build` |
+| Clean build artifacts | `.\gradlew.bat clean` |
+
+### Install on Device
+
+```bash
+# Build and install debug APK directly on a connected Karoo2 (skips tests and lint for speed)
+.\debugBuild.bat
+
+# Or install a previously-built APK via ADB
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+
+# Uninstall
+adb uninstall com.kema.k2look
+```
+
+### Run Tests
+
+```bash
+# Run all unit tests (debug variant)
+.\gradlew.bat :app:testDebugUnitTest
+
+# Run all unit tests (both debug and release variants)
+.\gradlew.bat :app:test
+
+# Run a single test class
+.\gradlew.bat :app:testDebugUnitTest --tests "com.kema.k2look.layout.LayoutBuilderTest"
+
+# Run tests with verbose output
+.\gradlew.bat :app:testDebugUnitTest --info
+
+# Run tests and open HTML report (Windows)
+.\gradlew.bat :app:testDebugUnitTest; start app\build\reports\tests\testDebugUnitTest\index.html
+```
+
+### Lint
+
+```bash
+# Run lint on the app module
+.\gradlew.bat :app:lintDebug
+
+# Open lint report (Windows)
+start app\build\reports\lint-results-debug.html
+```
+
+### Simulate the CI Pipeline Locally
+
+Run the exact same command the CI pipeline uses — catches any issues before pushing:
+
+```bash
+.\gradlew.bat build --no-daemon --continue `
+  -x lintDebug -x lintRelease `
+  -x :activelook-sdk:testDebugUnitTest `
+  -x :activelook-sdk:testReleaseUnitTest `
+  -x :karoo-ext:testDebugUnitTest `
+  -x :karoo-ext:testReleaseUnitTest
+```
+
+> **💡 Tip:** The CI pipeline runs on Linux (`ubuntu-latest`) with JDK 21. If you develop on
+> Windows with a different JDK version and run into unexpected CI failures, the Dev Container
+> described above provides an identical Linux + JDK 21 environment.
+
+### ADB Utilities
+
+```bash
+adb devices                          # List connected devices
+adb logcat -s K2Look                 # Stream K2Look log output only
+adb logcat | grep -E "K2Look|ERROR"  # Stream K2Look + all errors (Linux/macOS)
+adb logcat -c                        # Clear logcat buffer
+adb shell am force-stop com.kema.k2look  # Force-stop the app
+```
+
+### Gradle Daemon
+
+```bash
+.\gradlew.bat --stop    # Stop all running Gradle daemons (fixes stale file-lock issues)
+.\gradlew.bat --status  # List running daemons
+```
+
+---
 
 ## Quick Start
 
