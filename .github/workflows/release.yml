@@ -3,12 +3,15 @@ name: Build and Release APK
 on:
   push:
     tags:
-      - '*'  # Trigger on any tag push (e.g., 0.1, 0.2, v1.0)
+      - "*" # Trigger on any tag push (e.g., 0.1, 0.2, v1.0)
 
 # Explicit permissions needed for private repos
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 permissions:
-  contents: write  # Required to create releases
-  packages: write  # Optional, for future package publishing
+  contents: write # Required to create releases
+  packages: write # Optional, for future package publishing
 
 jobs:
   build:
@@ -18,14 +21,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch all history so git describe works
+          fetch-depth: 0 # Fetch all history so git describe works
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
-          distribution: 'temurin'
-          cache: 'gradle'
+          java-version: "21"
+          distribution: "temurin"
+          cache: "gradle"
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
@@ -96,55 +99,55 @@ jobs:
             docs/INSTALLATION.md
           body: |
             ## K2Look ${{ steps.get_version.outputs.VERSION }}
-            
+
             ${{ steps.changelog.outputs.NOTES }}
-            
+
             ---
-            
+
             ## 📥 Installation Instructions
-            
+
             <details>
             <summary><b>Click here for complete installation guide</b></summary>
-            
+
             ${{ steps.installation.outputs.INSTALL_GUIDE }}
-            
+
             </details>
-            
+
             ---
-            
+
             ## 🎨 DataField Builder Guide
-            
+
             <details>
             <summary><b>Click here to learn how to customize your display</b></summary>
-            
+
             ${{ steps.builder_guide.outputs.BUILDER_GUIDE }}
-            
+
             </details>
-            
+
             ---
-            
+
             ## 📋 Full Changelog
-            
+
             <details>
             <summary><b>Click here to view complete version history</b></summary>
-            
+
             ${{ steps.changelog_full.outputs.CHANGELOG }}
-            
+
             </details>
-            
+
             ---
-            
+
             ### Quick Start
-            
+
             1. Download the APK below
             2. Install via USB + ADB (see full guide above)
             3. Grant permissions and connect
             4. Start riding! 🚴‍♂️👓
-            
+
             ### Links
-            
+
             - 🐛 [Report Issues](https://github.com/${{ github.repository }}/issues)
-            
+
             **Built:** ${{ github.event.head_commit.timestamp }}  
             **Commit:** `${{ github.sha }}`
           draft: false
