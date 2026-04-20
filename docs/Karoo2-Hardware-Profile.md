@@ -387,7 +387,7 @@ android {
 - **Foreground Service:** Use during active rides
 - **Wake Lock:** Minimal, only when needed
 - **BLE Scan Interval:** 1 second (balance power/responsiveness)
-- **Data Update Rate:** 2 Hz except radar metrics that are updated on change.
+- **Data Update Rate:** Updates every 2 seconds except radar metrics that are updated on change.
 - **Connection Timeout:** 30 seconds
 - **Retry Strategy:** Exponential backoff
 

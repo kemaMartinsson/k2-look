@@ -21,8 +21,8 @@ All notable changes to K2Look will be documented in this file.
 - Glasses reconnect sequence
   Issues with scan caused constant BLE reconnects.
 - Slow down updates
-  Changed from 1Hz to 2Hz update rate.
-  This allows other commands to glasses BLE queue
+  Changed from every 1 second to every 2 seconds.
+  Reduces BLE queue pressure, giving other commands room to execute.
 - Enable gestures
   Added, but still glitchy.
 
