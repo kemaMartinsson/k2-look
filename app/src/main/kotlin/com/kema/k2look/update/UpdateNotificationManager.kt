@@ -68,7 +68,7 @@ class UpdateNotificationManager(private val context: Context) {
         )
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("UPDATE K2LOOK")
             .setContentText("Update available for K2Look, version ${update.version}.")
             .setStyle(

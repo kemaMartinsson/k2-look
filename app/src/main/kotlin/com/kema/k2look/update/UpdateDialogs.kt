@@ -152,10 +152,7 @@ fun UpdateDialog(
                                     fontWeight = FontWeight.Medium
                             )
                             Spacer(modifier = Modifier.height(12.dp))
-                            OutlinedButton(
-                                    onClick = onCancel,
-                                    modifier = Modifier.fillMaxWidth()
-                            ) {
+                            OutlinedButton(onClick = onCancel, modifier = Modifier.fillMaxWidth()) {
                                 Text("Cancel", style = MaterialTheme.typography.bodySmall)
                             }
                         }
@@ -169,16 +166,12 @@ fun UpdateDialog(
                                     onClick = onDismiss,
                                     modifier = Modifier.weight(1f),
                                     contentPadding = ButtonDefaults.ContentPadding
-                            ) {
-                                Text("Later", fontSize = 12.sp, maxLines = 1)
-                            }
+                            ) { Text("Later", fontSize = 10.sp, maxLines = 1) }
                             Button(
                                     onClick = onInstall,
                                     modifier = Modifier.weight(1f),
                                     contentPadding = ButtonDefaults.ContentPadding
-                            ) {
-                                Text("Install", fontSize = 12.sp, maxLines = 1)
-                            }
+                            ) { Text("Install", fontSize = 10.sp, maxLines = 1) }
                         }
                     }
                     else -> {
@@ -190,16 +183,12 @@ fun UpdateDialog(
                                     onClick = onDismiss,
                                     modifier = Modifier.weight(1f),
                                     contentPadding = ButtonDefaults.ContentPadding
-                            ) {
-                                Text("Later", fontSize = 12.sp, maxLines = 1)
-                            }
+                            ) { Text("Later", fontSize = 12.sp, maxLines = 1) }
                             Button(
                                     onClick = onDownload,
                                     modifier = Modifier.weight(1f),
                                     contentPadding = ButtonDefaults.ContentPadding
-                            ) {
-                                Text("Download", fontSize = 12.sp, maxLines = 1)
-                            }
+                            ) { Text("Download", fontSize = 12.sp, maxLines = 1) }
                         }
                     }
                 }
