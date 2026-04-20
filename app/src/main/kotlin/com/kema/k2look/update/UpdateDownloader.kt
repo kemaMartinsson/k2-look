@@ -145,7 +145,8 @@ class UpdateDownloader(private val context: Context) {
                             ) {
                                 downloading = false
                                 // Trigger completion from the polling thread — don't rely on
-                                // ACTION_DOWNLOAD_COMPLETE broadcast which isn't delivered on Karoo.
+                                // ACTION_DOWNLOAD_COMPLETE broadcast which isn't delivered on
+                                // Karoo.
                                 mainHandler.post { handleDownloadComplete() }
                             }
                         } else {
@@ -169,7 +170,7 @@ class UpdateDownloader(private val context: Context) {
 
     /** Handle download completion */
     private fun handleDownloadComplete() {
-        if (!completionHandled.compareAndSet(false, true)) return  // prevent double-invoke
+        if (!completionHandled.compareAndSet(false, true)) return // prevent double-invoke
         Log.d(TAG, "Download completed, handling...")
 
         try {
