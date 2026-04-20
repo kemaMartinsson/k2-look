@@ -1,8 +1,5 @@
 package com.kema.k2look.screens
 
-import android.content.Intent
-import android.net.Uri
-import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -61,9 +58,7 @@ import com.kema.k2look.update.UpdateDownloader
 import com.kema.k2look.util.PreferencesManager
 import kotlinx.coroutines.launch
 
-/**
- * Simple markdown parser for headers (<h2>), bold (**text**), and italic (*text*)
- */
+/** Simple markdown parser for headers (<h2>), bold (**text**), and italic (*text*) */
 fun parseSimpleMarkdown(text: String): AnnotatedString {
     return buildAnnotatedString {
         val lines = text.split("\n")
@@ -73,13 +68,8 @@ fun parseSimpleMarkdown(text: String): AnnotatedString {
             val trimmedLine = line.trimStart()
             if (trimmedLine.startsWith("<h2>")) {
                 // Header - make it bold, remove <h2> and optional </h2>
-                val headerText = trimmedLine
-                    .removePrefix("<h2>")
-                    .removeSuffix("</h2>")
-                    .trim()
-                withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
-                    append(headerText)
-                }
+                val headerText = trimmedLine.removePrefix("<h2>").removeSuffix("</h2>").trim()
+                withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) { append(headerText) }
             } else {
                 // Process inline markdown - handle bold and italic
                 var currentPos = 0
@@ -100,10 +90,11 @@ fun parseSimpleMarkdown(text: String): AnnotatedString {
 
                     // Check for italic (*text*) - but not if it's part of **
                     if (line.substring(currentPos).startsWith("*") &&
-                        !line.substring(currentPos).startsWith("**")
+                                    !line.substring(currentPos).startsWith("**")
                     ) {
                         val endPos = line.indexOf("*", currentPos + 1)
-                        if (endPos != -1 && (endPos + 1 >= line.length || line[endPos + 1] != '*')) {
+                        if (endPos != -1 && (endPos + 1 >= line.length || line[endPos + 1] != '*')
+                        ) {
                             // Found italic text
                             withStyle(style = SpanStyle(fontStyle = FontStyle.Italic)) {
                                 append(line.substring(currentPos + 1, endPos))
@@ -130,10 +121,10 @@ fun parseSimpleMarkdown(text: String): AnnotatedString {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AboutTab(
-    viewModel: com.kema.k2look.viewmodel.MainViewModel,
-    uiState: com.kema.k2look.viewmodel.MainViewModel.UiState,
-    openUpdateDialogOnStart: Boolean = false,
-    onUpdateDialogHandled: () -> Unit = {}
+        viewModel: com.kema.k2look.viewmodel.MainViewModel,
+        uiState: com.kema.k2look.viewmodel.MainViewModel.UiState,
+        openUpdateDialogOnStart: Boolean = false,
+        onUpdateDialogHandled: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -162,64 +153,53 @@ fun AboutTab(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(12.dp)
-            .verticalScroll(rememberScrollState())
-    ) {
+    Column(modifier = Modifier.fillMaxSize().padding(12.dp).verticalScroll(rememberScrollState())) {
         // App Info
         Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.background
-            ),
-            shape = androidx.compose.ui.graphics.RectangleShape
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                colors =
+                        CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.background
+                        ),
+                shape = androidx.compose.ui.graphics.RectangleShape
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    modifier = Modifier.fillMaxWidth().padding(12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Image(
-                    painter = painterResource(id = R.drawable.logo),
-                    contentDescription = "K2Look Logo",
-                    modifier = Modifier.height(48.dp)
+                        painter = painterResource(id = R.drawable.logo),
+                        contentDescription = "K2Look Logo",
+                        modifier = Modifier.height(48.dp)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = stringResource(R.string.app_name),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                        text = stringResource(R.string.app_name),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Version ${BuildConfig.VERSION_NAME}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = stringResource(R.string.app_description),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
+                        text = "Version ${BuildConfig.VERSION_NAME}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Developer: ${stringResource(R.string.app_developer)}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = stringResource(R.string.app_description),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                        text = "Developer: ${stringResource(R.string.app_developer)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 // Debug button
                 Spacer(modifier = Modifier.height(12.dp))
-                Button(
-                    onClick = { showDebugDialog = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
+                Button(onClick = { showDebugDialog = true }, modifier = Modifier.fillMaxWidth()) {
                     Text("Debug & Simulator")
                 }
             }
@@ -227,48 +207,43 @@ fun AboutTab(
 
         // Update Section
         Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            ),
-            shape = androidx.compose.ui.graphics.RectangleShape
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                colors =
+                        CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        ),
+                shape = androidx.compose.ui.graphics.RectangleShape
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp)
-            ) {
+            Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
                 Text(
-                    text = "Updates",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                        text = "Updates",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 8.dp)
                 )
 
                 // Auto-check toggle
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Auto-check for updates",
-                            style = MaterialTheme.typography.bodyMedium
+                                text = "Auto-check for updates",
+                                style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
-                            text = "Check on app start",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                text = "Check on app start",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     Switch(
-                        checked = autoCheckEnabled,
-                        onCheckedChange = { enabled ->
-                            autoCheckEnabled = enabled
-                            prefsManager.setAutoCheckUpdates(enabled)
-                        }
+                            checked = autoCheckEnabled,
+                            onCheckedChange = { enabled ->
+                                autoCheckEnabled = enabled
+                                prefsManager.setAutoCheckUpdates(enabled)
+                            }
                     )
                 }
 
@@ -276,29 +251,27 @@ fun AboutTab(
 
                 // Check for updates button
                 Button(
-                    onClick = {
-                        scope.launch {
-                            isCheckingUpdate = true
-                            val update = updateChecker.checkForUpdate()
-                            isCheckingUpdate = false
+                        onClick = {
+                            scope.launch {
+                                isCheckingUpdate = true
+                                val update = updateChecker.checkForUpdate()
+                                isCheckingUpdate = false
 
-                            if (update != null) {
-                                availableUpdate = update
-                                prefsManager.setLastUpdateCheckTime(System.currentTimeMillis())
-                            } else {
-                                showNoUpdateDialog = true
+                                if (update != null) {
+                                    availableUpdate = update
+                                    prefsManager.setLastUpdateCheckTime(System.currentTimeMillis())
+                                } else {
+                                    showNoUpdateDialog = true
+                                }
                             }
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !isCheckingUpdate
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isCheckingUpdate
                 ) {
                     if (isCheckingUpdate) {
                         CircularProgressIndicator(
-                            modifier = Modifier
-                                .height(20.dp)
-                                .width(20.dp),
-                            color = MaterialTheme.colorScheme.onPrimary
+                                modifier = Modifier.height(20.dp).width(20.dp),
+                                color = MaterialTheme.colorScheme.onPrimary
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                     }
@@ -309,90 +282,75 @@ fun AboutTab(
 
         // Release Notes
         Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            ),
-            shape = androidx.compose.ui.graphics.RectangleShape
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                colors =
+                        CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        ),
+                shape = androidx.compose.ui.graphics.RectangleShape
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp)
-            ) {
+            Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
                 Text(
-                    text = "Release Notes",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                        text = "Release Notes",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 8.dp)
                 )
                 Text(
-                    text = parseSimpleMarkdown(BuildConfig.CHANGELOG),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = parseSimpleMarkdown(BuildConfig.CHANGELOG),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
 
         // Features
         Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.background
-            ),
-            shape = androidx.compose.ui.graphics.RectangleShape
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                colors =
+                        CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.background
+                        ),
+                shape = androidx.compose.ui.graphics.RectangleShape
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp)
-            ) {
+            Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
                 Text(
-                    text = "Features",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                        text = "Features",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 8.dp)
                 )
 
                 FeatureItem(
-                    stringResource(R.string.feature_auto_reconnect),
-                    stringResource(R.string.feature_auto_reconnect_desc)
+                        stringResource(R.string.feature_auto_reconnect),
+                        stringResource(R.string.feature_auto_reconnect_desc)
                 )
                 FeatureItem(
-                    stringResource(R.string.feature_simulator),
-                    stringResource(R.string.feature_simulator_desc)
+                        stringResource(R.string.feature_simulator),
+                        stringResource(R.string.feature_simulator_desc)
                 )
                 FeatureItem(
-                    stringResource(R.string.feature_debug),
-                    stringResource(R.string.feature_debug_desc)
+                        stringResource(R.string.feature_debug),
+                        stringResource(R.string.feature_debug_desc)
                 )
             }
         }
 
         // Help & Support
         Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.background
-            ),
-            shape = androidx.compose.ui.graphics.RectangleShape
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                colors =
+                        CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.background
+                        ),
+                shape = androidx.compose.ui.graphics.RectangleShape
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp)
-            ) {
+            Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
                 Text(
-                    text = "Help & Support",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                        text = "Help & Support",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 8.dp)
                 )
 
                 HelpItem("Connect Glasses", stringResource(R.string.help_connect_glasses))
@@ -403,26 +361,24 @@ fun AboutTab(
 
         // Build Info Section at bottom
         Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
         ) {
             HorizontalDivider(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                thickness = 1.dp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    thickness = 1.dp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
             )
             Text(
-                text = "Version: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = "Version: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                text = "Build: ${BuildConfig.BUILD_DATE}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 2.dp, bottom = 8.dp)
+                    text = "Build: ${BuildConfig.BUILD_DATE}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp, bottom = 8.dp)
             )
         }
     }
@@ -430,78 +386,66 @@ fun AboutTab(
     // Update dialogs
     if (availableUpdate != null) {
         UpdateDialog(
-            update = availableUpdate!!,
-            isDownloading = isDownloading,
-            downloadProgress = downloadProgress,
-            onDownload = {
-                // Download and install the APK
-                isDownloading = true
-                downloadProgress = 0
-                updateDownloader.downloadUpdate(
-                    update = availableUpdate!!,
-                    onProgress = { progress ->
-                        downloadProgress = progress
-                    },
-                    onComplete = { success ->
-                        isDownloading = false
-                        downloadProgress = 0
-                        if (success) {
-                            availableUpdate = null
-                        }
-                    }
-                )
-            },
-            onOpenReleaseUrl = {
-                // Open GitHub release page in browser
-                Log.d("AboutTab", "Opening GitHub release URL: ${availableUpdate!!.htmlUrl}")
-                try {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(availableUpdate!!.htmlUrl))
-                    context.startActivity(intent)
-                    Log.d("AboutTab", "Successfully launched browser intent")
-                } catch (e: Exception) {
-                    Log.e("AboutTab", "Failed to open GitHub release page", e)
+                update = availableUpdate!!,
+                isDownloading = isDownloading,
+                downloadProgress = downloadProgress,
+                onDownload = {
+                    // Download and install the APK
+                    isDownloading = true
+                    downloadProgress = 0
+                    updateDownloader.downloadUpdate(
+                            update = availableUpdate!!,
+                            onProgress = { progress -> downloadProgress = progress },
+                            onComplete = { success ->
+                                isDownloading = false
+                                downloadProgress = 0
+                                if (success) {
+                                    availableUpdate = null
+                                }
+                            }
+                    )
+                },
+                onDismiss = {
+                    prefsManager.setDismissedUpdateVersion(availableUpdate!!.version)
+                    availableUpdate = null
                 }
-            },
-            onDismiss = {
-                prefsManager.setDismissedUpdateVersion(availableUpdate!!.version)
-                availableUpdate = null
-            }
         )
     }
 
     if (showNoUpdateDialog) {
         NoUpdateDialog(
-            currentVersion = BuildConfig.VERSION_NAME,
-            onDismiss = { showNoUpdateDialog = false }
+                currentVersion = BuildConfig.VERSION_NAME,
+                onDismiss = { showNoUpdateDialog = false }
         )
     }
 
     // Debug Dialog
     if (showDebugDialog) {
         Dialog(
-            onDismissRequest = { showDebugDialog = false },
-            properties = DialogProperties(
-                usePlatformDefaultWidth = false,
-                dismissOnBackPress = true,
-                dismissOnClickOutside = false
-            )
+                onDismissRequest = { showDebugDialog = false },
+                properties =
+                        DialogProperties(
+                                usePlatformDefaultWidth = false,
+                                dismissOnBackPress = true,
+                                dismissOnClickOutside = false
+                        )
         ) {
             Surface(
-                modifier = Modifier.fillMaxSize(),
-                color = MaterialTheme.colorScheme.background
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
             ) {
                 Column(modifier = Modifier.fillMaxSize()) {
                     // Dialog Header
                     TopAppBar(
-                        title = { Text("Debug & Simulator") },
-                        navigationIcon = {
-                            IconButton(onClick = { showDebugDialog = false }) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = "Close"
-                                )
+                            title = { Text("Debug & Simulator") },
+                            navigationIcon = {
+                                IconButton(onClick = { showDebugDialog = false }) {
+                                    Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = "Close"
+                                    )
+                                }
                             }
-                        }
                     )
 
                     // Debug Tab Content
@@ -514,44 +458,35 @@ fun AboutTab(
 
 @Composable
 fun FeatureItem(title: String, description: String) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
-    ) {
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
         Text(
-            text = "• $title",
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium,
-            color = MaterialTheme.colorScheme.primary
+                text = "• $title",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.primary
         )
         Text(
-            text = description,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 12.dp, top = 2.dp)
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 12.dp, top = 2.dp)
         )
     }
 }
 
 @Composable
 fun HelpItem(title: String, description: String) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
-    ) {
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
         Text(
-            text = title,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium
         )
         Text(
-            text = description,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 2.dp)
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 2.dp)
         )
     }
 }
-

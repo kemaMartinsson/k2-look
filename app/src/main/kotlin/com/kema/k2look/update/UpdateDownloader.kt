@@ -224,24 +224,28 @@ class UpdateDownloader(private val context: Context) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 val canInstall = context.packageManager.canRequestPackageInstalls()
                 if (!canInstall) {
-                    Log.w(TAG, "Permission to install unknown apps not granted, opening settings")
+                    Log.w(TAG, "Permission to install unknown apps not granted, trying settings")
+                    var settingsOpened = false
                     try {
                         val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
                             data = Uri.parse("package:${context.packageName}")
                             flags = Intent.FLAG_ACTIVITY_NEW_TASK
                         }
                         context.startActivity(intent)
+                        settingsOpened = true
                     } catch (e: ActivityNotFoundException) {
-                        // Bug fix: Karoo/custom Android may not support this settings screen
-                        Log.e(TAG, "Cannot open install permission settings on this device", e)
+                        // Karoo / custom Android may not have this settings screen.
+                        // Fall through and attempt the install anyway — the OS will reject
+                        // it if the device truly forbids unknown-source installs.
+                        Log.w(TAG, "ACTION_MANAGE_UNKNOWN_APP_SOURCES unavailable, attempting install directly", e)
                     }
-                    return false
+                    if (settingsOpened) return false
                 }
             }
 
             // Convert file:// URI to actual File
-            val filePath = uri.path?.removePrefix("file://") ?: run {
-                Log.e(TAG, "Invalid URI path: ${uri.path}")
+            val filePath = uri.path ?: run {
+                Log.e(TAG, "Invalid URI path: $uri")
                 return false
             }
 
