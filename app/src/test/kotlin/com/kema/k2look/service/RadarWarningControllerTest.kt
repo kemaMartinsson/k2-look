@@ -182,4 +182,53 @@ class RadarWarningControllerTest {
         assertEquals(listOf("render_small"), renderSmallCalls)
         assertEquals(emptyList<String>(), renderLargeCalls)
     }
+
+    // ── End-to-end scenarios ─────────────────────────────────────────────────
+
+    /**
+     * Scenario A (full ride-by):
+     * 1. Threat detected → small icon shown
+     * 2. Threat closes to <5s TTA → small replaced by large icon
+     * 3. Threat passes (level=0) → large icon removed
+     */
+    @Test
+    fun `scenario A - threat detected escalates to large then clears on pass`() {
+        // Step 1: threat detected → small icon
+        controller.onRadarUpdate(threatLevel = 1, closestRangeM = 200f)
+        assertEquals(listOf("render_small"), renderSmallCalls)
+        assertEquals(emptyList<String>(), renderLargeCalls)
+
+        // Step 2: vehicle closes fast → TTA ≤ 5s → escalate to large icon
+        // 200m → 160m in 1s = 40 m/s → TTA = 160/40 = 4s ≤ 5s
+        controller.onRadarUpdate(threatLevel = 1, closestRangeM = 160f, elapsedMs = 1000L)
+        assertEquals(listOf("erase_small"), eraseSmallCalls)
+        assertEquals(listOf("render_large"), renderLargeCalls)
+
+        // Step 3: threat passes → large icon removed, back to HIDDEN
+        controller.onRadarUpdate(threatLevel = 0, closestRangeM = null)
+        assertEquals(listOf("erase_large"), eraseLargeCalls)
+        // Nothing else rendered after clearing
+        assertEquals(1, renderSmallCalls.size) // only from step 1
+        assertEquals(1, renderLargeCalls.size) // only from step 2
+    }
+
+    /**
+     * Scenario B (threat disappears without passing):
+     * 1. Threat detected → small icon shown
+     * 2. Threat disappears (level=0, no targets) → small icon removed
+     */
+    @Test
+    fun `scenario B - threat detected then disappears without passing removes small icon`() {
+        // Step 1: threat detected → small icon
+        controller.onRadarUpdate(threatLevel = 1, closestRangeM = 200f)
+        assertEquals(listOf("render_small"), renderSmallCalls)
+        assertEquals(emptyList<String>(), renderLargeCalls)
+
+        // Step 2: threat disappears (vehicle turned off, out of range, etc.) → small icon removed
+        controller.onRadarUpdate(threatLevel = 0, closestRangeM = null)
+        assertEquals(listOf("erase_small"), eraseSmallCalls)
+        // Large icon was never shown
+        assertEquals(emptyList<String>(), renderLargeCalls)
+        assertEquals(emptyList<String>(), eraseLargeCalls)
+    }
 }
