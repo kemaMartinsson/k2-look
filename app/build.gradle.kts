@@ -1,6 +1,14 @@
 import java.io.ByteArrayOutputStream
+import java.io.FileInputStream
 import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.Properties
+
+// Load local.properties for secrets (gitignored)
+val localProps = Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) load(FileInputStream(f))
+}
 
 // Helper class to access ExecOperations
 abstract class GitHelper @Inject constructor(private val execOps: ExecOperations) {
@@ -102,11 +110,14 @@ android {
             if (keystoreFile.exists() || System.getenv("KEYSTORE_FILE") != null) {
                 storeFile = keystoreFile
                 storePassword = System.getenv("KEYSTORE_PASSWORD")
+                    ?: localProps.getProperty("KEYSTORE_PASSWORD")
                     ?: project.findProperty("KEYSTORE_PASSWORD") as String?
-                keyAlias =
-                    System.getenv("KEY_ALIAS") ?: project.findProperty("KEY_ALIAS") as String?
-                keyPassword =
-                    System.getenv("KEY_PASSWORD") ?: project.findProperty("KEY_PASSWORD") as String?
+                keyAlias = System.getenv("KEY_ALIAS")
+                    ?: localProps.getProperty("KEY_ALIAS")
+                    ?: project.findProperty("KEY_ALIAS") as String?
+                keyPassword = System.getenv("KEY_PASSWORD")
+                    ?: localProps.getProperty("KEY_PASSWORD")
+                    ?: project.findProperty("KEY_PASSWORD") as String?
             }
         }
     }
