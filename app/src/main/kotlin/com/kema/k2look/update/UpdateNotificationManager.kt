@@ -11,9 +11,7 @@ import androidx.core.app.NotificationManagerCompat
 import com.kema.k2look.MainActivity
 import com.kema.k2look.R
 
-/**
- * Manages notifications for app updates
- */
+/** Manages notifications for app updates */
 class UpdateNotificationManager(private val context: Context) {
 
     companion object {
@@ -25,61 +23,64 @@ class UpdateNotificationManager(private val context: Context) {
         createNotificationChannel()
     }
 
-    /**
-     * Create notification channel for updates (Android 8.0+)
-     */
+    /** Create notification channel for updates (Android 8.0+) */
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val name = "App Updates"
             val descriptionText = "Notifications about available app updates"
             val importance = NotificationManager.IMPORTANCE_DEFAULT
-            val channel = NotificationChannel(CHANNEL_ID, name, importance).apply {
-                description = descriptionText
-            }
+            val channel =
+                    NotificationChannel(CHANNEL_ID, name, importance).apply {
+                        description = descriptionText
+                    }
 
             val notificationManager =
-                context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                    context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannel(channel)
         }
     }
 
-    /**
-     * Show notification that an update is available
-     */
+    /** Show notification that an update is available */
     fun showUpdateAvailableNotification(update: AppUpdate) {
-        val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            putExtra("show_update", true)
-        }
+        val intent =
+                Intent(context, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    putExtra("show_update", true)
+                }
 
-        val pendingIntent = PendingIntent.getActivity(
-            context,
-            0,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+        val pendingIntent =
+                PendingIntent.getActivity(
+                        context,
+                        0,
+                        intent,
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
 
         // Action button uses a distinct request code so it's a separate PendingIntent
-        val actionPendingIntent = PendingIntent.getActivity(
-            context,
-            1,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+        val actionPendingIntent =
+                PendingIntent.getActivity(
+                        context,
+                        1,
+                        intent,
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("UPDATE K2LOOK")
-            .setContentText("Update available for K2Look, version ${update.version}.")
-            .setStyle(
-                NotificationCompat.BigTextStyle()
-                    .bigText("Update available for K2Look, version ${update.version}.")
-            )
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .setContentIntent(pendingIntent)
-            .addAction(0, "UPDATE", actionPendingIntent)
-            .setAutoCancel(true)
-            .build()
+        val notification =
+                NotificationCompat.Builder(context, CHANNEL_ID)
+                        .setSmallIcon(R.drawable.ic_notification)
+                        .setContentTitle("UPDATE K2LOOK")
+                        .setContentText("Update available for K2Look, version ${update.version}.")
+                        .setStyle(
+                                NotificationCompat.BigTextStyle()
+                                        .bigText(
+                                                "Update available for K2Look, version ${update.version}."
+                                        )
+                        )
+                        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                        .setContentIntent(pendingIntent)
+                        .addAction(0, "UPDATE", actionPendingIntent)
+                        .setAutoCancel(true)
+                        .build()
 
         try {
             NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, notification)
@@ -88,11 +89,8 @@ class UpdateNotificationManager(private val context: Context) {
         }
     }
 
-    /**
-     * Cancel update notification
-     */
+    /** Cancel update notification */
     fun cancelUpdateNotification() {
         NotificationManagerCompat.from(context).cancel(NOTIFICATION_ID)
     }
 }
-
