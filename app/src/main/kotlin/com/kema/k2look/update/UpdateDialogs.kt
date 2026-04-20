@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -26,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 
 /** Simple markdown parser for headers (<h2>), bold (**text**), and italic (*text*) */
@@ -165,15 +167,17 @@ fun UpdateDialog(
                         ) {
                             OutlinedButton(
                                     onClick = onDismiss,
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.weight(1f),
+                                    contentPadding = ButtonDefaults.ContentPadding
                             ) {
-                                Text("Later", style = MaterialTheme.typography.bodySmall)
+                                Text("Later", fontSize = 12.sp, maxLines = 1)
                             }
                             Button(
                                     onClick = onInstall,
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.weight(1f),
+                                    contentPadding = ButtonDefaults.ContentPadding
                             ) {
-                                Text("Install", style = MaterialTheme.typography.bodySmall)
+                                Text("Install", fontSize = 12.sp, maxLines = 1)
                             }
                         }
                     }
@@ -184,15 +188,17 @@ fun UpdateDialog(
                         ) {
                             OutlinedButton(
                                     onClick = onDismiss,
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.weight(1f),
+                                    contentPadding = ButtonDefaults.ContentPadding
                             ) {
-                                Text("Later", style = MaterialTheme.typography.bodySmall)
+                                Text("Later", fontSize = 12.sp, maxLines = 1)
                             }
                             Button(
                                     onClick = onDownload,
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.weight(1f),
+                                    contentPadding = ButtonDefaults.ContentPadding
                             ) {
-                                Text("Download", style = MaterialTheme.typography.bodySmall)
+                                Text("Download", fontSize = 12.sp, maxLines = 1)
                             }
                         }
                     }

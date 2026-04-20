@@ -28,6 +28,7 @@ class UpdateDownloader(private val context: Context) {
     private var onDownloadComplete: ((Boolean) -> Unit)? = null
     private var onDownloadProgress: ((Int) -> Unit)? = null
     private var downloadedFile: File? = null
+    private val completionHandled = java.util.concurrent.atomic.AtomicBoolean(false)
 
     private val downloadReceiver =
             object : BroadcastReceiver() {
@@ -87,6 +88,7 @@ class UpdateDownloader(private val context: Context) {
                     setAllowedOverRoaming(false)
                 }
 
+        completionHandled.set(false)
         downloadId = downloadManager.enqueue(request)
         Log.d(TAG, "Started download with ID: $downloadId")
 
@@ -142,6 +144,9 @@ class UpdateDownloader(private val context: Context) {
                                             status == DownloadManager.STATUS_FAILED
                             ) {
                                 downloading = false
+                                // Trigger completion from the polling thread — don't rely on
+                                // ACTION_DOWNLOAD_COMPLETE broadcast which isn't delivered on Karoo.
+                                mainHandler.post { handleDownloadComplete() }
                             }
                         } else {
                             // Bug fix: cursor empty means download was cancelled/removed - stop
@@ -164,6 +169,7 @@ class UpdateDownloader(private val context: Context) {
 
     /** Handle download completion */
     private fun handleDownloadComplete() {
+        if (!completionHandled.compareAndSet(false, true)) return  // prevent double-invoke
         Log.d(TAG, "Download completed, handling...")
 
         try {
