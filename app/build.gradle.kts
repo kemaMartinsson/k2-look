@@ -105,7 +105,7 @@ android {
             // For local builds, use local keystore if it exists
             // For CI builds, use environment variables
             val keystorePath = System.getenv("KEYSTORE_FILE") ?: "keystore.jks"
-            val keystoreFile = file(keystorePath)
+            val keystoreFile = rootProject.file(keystorePath)
 
             if (keystoreFile.exists() || System.getenv("KEYSTORE_FILE") != null) {
                 storeFile = keystoreFile
