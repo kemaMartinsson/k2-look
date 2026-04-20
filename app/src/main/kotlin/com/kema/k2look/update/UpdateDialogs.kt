@@ -93,10 +93,13 @@ fun UpdateDialog(
         update: AppUpdate,
         isDownloading: Boolean = false,
         downloadProgress: Int = 0,
+        downloadComplete: Boolean = false,
         onDownload: () -> Unit,
+        onInstall: () -> Unit,
+        onCancel: () -> Unit,
         onDismiss: () -> Unit
 ) {
-    Dialog(onDismissRequest = { if (!isDownloading) onDismiss() }) {
+    Dialog(onDismissRequest = { if (isDownloading) onCancel() else onDismiss() }) {
         Card(
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
@@ -130,33 +133,67 @@ fun UpdateDialog(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                if (isDownloading) {
-                    Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        LinearProgressIndicator(
-                                progress = { downloadProgress / 100f },
-                                modifier = Modifier.fillMaxWidth().height(8.dp)
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                                text = "Downloading... $downloadProgress%",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium
-                        )
-                    }
-                } else {
-                    Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
-                            Text("Later")
+                when {
+                    isDownloading -> {
+                        Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            LinearProgressIndicator(
+                                    progress = { downloadProgress / 100f },
+                                    modifier = Modifier.fillMaxWidth().height(8.dp)
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                    text = "Downloading... $downloadProgress%",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            OutlinedButton(
+                                    onClick = onCancel,
+                                    modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Cancel", style = MaterialTheme.typography.bodySmall)
+                            }
                         }
-
-                        Button(onClick = onDownload, modifier = Modifier.weight(1f)) {
-                            Text("Download")
+                    }
+                    downloadComplete -> {
+                        Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            OutlinedButton(
+                                    onClick = onDismiss,
+                                    modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Later", style = MaterialTheme.typography.bodySmall)
+                            }
+                            Button(
+                                    onClick = onInstall,
+                                    modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Install", style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
+                    else -> {
+                        Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            OutlinedButton(
+                                    onClick = onDismiss,
+                                    modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Later", style = MaterialTheme.typography.bodySmall)
+                            }
+                            Button(
+                                    onClick = onDownload,
+                                    modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Download", style = MaterialTheme.typography.bodySmall)
+                            }
                         }
                     }
                 }

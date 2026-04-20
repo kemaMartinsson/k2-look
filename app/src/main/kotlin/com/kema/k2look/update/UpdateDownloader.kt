@@ -27,6 +27,7 @@ class UpdateDownloader(private val context: Context) {
     private var downloadId: Long = -1
     private var onDownloadComplete: ((Boolean) -> Unit)? = null
     private var onDownloadProgress: ((Int) -> Unit)? = null
+    private var downloadedFile: File? = null
 
     private val downloadReceiver =
             object : BroadcastReceiver() {
@@ -190,9 +191,14 @@ class UpdateDownloader(private val context: Context) {
                 cursor.close()
 
                 if (uriString != null) {
-                    // Bug fix: only report success if install intent actually launched
-                    val installed = installApk(Uri.parse(uriString))
-                    onDownloadComplete?.invoke(installed)
+                    val file = File(Uri.parse(uriString).path ?: "")
+                    if (file.exists()) {
+                        downloadedFile = file
+                        onDownloadComplete?.invoke(true)
+                    } else {
+                        Log.e(TAG, "Downloaded file not found at: ${file.absolutePath}")
+                        onDownloadComplete?.invoke(false)
+                    }
                 } else {
                     Log.e(TAG, "Download URI is null")
                     onDownloadComplete?.invoke(false)
@@ -313,6 +319,25 @@ class UpdateDownloader(private val context: Context) {
         }
     }
 
+    /**
+     * Install the APK that was previously downloaded. Call this only after onDownloadComplete
+     * reports true.
+     * @return true if the install intent was launched successfully
+     */
+    fun installDownloadedApk(): Boolean {
+        val file =
+                downloadedFile
+                        ?: run {
+                            Log.e(TAG, "No downloaded file available to install")
+                            return false
+                        }
+        if (!file.exists()) {
+            Log.e(TAG, "Downloaded file no longer exists: ${file.absolutePath}")
+            return false
+        }
+        return installApk(Uri.fromFile(file))
+    }
+
     /** Cancel ongoing download */
     fun cancelDownload() {
         if (downloadId != -1L) {
@@ -326,5 +351,6 @@ class UpdateDownloader(private val context: Context) {
             }
             downloadId = -1
         }
+        downloadedFile = null
     }
 }

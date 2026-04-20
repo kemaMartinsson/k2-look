@@ -137,6 +137,7 @@ fun AboutTab(
     var showNoUpdateDialog by remember { mutableStateOf(false) }
     var isDownloading by remember { mutableStateOf(false) }
     var downloadProgress by remember { mutableStateOf(0) }
+    var downloadComplete by remember { mutableStateOf(false) }
     var autoCheckEnabled by remember { mutableStateOf(prefsManager.isAutoCheckUpdatesEnabled()) }
     var showDebugDialog by remember { mutableStateOf(false) }
 
@@ -389,24 +390,31 @@ fun AboutTab(
                 update = availableUpdate!!,
                 isDownloading = isDownloading,
                 downloadProgress = downloadProgress,
+                downloadComplete = downloadComplete,
                 onDownload = {
-                    // Download and install the APK
                     isDownloading = true
                     downloadProgress = 0
+                    downloadComplete = false
                     updateDownloader.downloadUpdate(
                             update = availableUpdate!!,
                             onProgress = { progress -> downloadProgress = progress },
                             onComplete = { success ->
                                 isDownloading = false
                                 downloadProgress = 0
-                                if (success) {
-                                    availableUpdate = null
-                                }
+                                if (success) downloadComplete = true
                             }
                     )
                 },
+                onInstall = { updateDownloader.installDownloadedApk() },
+                onCancel = {
+                    updateDownloader.cancelDownload()
+                    isDownloading = false
+                    downloadProgress = 0
+                    downloadComplete = false
+                },
                 onDismiss = {
                     prefsManager.setDismissedUpdateVersion(availableUpdate!!.version)
+                    downloadComplete = false
                     availableUpdate = null
                 }
         )
