@@ -11,14 +11,10 @@ import androidx.core.content.edit
  */
 class PreferencesManager(context: Context) {
 
-    private val prefs: SharedPreferences = context.getSharedPreferences(
-        PREFS_NAME,
-        Context.MODE_PRIVATE
-    )
+    private val prefs: SharedPreferences =
+            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-    /**
-     * Auto-connect settings
-     */
+    /** Auto-connect settings */
     fun isAutoConnectKarooEnabled(): Boolean {
         return prefs.getBoolean(KEY_AUTO_CONNECT_KAROO, true)
     }
@@ -28,16 +24,14 @@ class PreferencesManager(context: Context) {
     }
 
     fun isAutoConnectActiveLookEnabled(): Boolean {
-        return prefs.getBoolean(KEY_AUTO_CONNECT_ACTIVELOOK, false)
+        return prefs.getBoolean(KEY_AUTO_CONNECT_ACTIVELOOK, true)
     }
 
     fun setAutoConnectActiveLook(enabled: Boolean) {
         prefs.edit { putBoolean(KEY_AUTO_CONNECT_ACTIVELOOK, enabled) }
     }
 
-    /**
-     * Last connected glasses
-     */
+    /** Last connected glasses */
     fun getLastConnectedGlassesAddress(): String? {
         return prefs.getString(KEY_LAST_GLASSES_ADDRESS, null)
     }
@@ -50,31 +44,7 @@ class PreferencesManager(context: Context) {
         prefs.edit { remove(KEY_LAST_GLASSES_ADDRESS) }
     }
 
-    /**
-     * Reconnect timeout in minutes (for auto-reconnect attempts during rides)
-     */
-    fun getReconnectTimeoutMinutes(): Int {
-        return prefs.getInt(KEY_RECONNECT_TIMEOUT_MINUTES, 10) // Default 10 minutes
-    }
-
-    fun setReconnectTimeoutMinutes(minutes: Int) {
-        prefs.edit { putInt(KEY_RECONNECT_TIMEOUT_MINUTES, minutes) }
-    }
-
-    /**
-     * Startup connection timeout in minutes (for initial connection attempt on boot)
-     */
-    fun getStartupTimeoutMinutes(): Int {
-        return prefs.getInt(KEY_STARTUP_TIMEOUT_MINUTES, 10) // Default 10 minutes
-    }
-
-    fun setStartupTimeoutMinutes(minutes: Int) {
-        prefs.edit { putInt(KEY_STARTUP_TIMEOUT_MINUTES, minutes) }
-    }
-
-    /**
-     * Enable continuous reconnection attempts during active rides
-     */
+    /** Enable continuous reconnection attempts during active rides */
     fun isReconnectDuringRidesEnabled(): Boolean {
         return prefs.getBoolean(KEY_RECONNECT_DURING_RIDES, true) // Default: enabled
     }
@@ -83,9 +53,7 @@ class PreferencesManager(context: Context) {
         prefs.edit { putBoolean(KEY_RECONNECT_DURING_RIDES, enabled) }
     }
 
-    /**
-     * Disconnect glasses when ride ends (idle state)
-     */
+    /** Disconnect glasses when ride ends (idle state) */
     fun isDisconnectWhenIdleEnabled(): Boolean {
         return prefs.getBoolean(KEY_DISCONNECT_WHEN_IDLE, false) // Default: keep connected
     }
@@ -94,9 +62,7 @@ class PreferencesManager(context: Context) {
         prefs.edit { putBoolean(KEY_DISCONNECT_WHEN_IDLE, enabled) }
     }
 
-    /**
-     * Auto-check for updates on app start
-     */
+    /** Auto-check for updates on app start */
     fun isAutoCheckUpdatesEnabled(): Boolean {
         return prefs.getBoolean(KEY_AUTO_CHECK_UPDATES, true) // Default: enabled
     }
@@ -105,9 +71,7 @@ class PreferencesManager(context: Context) {
         prefs.edit { putBoolean(KEY_AUTO_CHECK_UPDATES, enabled) }
     }
 
-    /**
-     * Last time we checked for updates (timestamp in milliseconds)
-     */
+    /** Last time we checked for updates (timestamp in milliseconds) */
     fun getLastUpdateCheckTime(): Long {
         return prefs.getLong(KEY_LAST_UPDATE_CHECK, 0L)
     }
@@ -116,9 +80,7 @@ class PreferencesManager(context: Context) {
         prefs.edit { putLong(KEY_LAST_UPDATE_CHECK, timestamp) }
     }
 
-    /**
-     * Dismissed update version (user clicked "Later" for this version)
-     */
+    /** Dismissed update version (user clicked "Later" for this version) */
     fun getDismissedUpdateVersion(): String? {
         return prefs.getString(KEY_DISMISSED_UPDATE_VERSION, null)
     }
@@ -132,8 +94,6 @@ class PreferencesManager(context: Context) {
         private const val KEY_AUTO_CONNECT_KAROO = "auto_connect_karoo"
         private const val KEY_AUTO_CONNECT_ACTIVELOOK = "auto_connect_activelook"
         private const val KEY_LAST_GLASSES_ADDRESS = "last_glasses_address"
-        private const val KEY_RECONNECT_TIMEOUT_MINUTES = "reconnect_timeout_minutes"
-        private const val KEY_STARTUP_TIMEOUT_MINUTES = "startup_timeout_minutes"
         private const val KEY_RECONNECT_DURING_RIDES = "reconnect_during_rides"
         private const val KEY_DISCONNECT_WHEN_IDLE = "disconnect_when_idle"
         private const val KEY_AUTO_CHECK_UPDATES = "auto_check_updates"

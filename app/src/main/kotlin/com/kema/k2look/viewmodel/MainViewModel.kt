@@ -91,7 +91,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val rideState: RideState = RideState.Idle,
             val userProfile: UserProfile? = null,
             val useImperialUnits: Boolean = false,
-            val reconnectTimeoutMinutes: Int = 10, // Default 10 minutes
             val debugModeEnabled: Boolean = false,
             val speed: String = "--",
             val avgSpeed: String = "--",
@@ -142,7 +141,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         observeActiveLookData()
         observeBridgeState()
         observeUserProfile()
-        loadReconnectTimeout()
         observeGestureEvents()
         observeGesturePreferences()
     }
@@ -263,29 +261,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.value = _uiState.value.copy(showForgetWarningDialog = false)
     }
 
-    /** Load reconnect timeout from preferences */
-    private fun loadReconnectTimeout() {
-        val timeout = preferencesManager.getReconnectTimeoutMinutes()
-        _uiState.value = _uiState.value.copy(reconnectTimeoutMinutes = timeout)
-        Log.d(TAG, "Loaded reconnect timeout: ${timeout}min")
-    }
-
     // observeGestureEvents / observeGesturePreferences / executeGestureAction /
     // executeTouchAction / cycleToNextScreen / adjustBrightness / toggleDisplay /
     // setGestureAction / setTouchAction / setGestureEnabled / setTouchEnabled
     // → MainViewModelGestureHandlers.kt as extension functions
-
-    /** Update reconnect timeout */
-    fun setReconnectTimeout(minutes: Int) {
-        if (minutes < 1 || minutes > 60) {
-            Log.w(TAG, "Invalid reconnect timeout: $minutes (must be 1-60)")
-            return
-        }
-
-        Log.i(TAG, "Setting reconnect timeout to ${minutes}min")
-        preferencesManager.setReconnectTimeoutMinutes(minutes)
-        _uiState.value = _uiState.value.copy(reconnectTimeoutMinutes = minutes)
-    }
 
     /** Toggle debug mode on/off */
     fun setDebugMode(enabled: Boolean) {

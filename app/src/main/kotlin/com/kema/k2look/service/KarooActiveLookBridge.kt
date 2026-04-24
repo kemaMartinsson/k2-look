@@ -225,9 +225,6 @@ class KarooActiveLookBridge(context: Context) {
             android.util.Log.i(TAG, "⏭️ Auto-connect to Karoo disabled in preferences")
         }
 
-        // Request BLE radio from Karoo OS so it stays available for our scanning
-        requestBluetooth()
-
         // Auto-connect to last paired glasses if enabled
         if (preferencesManager.isAutoConnectActiveLookEnabled()) {
             val lastGlassesAddress = preferencesManager.getLastConnectedGlassesAddress()
@@ -241,7 +238,7 @@ class KarooActiveLookBridge(context: Context) {
             } else {
                 android.util.Log.i(
                         TAG,
-                        "⚠️ Auto-connect to glasses enabled, but no previous connection found"
+                        "👓 Auto-connect enabled but no previous address — waiting for user to tap Connect"
                 )
             }
         } else {
@@ -285,12 +282,12 @@ class KarooActiveLookBridge(context: Context) {
         autoConnectCollectionJob?.cancel()
         autoConnectTimeoutJob?.cancel()
 
-        val timeoutMinutes = preferencesManager.getStartupTimeoutMinutes()
-        val timeoutMs = timeoutMinutes * 60 * 1000L // Convert to milliseconds
+        // ActiveLook glasses stop advertising after 3 minutes without a connection (API §2.2)
+        val timeoutMs = 3 * 60 * 1000L
 
         android.util.Log.i(
                 TAG,
-                "🔍 Scanning for previously connected glasses: $targetAddress (timeout: ${timeoutMinutes}min)"
+                "🔍 Scanning for previously connected glasses: $targetAddress (timeout: 3min)"
         )
 
         // Stop any existing scan before starting fresh
@@ -344,7 +341,7 @@ class KarooActiveLookBridge(context: Context) {
                     if (!glassesFound && activeLookService.isScanning.value) {
                         android.util.Log.w(
                                 TAG,
-                                "⏱️ Startup auto-connect timeout (${timeoutMinutes}min): Could not find glasses with address $targetAddress"
+                                "⏱️ Startup auto-connect timeout (3min): Could not find glasses with address $targetAddress"
                         )
                         android.util.Log.i(
                                 TAG,
@@ -420,6 +417,25 @@ class KarooActiveLookBridge(context: Context) {
 
         scanJob =
                 scope.launch {
+                    // Wait for the BLE adapter to become enabled after RequestBluetooth dispatch.
+                    // The Karoo system enables BLE asynchronously — polling until ready (max 5s).
+                    val btManager =
+                            context.getSystemService(android.content.Context.BLUETOOTH_SERVICE) as?
+                                    android.bluetooth.BluetoothManager
+                    var bleWaitMs = 0
+                    while (btManager?.adapter?.isEnabled != true && bleWaitMs < 5000) {
+                        delay(250)
+                        bleWaitMs += 250
+                    }
+                    if (btManager?.adapter?.isEnabled == true) {
+                        Log.i(TAG, "✅ BLE adapter ready after ${bleWaitMs}ms")
+                    } else {
+                        Log.w(
+                                TAG,
+                                "⚠️ BLE adapter still not enabled after ${bleWaitMs}ms — scanning anyway"
+                        )
+                    }
+
                     while (scanAttempt < MAX_SCAN_RETRIES && !glassesFound) {
                         scanAttempt++
                         Log.i(TAG, "🔍 Scan attempt $scanAttempt/$MAX_SCAN_RETRIES")
@@ -556,10 +572,17 @@ class KarooActiveLookBridge(context: Context) {
                 when (state) {
                     is KarooDataService.ConnectionState.Connected -> {
                         _bridgeState.value = BridgeState.KarooConnected
+                        // Request BLE now that the Karoo system service is connected and can handle
+                        // it
+                        requestBluetooth()
                         updateBridgeState()
                     }
                     is KarooDataService.ConnectionState.Error ->
                             _bridgeState.value = BridgeState.Error("Karoo: ${state.message}")
+                    is KarooDataService.ConnectionState.Disconnected -> {
+                        bluetoothRequested = false // Reset so we re-request on next connection
+                        updateBridgeState()
+                    }
                     else -> updateBridgeState()
                 }
             }

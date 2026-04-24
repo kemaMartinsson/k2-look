@@ -32,27 +32,26 @@ class MainActivity : ComponentActivity() {
     private var showInitialRationaleDialog by mutableStateOf(false)
     private var openUpdateDialog by mutableStateOf(false)
 
-    private val permsLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { results ->
-        val denied = results.filterValues { granted -> !granted }.keys
-        if (denied.isEmpty()) {
-            // All permissions granted
-            onPermissionsGranted()
-            return@registerForActivityResult
-        }
+    private val permsLauncher =
+            registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+                    results ->
+                val denied = results.filterValues { granted -> !granted }.keys
+                if (denied.isEmpty()) {
+                    // All permissions granted
+                    onPermissionsGranted()
+                    return@registerForActivityResult
+                }
 
-        // Check if any permission was permanently denied (user selected "Don't ask again")
-        val permanentlyDenied = denied.any { perm ->
-            !shouldShowRequestPermissionRationale(perm)
-        }
+                // Check if any permission was permanently denied (user selected "Don't ask again")
+                val permanentlyDenied =
+                        denied.any { perm -> !shouldShowRequestPermissionRationale(perm) }
 
-        if (permanentlyDenied) {
-            showSettingsDialog = true
-        } else {
-            showRationaleDialog = true
-        }
-    }
+                if (permanentlyDenied) {
+                    showSettingsDialog = true
+                } else {
+                    showRationaleDialog = true
+                }
+            }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,57 +60,55 @@ class MainActivity : ComponentActivity() {
         setContent {
             AppTheme {
                 if (permissionsGranted) {
-                    BackHandler {
-                        finish()
-                    }
+                    BackHandler { finish() }
                     MainScreen(
-                        onBack = { finish() },
-                        openUpdateDialog = openUpdateDialog,
-                        onUpdateDialogHandled = { openUpdateDialog = false }
+                            onBack = { finish() },
+                            openUpdateDialog = openUpdateDialog,
+                            onUpdateDialogHandled = { openUpdateDialog = false }
                     )
                 }
 
                 // Permission dialogs
                 if (showInitialRationaleDialog) {
                     InitialRationaleDialog(
-                        onContinue = {
-                            showInitialRationaleDialog = false
-                            permsLauncher.launch(PermissionUtils.requiredPermissions())
-                        },
-                        onExit = {
-                            showInitialRationaleDialog = false
-                            finish()
-                        }
+                            onContinue = {
+                                showInitialRationaleDialog = false
+                                permsLauncher.launch(PermissionUtils.requiredPermissions())
+                            },
+                            onExit = {
+                                showInitialRationaleDialog = false
+                                finish()
+                            }
                     )
                 }
 
                 if (showRationaleDialog) {
                     RationaleDialog(
-                        onGrantPermissions = {
-                            showRationaleDialog = false
-                            permsLauncher.launch(PermissionUtils.requiredPermissions())
-                        },
-                        onExit = {
-                            showRationaleDialog = false
-                            finish()
-                        }
+                            onGrantPermissions = {
+                                showRationaleDialog = false
+                                permsLauncher.launch(PermissionUtils.requiredPermissions())
+                            },
+                            onExit = {
+                                showRationaleDialog = false
+                                finish()
+                            }
                     )
                 }
 
                 if (showSettingsDialog) {
                     SettingsDialog(
-                        onOpenSettings = {
-                            showSettingsDialog = false
-                            val intent =
-                                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                    data = Uri.fromParts("package", packageName, null)
-                                }
-                            startActivity(intent)
-                        },
-                        onCancel = {
-                            showSettingsDialog = false
-                            finish()
-                        }
+                            onOpenSettings = {
+                                showSettingsDialog = false
+                                val intent =
+                                        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                            data = Uri.fromParts("package", packageName, null)
+                                        }
+                                startActivity(intent)
+                            },
+                            onCancel = {
+                                showSettingsDialog = false
+                                finish()
+                            }
                     )
                 }
             }
@@ -212,86 +209,52 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun InitialRationaleDialog(
-    onContinue: () -> Unit,
-    onExit: () -> Unit
-) {
+private fun InitialRationaleDialog(onContinue: () -> Unit, onExit: () -> Unit) {
     AlertDialog(
-        onDismissRequest = { /* Prevent dismissal */ },
-        title = { Text("Permissions Needed") },
-        text = {
-            Text(
-                "K2Look needs the following permissions to work:\n\n" +
-                        "• Bluetooth - to connect to your glasses\n" +
-                        "• Location - required for Bluetooth scanning on Android\n" +
-                        "• Notifications - to notify you of updates\n\n" +
-                        "Your location data is not collected or shared."
-            )
-        },
-        confirmButton = {
-            Button(onClick = onContinue) {
-                Text("Continue")
-            }
-        },
-        dismissButton = {
-            OutlinedButton(onClick = onExit) {
-                Text("Exit")
-            }
-        }
+            onDismissRequest = { /* Prevent dismissal */},
+            title = { Text("Permissions Needed") },
+            text = {
+                Text(
+                        "K2Look needs the following permissions to work:\n\n" +
+                                "• Bluetooth - to connect to your glasses\n" +
+                                "• Location - required for Bluetooth scanning on Android\n" +
+                                "• Notifications - to notify you of updates\n\n" +
+                                "Your location data is not collected or shared."
+                )
+            },
+            confirmButton = { Button(onClick = onContinue) { Text("Continue") } },
+            dismissButton = { OutlinedButton(onClick = onExit) { Text("Exit") } }
     )
 }
 
 @Composable
-private fun RationaleDialog(
-    onGrantPermissions: () -> Unit,
-    onExit: () -> Unit
-) {
+private fun RationaleDialog(onGrantPermissions: () -> Unit, onExit: () -> Unit) {
     AlertDialog(
-        onDismissRequest = { /* Prevent dismissal */ },
-        title = { Text("Permissions Needed") },
-        text = {
-            Text(
-                "K2Look needs Bluetooth and location permissions to discover and connect to your ActiveLook glasses.\n\n" +
-                        "Without these permissions, the app cannot function."
-            )
-        },
-        confirmButton = {
-            Button(onClick = onGrantPermissions) {
-                Text("Grant Permissions")
-            }
-        },
-        dismissButton = {
-            OutlinedButton(onClick = onExit) {
-                Text("Exit")
-            }
-        }
+            onDismissRequest = { /* Prevent dismissal */},
+            title = { Text("Permissions Needed") },
+            text = {
+                Text(
+                        "K2Look needs Bluetooth and location permissions to discover and connect to your ActiveLook glasses.\n\n" +
+                                "Without these permissions, the app cannot function."
+                )
+            },
+            confirmButton = { Button(onClick = onGrantPermissions) { Text("Grant Permissions") } },
+            dismissButton = { OutlinedButton(onClick = onExit) { Text("Exit") } }
     )
 }
 
 @Composable
-private fun SettingsDialog(
-    onOpenSettings: () -> Unit,
-    onCancel: () -> Unit
-) {
+private fun SettingsDialog(onOpenSettings: () -> Unit, onCancel: () -> Unit) {
     AlertDialog(
-        onDismissRequest = { /* Prevent dismissal */ },
-        title = { Text("Permissions Required") },
-        text = {
-            Text(
-                "K2Look needs Bluetooth and location permissions to scan and connect to your glasses.\n\n" +
-                        "Please enable these permissions in app settings."
-            )
-        },
-        confirmButton = {
-            Button(onClick = onOpenSettings) {
-                Text("Open Settings")
-            }
-        },
-        dismissButton = {
-            OutlinedButton(onClick = onCancel) {
-                Text("Cancel")
-            }
-        }
+            onDismissRequest = { /* Prevent dismissal */},
+            title = { Text("Permissions Required") },
+            text = {
+                Text(
+                        "K2Look needs Bluetooth and location permissions to scan and connect to your glasses.\n\n" +
+                                "Please enable these permissions in app settings."
+                )
+            },
+            confirmButton = { Button(onClick = onOpenSettings) { Text("Open Settings") } },
+            dismissButton = { OutlinedButton(onClick = onCancel) { Text("Cancel") } }
     )
 }
-
