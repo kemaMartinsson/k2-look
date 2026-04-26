@@ -2,7 +2,17 @@
 
 All notable changes to K2Look will be documented in this file.
 
-## [1.0.0] - 2026-06-30
+## [1.0.7] - 2026-04-26
+
+### Fixed
+
+- Fixed broken glasses connection introduces in 1.0.0 with code splitting and refactoring.
+
+### Removed
+
+- Removed glasses connection timeout. Engo2 stop searching for glasses after ~3min so having a configurable timeout is not really useful.
+  
+## [1.0.0] - 2026-04-20
 
 ### Added
 
