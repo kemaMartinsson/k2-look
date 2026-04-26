@@ -356,7 +356,6 @@ fun AboutTab(
 
                 HelpItem("Connect Glasses", stringResource(R.string.help_connect_glasses))
                 HelpItem("Auto-Reconnect", stringResource(R.string.help_reconnect))
-                HelpItem("Timeout Settings", stringResource(R.string.help_timeout))
             }
         }
 

@@ -29,7 +29,6 @@
     <!-- Help & Support -->
     <string name="help_connect_glasses">Tap the \"Connect glasses\" button to scan and pair your ActiveLook smart glasses.</string>
     <string name="help_reconnect">The app will automatically reconnect to your glasses if they disconnect during a ride.</string>
-    <string name="help_timeout">Configure the reconnect timeout in the Status tab (default: 10 minutes).</string>
 
     <!-- Feature Descriptions -->
     <string name="feature_auto_reconnect">Auto-Reconnect</string>
