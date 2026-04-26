@@ -1,0 +1,162 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Gradle: Assemble Debug APK",
+      "type": "shell",
+      "command": ".\\gradlew.bat",
+      "args": [":app:assembleDebug"],
+      "group": "build",
+      "presentation": { "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Gradle: Assemble Release APK",
+      "type": "shell",
+      "command": ".\\gradlew.bat",
+      "args": [":app:assembleRelease"],
+      "group": "build",
+      "presentation": { "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Gradle: Build All",
+      "type": "shell",
+      "command": ".\\gradlew.bat",
+      "args": ["build"],
+      "group": "build",
+      "presentation": { "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Gradle: Clean",
+      "type": "shell",
+      "command": ".\\gradlew.bat",
+      "args": ["clean"],
+      "presentation": { "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Install: debugBuild.bat (build & install)",
+      "type": "shell",
+      "command": ".\\debugBuild.bat",
+      "presentation": { "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "ADB: Install APK (latest debug)",
+      "type": "shell",
+      "command": "adb",
+      "args": ["install", "-r", "app/build/outputs/apk/debug/app-debug.apk"],
+      "presentation": { "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "ADB: Uninstall app",
+      "type": "shell",
+      "command": "adb",
+      "args": ["uninstall", "com.kema.k2look"],
+      "presentation": { "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Gradle: Run Unit Tests (debug)",
+      "type": "shell",
+      "command": ".\\gradlew.bat",
+      "args": [":app:testDebugUnitTest"],
+      "presentation": { "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Gradle: Run All Unit Tests",
+      "type": "shell",
+      "command": ".\\gradlew.bat",
+      "args": [":app:test"],
+      "presentation": { "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Gradle: Run Single Test Class (example)",
+      "type": "shell",
+      "command": ".\\gradlew.bat",
+      "args": [":app:testDebugUnitTest", "--tests", "\"com.kema.k2look.layout.LayoutBuilderTest\""],
+      "presentation": { "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Gradle: Run Tests Verbose",
+      "type": "shell",
+      "command": ".\\gradlew.bat",
+      "args": [":app:testDebugUnitTest", "--info"],
+      "presentation": { "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Gradle: Lint (app)",
+      "type": "shell",
+      "command": ".\\gradlew.bat",
+      "args": [":app:lintDebug"],
+      "presentation": { "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "CI: Simulate CI Pipeline Locally",
+      "type": "shell",
+      "command": ".\\gradlew.bat",
+      "args": [
+        "build",
+        "--no-daemon",
+        "--continue",
+        "-x", "lintDebug",
+        "-x", "lintRelease",
+        "-x", ":activelook-sdk:testDebugUnitTest",
+        "-x", ":activelook-sdk:testReleaseUnitTest",
+        "-x", ":karoo-ext:testDebugUnitTest",
+        "-x", ":karoo-ext:testReleaseUnitTest"
+      ],
+      "presentation": { "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "ADB: devices",
+      "type": "shell",
+      "command": "adb",
+      "args": ["devices"],
+      "presentation": { "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "ADB: logcat K2Look",
+      "type": "shell",
+      "command": "adb",
+      "args": ["logcat", "-s", "K2Look"],
+      "isBackground": true,
+      "presentation": { "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "ADB: logcat K2Look+ERROR (grep on *nix)",
+      "type": "shell",
+      "command": "adb",
+      "args": ["logcat", "-c"],
+      "presentation": { "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Gradle Daemon: Stop",
+      "type": "shell",
+      "command": ".\\gradlew.bat",
+      "args": ["--stop"],
+      "presentation": { "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Gradle Daemon: Status",
+      "type": "shell",
+      "command": ".\\gradlew.bat",
+      "args": ["--status"],
+      "presentation": { "reveal": "always" },
+      "problemMatcher": []
+    }
+  ]
+}
