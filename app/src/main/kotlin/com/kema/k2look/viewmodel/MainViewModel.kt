@@ -7,6 +7,11 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.activelook.activelooksdk.DiscoveredGlasses
 import com.kema.k2look.K2LookApplication
+import com.kema.k2look.data.DataFieldRegistry
+import com.kema.k2look.model.DataFieldProfile
+import com.kema.k2look.model.IconSize
+import com.kema.k2look.model.LayoutDataField
+import com.kema.k2look.model.LayoutScreen
 import com.kema.k2look.service.ActiveLookService
 import com.kema.k2look.service.DisplayDebugService
 import com.kema.k2look.service.KarooActiveLookBridge
@@ -388,6 +393,96 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     /** Clear all debug patterns from the glasses display. */
     fun clearGlassesDisplay() {
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { displayDebug.clearDisplay() }
+    }
+
+    /**
+     * Simulate a full production ride display via the exact same rendering pipeline used at
+     * runtime: saveAndActivateProfile → displayAllFieldValues.
+     *
+     * Layout: 3D_FULL — speed (large row), cadence (medium row), heart rate (small row). All
+     * fields: large icon + unit overlay. Battery overlay: enabled at 75%. Radar alert: threat level
+     * 3, closest target at 20 m.
+     */
+    fun runProductionSimulation() {
+        if (!_uiState.value.debugModeEnabled) {
+            Log.w(TAG, "Production simulation requires debug mode")
+            return
+        }
+        if (_uiState.value.activeLookState !is ActiveLookService.ConnectionState.Connected) {
+            Log.w(TAG, "Production simulation requires glasses connected")
+            return
+        }
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val layoutService = bridge.getLayoutService()
+
+            val screen =
+                    LayoutScreen(
+                            id = 1,
+                            name = "Sim",
+                            templateId = "3D_FULL",
+                            dataFields =
+                                    listOf(
+                                            LayoutDataField(
+                                                    dataField =
+                                                            DataFieldRegistry.getById(
+                                                                    12
+                                                            )!!, // Speed — km/h, icon40=58
+                                                    zoneId = "3D_FULL_H",
+                                                    showIcon = true,
+                                                    showUnit = true,
+                                                    iconSize = IconSize.LARGE
+                                            ),
+                                            LayoutDataField(
+                                                    dataField =
+                                                            DataFieldRegistry.getById(
+                                                                    18
+                                                            )!!, // Cadence — rpm, icon40=36
+                                                    zoneId = "3D_FULL_M",
+                                                    showIcon = true,
+                                                    showUnit = true,
+                                                    iconSize = IconSize.LARGE
+                                            ),
+                                            LayoutDataField(
+                                                    dataField =
+                                                            DataFieldRegistry.getById(
+                                                                    4
+                                                            )!!, // Heart Rate — bpm, icon40=44
+                                                    zoneId = "3D_FULL_L",
+                                                    showIcon = true,
+                                                    showUnit = true,
+                                                    iconSize = IconSize.LARGE
+                                            )
+                                    )
+                    )
+            val profile =
+                    DataFieldProfile(
+                            id = "debug_prod_sim",
+                            name = "Production Simulation",
+                            screens = listOf(screen)
+                    )
+
+            // Upload layout definitions to glasses — same call as a real profile activation
+            val ok = layoutService.saveAndActivateProfile(profile)
+            if (!ok) {
+                Log.w(TAG, "Production simulation: saveAndActivateProfile failed")
+                return@launch
+            }
+
+            // Enable battery overlay — uses dedicated layout ID 9, independent of metric render
+            layoutService.batteryDisplayEnabled = true
+            layoutService.updateBatteryDisplay(100)
+
+            // Render simulated field values via the production display path
+            layoutService.displayAllFieldValues(
+                    mapOf("3D_FULL_H" to "25.1", "3D_FULL_M" to "185", "3D_FULL_L" to "150"),
+                    screen
+            )
+
+            // Directly render the large radar warning icon at its intended position
+            bridge.renderRadarWarningLargeNow()
+
+            Log.i(TAG, "Production simulation dispatched")
+        }
     }
 
     /** Format simulated time */

@@ -419,7 +419,76 @@ fun DebugTab(viewModel: MainViewModel, uiState: MainViewModel.UiState) {
                         }
                 } // end BuildConfig.DEBUG
 
-                // Current Values Display
+                // ── Production Simulation (debug builds only) ──────────────────
+                if (BuildConfig.DEBUG) {
+                        HorizontalDivider(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                                thickness = 1.dp,
+                                color =
+                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                                alpha = 0.3f
+                                        )
+                        )
+
+                        Card(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                                colors =
+                                        CardDefaults.cardColors(
+                                                containerColor =
+                                                        MaterialTheme.colorScheme.background
+                                        ),
+                                shape = androidx.compose.ui.graphics.RectangleShape
+                        ) {
+                                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                                        Text(
+                                                text = "Production Simulation",
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.padding(bottom = 4.dp)
+                                        )
+                                        Text(
+                                                text =
+                                                        "3-row 3D_FULL layout via saveAndActivateProfile + displayAllFieldValues — same code path as a real ride",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.padding(bottom = 4.dp)
+                                        )
+                                        Text(
+                                                text =
+                                                        "Speed 25.1 km/h · Cadence 185 rpm · HR 150 bpm · Battery 75% · Radar alert",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.padding(bottom = 12.dp)
+                                        )
+
+                                        val simEnabled =
+                                                debugEnabled &&
+                                                        uiState.activeLookState is
+                                                                ActiveLookService.ConnectionState.Connected
+
+                                        Button(
+                                                onClick = { viewModel.runProductionSimulation() },
+                                                enabled = simEnabled,
+                                                modifier = Modifier.fillMaxWidth()
+                                        ) { Text("Run Production Simulation") }
+
+                                        if (!simEnabled) {
+                                                Text(
+                                                        text =
+                                                                when {
+                                                                        !debugEnabled ->
+                                                                                "⚠️ Enable Debug Mode above"
+                                                                        else ->
+                                                                                "⚠️ Connect glasses first"
+                                                                },
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.error,
+                                                        modifier = Modifier.padding(top = 8.dp)
+                                                )
+                                        }
+                                }
+                        }
+                } // end Production Simulation
                 Card(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                         colors =

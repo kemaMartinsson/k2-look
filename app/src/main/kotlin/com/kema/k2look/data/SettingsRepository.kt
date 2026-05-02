@@ -13,6 +13,7 @@ class SettingsRepository(context: Context) {
         private const val PREFS_NAME = "k2look_settings"
         private const val KEY_KAROO_SYNC = "karoo_sync_enabled"
         private const val KEY_RADAR_WARNING = "radar_warning_enabled"
+        private const val KEY_BATTERY_DISPLAY = "battery_display_enabled"
     }
 
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -31,5 +32,14 @@ class SettingsRepository(context: Context) {
     fun setRadarWarningEnabled(enabled: Boolean) {
         prefs.edit { putBoolean(KEY_RADAR_WARNING, enabled) }
         _radarWarningEnabled.value = enabled
+    }
+
+    private val _batteryDisplayEnabled =
+            MutableStateFlow(prefs.getBoolean(KEY_BATTERY_DISPLAY, false))
+    val batteryDisplayEnabled: StateFlow<Boolean> = _batteryDisplayEnabled.asStateFlow()
+
+    fun setBatteryDisplayEnabled(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_BATTERY_DISPLAY, enabled) }
+        _batteryDisplayEnabled.value = enabled
     }
 }

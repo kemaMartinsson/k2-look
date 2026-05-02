@@ -46,7 +46,8 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
             val activeRideProfile: RideProfile? = null,
             val isRiding: Boolean = false,
             val karooSyncEnabled: Boolean = true,
-            val radarWarningEnabled: Boolean = true
+            val radarWarningEnabled: Boolean = true,
+            val batteryDisplayEnabled: Boolean = false
     )
 
     init {
@@ -68,6 +69,17 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
                 .onEach { enabled ->
                     _uiState.value = _uiState.value.copy(radarWarningEnabled = enabled)
                     bridge?.setRadarWarningEnabled(enabled)
+                }
+                .launchIn(viewModelScope)
+        _uiState.value =
+                _uiState.value.copy(
+                        batteryDisplayEnabled = settingsRepository.batteryDisplayEnabled.value
+                )
+        settingsRepository
+                .batteryDisplayEnabled
+                .onEach { enabled ->
+                    _uiState.value = _uiState.value.copy(batteryDisplayEnabled = enabled)
+                    bridge?.setBatteryDisplayEnabled(enabled)
                 }
                 .launchIn(viewModelScope)
         loadProfiles()
@@ -183,6 +195,8 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
         }
         // Sync radar warning setting to bridge on connect
         bridge.setRadarWarningEnabled(_uiState.value.radarWarningEnabled)
+        // Sync battery overlay setting to bridge on connect
+        bridge.setBatteryDisplayEnabled(_uiState.value.batteryDisplayEnabled)
     }
 
     // selectScreen / addFieldToScreen / updateField / removeField / addScreen /
@@ -279,6 +293,11 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
     fun setRadarWarningEnabled(enabled: Boolean) {
         settingsRepository.setRadarWarningEnabled(enabled)
         Log.i(TAG, "Radar warning ${if (enabled) "enabled" else "disabled"}")
+    }
+
+    fun setBatteryDisplayEnabled(enabled: Boolean) {
+        settingsRepository.setBatteryDisplayEnabled(enabled)
+        Log.i(TAG, "Battery overlay ${if (enabled) "enabled" else "disabled"}")
     }
 
     companion object {

@@ -91,7 +91,7 @@ class KarooActiveLookBridge(context: Context) {
     // Cached on setActiveProfile() so observeRadar() can gate the bypass cheaply.
     private var activeProfileHasRadar = false
 
-    // ── Radar warning overlay ────────────────────────────────────────────────
+    // ── Radar warning ────────────────────────────────────────────────
     private var warningBitmapSmall: android.graphics.Bitmap? = null
     private var warningBitmapLarge: android.graphics.Bitmap? = null
     private var radarWarningEnabled: Boolean = true
@@ -138,6 +138,9 @@ class KarooActiveLookBridge(context: Context) {
                 val success = layoutService.saveAndActivateProfile(profile)
                 if (success) {
                     Log.i(TAG, "✅ Profile '${profile.name}' activated on glasses")
+                    // Battery layout is saved inside saveAndActivateProfile (slow path) and
+                    // always needs a redraw after the display was cleared.
+                    layoutService.updateBatteryDisplay(currentBatteryLevel)
                 } else {
                     Log.w(TAG, "⚠️ Failed to activate profile '${profile.name}' on glasses")
                 }
@@ -533,6 +536,7 @@ class KarooActiveLookBridge(context: Context) {
      */
     private fun observeKarooData() {
         observeSystemState() // connection, ride state, profile auto-switch
+        observeGlassesBattery()
         observeCoreMetrics() // speed, HR, cadence, power, distance, time, VAM
         observeRadar() // multi-field radar stream
         observeGeneralMetrics()
@@ -612,6 +616,9 @@ class KarooActiveLookBridge(context: Context) {
                                 )
                                 stopContinuousReconnect()
                                 resetAutoSwitch()
+                                // Battery display is gated by batteryDisplayEnabled, not ride
+                                // state.
+                                // Nothing to do here.
                             }
                 }
             }
@@ -729,7 +736,35 @@ class KarooActiveLookBridge(context: Context) {
     fun setRadarWarningEnabled(enabled: Boolean) {
         radarWarningEnabled = enabled
         radarWarningController.setEnabled(enabled)
-        Log.d(TAG, "Radar warning overlay: ${if (enabled) "enabled" else "disabled"}")
+        Log.d(TAG, "Radar warning: ${if (enabled) "enabled" else "disabled"}")
+    }
+
+    /** Trigger a simulated radar warning (debug/test use only). */
+    fun simulateRadarWarning(threatLevel: Int, closestRangeM: Float?) {
+        radarWarningController.onRadarUpdate(threatLevel, closestRangeM)
+    }
+
+    /** Directly render the large radar warning icon — bypasses TTA logic (debug/test use only). */
+    fun renderRadarWarningLargeNow() {
+        renderWarningLarge()
+    }
+
+    /** Enable or disable the glasses battery. */
+    fun setBatteryDisplayEnabled(enabled: Boolean) {
+        layoutService.batteryDisplayEnabled = enabled
+        layoutService.updateBatteryDisplay(if (enabled) currentBatteryLevel else -1)
+        Log.d(TAG, "Battery overlay: ${if (enabled) "enabled" else "disabled"}")
+    }
+
+    private var currentBatteryLevel: Int = -1
+
+    private fun observeGlassesBattery() {
+        scope.launch {
+            activeLookService.glassesBatteryLevel.collect { level ->
+                currentBatteryLevel = level
+                layoutService.updateBatteryDisplay(level)
+            }
+        }
     }
 
     private fun observeRadar() {
