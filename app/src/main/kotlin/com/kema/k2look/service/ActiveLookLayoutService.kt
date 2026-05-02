@@ -73,6 +73,12 @@ class ActiveLookLayoutService(internal val activeLookService: ActiveLookService)
      */
     private val activeIconsByZone = mutableMapOf<String, DynamicLayoutRenderer.PendingIcon>()
 
+    /**
+     * Whether to show the battery overlay. Set by [KarooActiveLookBridge.setBatteryDisplayEnabled].
+     * The overlay is driven by [updateBatteryDisplay], not the per-frame render loop.
+     */
+    var batteryDisplayEnabled: Boolean = false
+
     companion object {
         private const val TAG = "ActiveLookLayoutService"
 
@@ -86,6 +92,26 @@ class ActiveLookLayoutService(internal val activeLookService: ActiveLookService)
 
         private val zoneToLayoutId = mutableMapOf<String, Int>()
         private var nextLayoutId = LAYOUT_ID_BASE
+
+        // ── Battery dedicated layout (ID 9 — below LAYOUT_ID_BASE=10, never conflicts) ──
+        // Matches a normal font-1 ride metric zone: same x0/width as all metric zones, icon at
+        // the same viewer-left position (ICON_ABS_X + 15 for 28px icons = 275), value text at
+        // txtXWithIcon=178 (font-1 calibrated). Placed at y=203 — just below the top metric zone
+        // (3D_FULL_H: y=153 h=50 → clears up to y=203).
+        const val BATTERY_LAYOUT_ID = 9
+        private const val BATTERY_ZONE_X = 30 // same left edge as all metric zones
+        private const val BATTERY_ZONE_Y = 203
+        private const val BATTERY_ZONE_WIDTH = 244 // same width as all metric zones
+        private const val BATTERY_ZONE_HEIGHT = 30 // font-1 refHeight
+        private const val BATTERY_ZONE_TXT_X: Short = 240 // font-1 txtXWithIcon (relative to zone)
+        private const val BATTERY_ZONE_TXT_Y: Byte = 25 // font-1 calibrated txtY
+        private const val BATTERY_ICON_X: Short = 275 // ICON_ABS_X(260) + 15 for 28px icon
+        private const val BATTERY_ICON_Y: Short = 204 // y=203 + (30-28)/2 = 204 (centred in zone)
+        private const val BATTERY_ICON_ERASE_X2: Short = 302 // icon right edge (275+27)
+        private const val BATTERY_ICON_ERASE_Y2: Short = 231 // icon bottom edge (204+27)
+        private const val BATTERY_ICON_NORMAL: Byte = 0
+        private const val BATTERY_ICON_LOW: Byte = 1
+        private const val BATTERY_LOW_THRESHOLD = 10
 
         /**
          * Returns a stable layout ID for a (screenId, zoneId) pair. Using screenId in the key
@@ -356,6 +382,8 @@ class ActiveLookLayoutService(internal val activeLookService: ActiveLookService)
 
             // Icon pass: imgDisplay requires ALooK system config context.
             // Also erases icon areas for zones that had an icon last frame but no longer do.
+            // Battery has its own layout (ID 9) and is updated independently via
+            // updateBatteryDisplay().
             val zonesToErase = activeIconsByZone.keys - currentIconsByZone.keys
             if (pendingIcons.isNotEmpty() || zonesToErase.isNotEmpty()) {
                 glasses.cfgSet("ALooK")
@@ -485,7 +513,87 @@ class ActiveLookLayoutService(internal val activeLookService: ActiveLookService)
                 TAG,
                 "Layouts saved: $totalSaved / $totalExpected across ${profile.screens.size} screen(s)"
         )
+
+        // Always save the battery layout so it is available regardless of profile content.
+        saveBatteryLayout(glasses)
+        delay(COMMAND_DELAY_MS)
+
         return totalSaved == totalExpected
+    }
+
+    /**
+     * Save the battery text layout (ID [BATTERY_LAYOUT_ID]=9) inside the currently open cfgWrite
+     * context. Must be called from within [saveProfileLayouts] before [cfgSet] is issued.
+     *
+     * The layout covers only the percentage text zone (x=100, y=203, 100×30 px, font 1). The
+     * battery icon is drawn separately via [updateBatteryDisplay] using imgDisplay in ALooK
+     * context. The two elements never overlap so neither can clobber the other.
+     */
+    private fun saveBatteryLayout(glasses: Glasses) {
+        try {
+            val params =
+                    com.activelook.activelooksdk.types.LayoutParameters(
+                            BATTERY_LAYOUT_ID.toByte(),
+                            BATTERY_ZONE_X.toShort(), // x0
+                            BATTERY_ZONE_Y
+                                    .toByte(), // y0 (203 → signed byte -53; firmware treats as
+                            // unsigned 203)
+                            BATTERY_ZONE_WIDTH.toShort(), // width
+                            BATTERY_ZONE_HEIGHT.toByte(), // height
+                            15.toByte(), // fg WHITE
+                            0.toByte(), // bg BLACK
+                            1.toByte(), // font 1
+                            true, // textValid
+                            BATTERY_ZONE_TXT_X, // textX (right-aligned in 100px zone)
+                            BATTERY_ZONE_TXT_Y, // textY
+                            com.activelook.activelooksdk.types.Rotation.TOP_LR,
+                            true, // opacity — zone clear on each update
+                    )
+            glasses.layoutSave(params)
+            Log.d(TAG, "✓ Battery layout $BATTERY_LAYOUT_ID saved")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving battery layout: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Render or erase the battery overlay (icon + percentage text).
+     *
+     * - Icon at ([BATTERY_ICON_X], [BATTERY_ICON_Y]) via imgDisplay in ALooK context.
+     * - Text via [layoutClearAndDisplay] on layout [BATTERY_LAYOUT_ID] in the K2L config.
+     *
+     * Call this whenever the battery level changes or [batteryDisplayEnabled] is toggled. It is NOT
+     * called per-frame — only on change — so it never interferes with the metric render loop.
+     *
+     * @param level BLE battery level 0–100, or -1 to erase the overlay.
+     */
+    fun updateBatteryDisplay(level: Int) {
+        if (!activeLookService.isConnected) return
+        val glasses = activeLookService.getConnectedGlasses() ?: return
+        val configName = activeConfigName ?: return
+
+        if (!batteryDisplayEnabled || level < 0) {
+            // Erase icon pixels in ALooK context, then clear text zone via layout
+            glasses.cfgSet("ALooK")
+            glasses.color(0)
+            glasses.rectf(
+                    BATTERY_ICON_X,
+                    BATTERY_ICON_Y,
+                    BATTERY_ICON_ERASE_X2,
+                    BATTERY_ICON_ERASE_Y2
+            )
+            glasses.cfgSet(configName)
+            glasses.layoutClearAndDisplay(BATTERY_LAYOUT_ID.toByte(), "")
+            Log.d(TAG, "Battery overlay erased")
+            return
+        }
+
+        val iconId = if (level < BATTERY_LOW_THRESHOLD) BATTERY_ICON_LOW else BATTERY_ICON_NORMAL
+        glasses.cfgSet("ALooK")
+        glasses.imgDisplay(iconId, BATTERY_ICON_X, BATTERY_ICON_Y)
+        glasses.cfgSet(configName)
+        glasses.layoutClearAndDisplay(BATTERY_LAYOUT_ID.toByte(), "${level}%")
+        Log.d(TAG, "Battery overlay updated: $level%")
     }
 
     // ──────────────────────────────────────────────────────────────────────

@@ -65,6 +65,10 @@ class ActiveLookService(private val context: Context) {
     private val _touchEvents = MutableStateFlow(0) // Counter for touch events
     val touchEvents: StateFlow<Int> = _touchEvents.asStateFlow()
 
+    // Glasses battery level (0-100, -1 = unknown / disconnected)
+    private val _glassesBatteryLevel = MutableStateFlow(-1)
+    val glassesBatteryLevel: StateFlow<Int> = _glassesBatteryLevel.asStateFlow()
+
     /** Connection state enum */
     sealed class ConnectionState {
         data object Disconnected : ConnectionState()
@@ -324,6 +328,7 @@ class ActiveLookService(private val context: Context) {
 
                         _connectionState.value = ConnectionState.Disconnected
                         this.connectedGlasses = null
+                        _glassesBatteryLevel.value = -1
 
                         Log.w(TAG, "Connection lost - glasses disconnected")
                     }
@@ -471,6 +476,11 @@ class ActiveLookService(private val context: Context) {
                 // Touch characteristic (UUID ...CBC): capacitive button press
                 _touchEvents.value += 1
                 Log.d(TAG, "Touch event. Total: ${_touchEvents.value}")
+            }
+
+            glasses.subscribeToBatteryLevelNotifications { level ->
+                _glassesBatteryLevel.value = level
+                Log.d(TAG, "Glasses battery: $level%")
             }
 
             Log.i(
