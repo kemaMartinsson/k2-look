@@ -2,6 +2,16 @@
 
 All notable changes to K2Look will be documented in this file.
 
+## [1.0.8] - 2026-05-02
+
+### Added
+
+- Glasses battery level overlay
+  - New toggle in settings to show/hide battery level on glasses
+  - Shows battery percentage with icon in top-left corner of glasses display
+  - Automatically updates during rides and when battery level changes
+  - Icon is changed when battery level is below 10%
+
 ## [1.0.7] - 2026-04-26
 
 ### Fixed
