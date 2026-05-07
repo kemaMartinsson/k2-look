@@ -49,6 +49,7 @@ class KarooActiveLookBridge(context: Context) {
     private var autoConnectCollectionJob: Job? = null
     private var autoConnectTimeoutJob: Job? = null
     private var bluetoothRequested = false
+    private var pendingUserScanUntilKarooReady = false
 
     // Simulator mode (for Debug tab)
     internal var simulatorJob: Job? = null
@@ -394,6 +395,33 @@ class KarooActiveLookBridge(context: Context) {
             return
         }
 
+        when (resolveScanStartAction(
+                        karooConnected = karooDataService.isConnected,
+                        pendingScanUntilKarooReady = pendingUserScanUntilKarooReady
+                )
+        ) {
+            ScanStartAction.WAIT_FOR_KAROO -> {
+                pendingUserScanUntilKarooReady = true
+                Log.i(
+                        TAG,
+                        "⏳ Deferring glasses scan until Karoo service is connected (first-launch race protection)"
+                )
+                if (karooDataService.connectionState.value !is
+                                KarooDataService.ConnectionState.Connecting
+                ) {
+                    connectKaroo()
+                }
+                return
+            }
+            ScanStartAction.NO_OP_ALREADY_PENDING -> {
+                Log.i(TAG, "⏳ Glasses scan already queued; waiting for Karoo connection")
+                return
+            }
+            ScanStartAction.START_NOW -> {
+                // Continue below
+            }
+        }
+
         // Cancel any previous scan jobs (including auto-connect jobs)
         Log.i(
                 TAG,
@@ -456,7 +484,6 @@ class KarooActiveLookBridge(context: Context) {
                         )
 
                         // Wait for SCAN_ATTEMPT_DURATION_MS, checking for results
-                        val scanStartTime = System.currentTimeMillis()
                         val collectJob = launch {
                             activeLookService.discoveredGlasses.collect { glassesList ->
                                 if (glassesList.isNotEmpty() && !glassesFound) {
@@ -498,6 +525,16 @@ class KarooActiveLookBridge(context: Context) {
                         updateBridgeState()
                     }
                 }
+    }
+
+    private fun resumePendingUserScanIfNeeded() {
+        if (!pendingUserScanUntilKarooReady) return
+        pendingUserScanUntilKarooReady = false
+        scope.launch {
+            // Give the Karoo system a short moment to process RequestBluetooth.
+            delay(250)
+            startActiveLookScan()
+        }
     }
 
     /** Stop scanning for ActiveLook glasses */
@@ -580,6 +617,7 @@ class KarooActiveLookBridge(context: Context) {
                         // it
                         requestBluetooth()
                         updateBridgeState()
+                        resumePendingUserScanIfNeeded()
                     }
                     is KarooDataService.ConnectionState.Error ->
                             _bridgeState.value = BridgeState.Error("Karoo: ${state.message}")
@@ -1226,5 +1264,23 @@ class KarooActiveLookBridge(context: Context) {
         private const val SCAN_RETRY_BASE_DELAY_MS = 2_000L
         /** Maximum number of scan attempts for UI-triggered scan */
         private const val MAX_SCAN_RETRIES = 3
+    }
+}
+
+internal enum class ScanStartAction {
+    START_NOW,
+    WAIT_FOR_KAROO,
+    NO_OP_ALREADY_PENDING,
+}
+
+internal fun resolveScanStartAction(
+        karooConnected: Boolean,
+        pendingScanUntilKarooReady: Boolean
+): ScanStartAction {
+    if (karooConnected) return ScanStartAction.START_NOW
+    return if (pendingScanUntilKarooReady) {
+        ScanStartAction.NO_OP_ALREADY_PENDING
+    } else {
+        ScanStartAction.WAIT_FOR_KAROO
     }
 }

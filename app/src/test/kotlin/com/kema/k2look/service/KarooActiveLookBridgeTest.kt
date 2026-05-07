@@ -7,8 +7,8 @@ import org.junit.Test
 /**
  * Unit tests for KarooActiveLookBridge value parsing
  *
- * These tests verify the parseNumericValue function which is critical
- * for converting display strings to numeric values for gauges/bars
+ * These tests verify the parseNumericValue function which is critical for converting display
+ * strings to numeric values for gauges/bars
  */
 class KarooActiveLookBridgeValueParsingTest {
 
@@ -90,10 +90,7 @@ class KarooActiveLookBridgeValueParsingTest {
         assertEquals(1234.5f, parseNumericValue("1234.5"))
     }
 
-    /**
-     * Copy of the actual implementation from KarooActiveLookBridge
-     * for testing purposes
-     */
+    /** Copy of the actual implementation from KarooActiveLookBridge for testing purposes */
     private fun parseNumericValue(value: String): Float? {
         return when {
             value == "--" || value == "..." || value == "N/A" -> null
@@ -106,9 +103,7 @@ class KarooActiveLookBridgeValueParsingTest {
     }
 }
 
-/**
- * Unit tests for gauge percentage calculation logic
- */
+/** Unit tests for gauge percentage calculation logic */
 class GaugePercentageCalculationTest {
 
     @Test
@@ -159,9 +154,7 @@ class GaugePercentageCalculationTest {
     }
 }
 
-/**
- * Unit tests for bar fill amount calculation logic
- */
+/** Unit tests for bar fill amount calculation logic */
 class BarFillAmountCalculationTest {
 
     @Test
@@ -192,10 +185,10 @@ class BarFillAmountCalculationTest {
     }
 
     private fun calculateFillAmount(
-        value: Float,
-        minValue: Float,
-        maxValue: Float,
-        dimension: Int
+            value: Float,
+            minValue: Float,
+            maxValue: Float,
+            dimension: Int
     ): Int {
         val range = maxValue - minValue
         val normalized = ((value - minValue) / range).coerceIn(0f, 1f)
@@ -203,3 +196,29 @@ class BarFillAmountCalculationTest {
     }
 }
 
+class KarooActiveLookBridgeScanStartPolicyTest {
+
+    @Test
+    fun `resolveScanStartAction starts scan immediately when karoo is connected`() {
+        val action =
+                resolveScanStartAction(karooConnected = true, pendingScanUntilKarooReady = false)
+
+        assertEquals(ScanStartAction.START_NOW, action)
+    }
+
+    @Test
+    fun `resolveScanStartAction queues scan when karoo is disconnected and no pending request`() {
+        val action =
+                resolveScanStartAction(karooConnected = false, pendingScanUntilKarooReady = false)
+
+        assertEquals(ScanStartAction.WAIT_FOR_KAROO, action)
+    }
+
+    @Test
+    fun `resolveScanStartAction avoids duplicate queue when request already pending`() {
+        val action =
+                resolveScanStartAction(karooConnected = false, pendingScanUntilKarooReady = true)
+
+        assertEquals(ScanStartAction.NO_OP_ALREADY_PENDING, action)
+    }
+}
