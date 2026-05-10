@@ -101,6 +101,8 @@ class KarooActiveLookBridge(context: Context) {
     private var reconnectStartTime = 0L
     private var lastConnectedGlassesAddress: String? = null
     private var isInActiveRide = false
+    private var pendingRideStartCountdown = false
+    private var rideStartCountdownJob: Job? = null
     private val reconnectIntervalMs = 15000L // Try reconnect every 15 seconds
 
     // Add a lightweight heartbeat for idle logging (prevents logcat spam)
@@ -637,13 +639,21 @@ class KarooActiveLookBridge(context: Context) {
                 isInActiveRide = state is RideState.Recording
                 when (state) {
                     is RideState.Recording -> {
-                        if (_bridgeState.value == BridgeState.FullyConnected) startStreaming()
                         if (!wasInActiveRide) {
+                            pendingRideStartCountdown = true
                             Log.i(
                                     TAG,
-                                    "Entered active ride - starting continuous reconnect monitoring"
+                                    "Entered active ride - starting countdown and reconnect monitoring"
                             )
                             startContinuousReconnect()
+                            if (_bridgeState.value == BridgeState.FullyConnected) {
+                                playRideStartCountdownThenStartStreaming()
+                            }
+                        } else if (_bridgeState.value == BridgeState.FullyConnected &&
+                                        rideStartCountdownJob?.isActive != true &&
+                                        !pendingRideStartCountdown
+                        ) {
+                            startStreaming()
                         }
                     }
                     else ->
@@ -654,6 +664,9 @@ class KarooActiveLookBridge(context: Context) {
                                 )
                                 stopContinuousReconnect()
                                 resetAutoSwitch()
+                                pendingRideStartCountdown = false
+                                rideStartCountdownJob?.cancel()
+                                rideStartCountdownJob = null
                                 // Battery display is gated by batteryDisplayEnabled, not ride
                                 // state.
                                 // Nothing to do here.
@@ -894,8 +907,10 @@ class KarooActiveLookBridge(context: Context) {
                         }
 
                         updateBridgeState()
-                        // If Karoo is also connected and riding, start streaming
-                        if (karooDataService.isConnected) {
+                        // If a ride has just started, play countdown first, then show layout.
+                        if (isInActiveRide && pendingRideStartCountdown) {
+                            playRideStartCountdownThenStartStreaming()
+                        } else if (karooDataService.isConnected) {
                             startStreaming()
                         }
                     }
@@ -1096,6 +1111,8 @@ class KarooActiveLookBridge(context: Context) {
 
         stopStreaming()
         stopContinuousReconnect()
+        rideStartCountdownJob?.cancel()
+        rideStartCountdownJob = null
         autoConnectCollectionJob?.cancel()
         autoConnectTimeoutJob?.cancel()
         releaseBluetooth()
@@ -1145,6 +1162,55 @@ class KarooActiveLookBridge(context: Context) {
         }
         reconnectJob?.cancel()
         reconnectJob = null
+    }
+
+    private fun playRideStartCountdownThenStartStreaming() {
+        if (rideStartCountdownJob?.isActive == true) return
+
+        rideStartCountdownJob =
+                scope.launch {
+                    if (_bridgeState.value != BridgeState.FullyConnected ||
+                                    !activeLookService.isConnected
+                    ) {
+                        return@launch
+                    }
+
+                    val glasses = activeLookService.getConnectedGlasses() ?: return@launch
+                    val configToRestore = layoutService.activeConfigName
+
+                    stopStreaming()
+                    pendingRideStartCountdown = false
+
+                    try {
+                        Log.i(TAG, "▶ Playing ride-start animation: 6_countdown_x_76_y_56")
+                        glasses.cfgSet("ALooK")
+                        glasses.clear()
+                        glasses.animDisplay(
+                                RIDE_START_COUNTDOWN_HANDLER_ID,
+                                RIDE_START_COUNTDOWN_ANIM_ID,
+                                RIDE_START_COUNTDOWN_FRAME_DELAY_MS,
+                                RIDE_START_COUNTDOWN_REPEAT,
+                                RIDE_START_COUNTDOWN_X,
+                                RIDE_START_COUNTDOWN_Y
+                        )
+                        delay(RIDE_START_COUNTDOWN_DURATION_MS)
+                        glasses.animClear(RIDE_START_COUNTDOWN_HANDLER_ID)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Ride-start countdown animation failed: ${e.message}", e)
+                    }
+
+                    try {
+                        configToRestore?.let { glasses.cfgSet(it) }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed to restore profile config after countdown: ${e.message}")
+                    }
+
+                    if (isInActiveRide && _bridgeState.value == BridgeState.FullyConnected) {
+                        currentData.isDirty = true
+                        flushToGlasses()
+                        startStreaming()
+                    }
+                }
     }
 
     // ========== GAUGE & BAR VISUALIZATION ==========
@@ -1345,6 +1411,16 @@ class KarooActiveLookBridge(context: Context) {
         private const val SCAN_RETRY_BASE_DELAY_MS = 2_000L
         /** Maximum number of scan attempts for UI-triggered scan */
         private const val MAX_SCAN_RETRIES = 3
+
+        // ActiveLook visual asset: 6_countdown_x_76_y_56
+        private const val RIDE_START_COUNTDOWN_ANIM_ID: Byte = 6
+        private const val RIDE_START_COUNTDOWN_HANDLER_ID: Byte = 106
+        private const val RIDE_START_COUNTDOWN_X: Short = 76
+        private const val RIDE_START_COUNTDOWN_Y: Short = 56
+        private const val RIDE_START_COUNTDOWN_FRAME_DELAY_MS: Short = 80
+        private const val RIDE_START_COUNTDOWN_REPEAT: Byte = 1
+        // Source GIF duration is 2960 ms; small guard to ensure final frame has cleared.
+        private const val RIDE_START_COUNTDOWN_DURATION_MS = 3100L
     }
 }
 
