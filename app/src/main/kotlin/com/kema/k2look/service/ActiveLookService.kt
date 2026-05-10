@@ -264,7 +264,6 @@ class ActiveLookService(private val context: Context) {
                         Log.i(TAG, "=========================")
 
                         this.connectedGlasses = connectedGlasses
-                        _connectionState.value = ConnectionState.Connected(connectedGlasses)
 
                         // Subscribe to sensor interface notifications (gesture & touch events)
                         setupGestureAndTouchListeners(connectedGlasses)
@@ -279,6 +278,9 @@ class ActiveLookService(private val context: Context) {
                         // disconnect while the logo is still displayed.
                         serviceScope.launch(Dispatchers.IO) {
                             try {
+                                // Keep state as Connecting until splash init is complete so
+                                // bridge/profile rendering cannot race and draw stale text before
+                                // the logo animation starts.
                                 // Brief delay for firmware startup, then clear boot screen.
                                 delay(500)
                                 connectedGlasses.clear()
@@ -289,9 +291,12 @@ class ActiveLookService(private val context: Context) {
                                 delay(500)
                                 connectedGlasses.clear()
 
+                                _connectionState.value = ConnectionState.Connected(connectedGlasses)
+
                                 Log.i(TAG, "✓ Connection established successfully")
                             } catch (e: Exception) {
                                 Log.w(TAG, "Post-connect init failed: ${e.message}")
+                                _connectionState.value = ConnectionState.Connected(connectedGlasses)
                             }
                         }
                     },
