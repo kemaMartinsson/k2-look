@@ -73,7 +73,8 @@ private fun KarooActiveLookBridge.pushSimulatedFrame(tick: Int) {
                     ?.map { it.dataField.id }
                     ?.distinct()
                     ?.takeIf { it.isNotEmpty() }
-                    ?: listOf(
+                    ?.toMutableSet()
+                    ?: mutableSetOf(
                             1,
                             2,
                             4,
@@ -81,6 +82,10 @@ private fun KarooActiveLookBridge.pushSimulatedFrame(tick: Int) {
                             12,
                             18
                     ) // fallback: time, distance, HR, power, speed, cadence
+
+    // Zoned overlays depend on base metrics (HR/Power) even when only zone fields are selected.
+    if (47 in fieldIds) fieldIds.add(4)
+    if (48 in fieldIds) fieldIds.add(7)
 
     for (id in fieldIds) {
         applySimulatedValue(id, tick)

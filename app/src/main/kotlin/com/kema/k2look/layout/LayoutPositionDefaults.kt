@@ -80,7 +80,7 @@ object LayoutPositionDefaults {
                                         fontId = 2.toByte(),
                                         txtY = 35.toByte(),
                                         rotation = Rotation.TOP_LR,
-                                        unitY = 38.toShort(),
+                                        unitY = 40.toShort(),
                                         refHeight = 35,
                                         txtXWithIcon = 208,
                                 ),
@@ -130,7 +130,7 @@ object LayoutPositionDefaults {
                         "km/h" to 165.toShort(), // 4 chars, ~50px — calibrated
                         "bpm" to 165.toShort(), // 3 chars, ~42px — calibrated
                         "rpm" to 165.toShort(), // 3 chars, ~38px
-                        "w" to 150.toShort(), // 1 char,  ~16px
+                        "w" to 148.toShort(), // 1 char,  ~16px
                         "m" to 150.toShort(), // 1 char,  ~16px
                         "%" to 178.toShort(), // 1 char,  ~14px
                         "z" to 180.toShort(), // 1 char,  ~11px (zone label)
