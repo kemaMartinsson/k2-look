@@ -425,7 +425,7 @@ class ActiveLookLayoutService(internal val activeLookService: ActiveLookService)
     }
 
     private fun stripTrailingUnit(value: String, unit: String): String {
-        if (unit.isEmpty() || value == "--" || value == "..." || value == "N/A") {
+        if (unit.isEmpty() || value == "--" || value == "..." || value == "n/a") {
             return value
         }
         val suffix = " $unit"

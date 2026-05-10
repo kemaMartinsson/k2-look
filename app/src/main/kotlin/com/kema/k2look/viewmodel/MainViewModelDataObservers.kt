@@ -295,7 +295,7 @@ private fun formatStreamData(streamState: StreamState?, unit: String): String {
         }
         is StreamState.Searching -> "Searching..."
         is StreamState.Idle -> "-- $unit"
-        is StreamState.NotAvailable -> "N/A"
+        is StreamState.NotAvailable -> "n/a"
         null -> "-- $unit"
     }
 }
@@ -316,7 +316,7 @@ private fun formatTimeData(streamState: StreamState?): String {
         }
         is StreamState.Searching -> "--:--:--"
         is StreamState.Idle -> "--:--:--"
-        is StreamState.NotAvailable -> "N/A"
+        is StreamState.NotAvailable -> "n/a"
         null -> "--:--:--"
     }
 }
@@ -337,7 +337,7 @@ private fun formatStreamDataInt(streamState: StreamState?, unit: String): String
                 streamState.dataPoint.singleValue?.let { "%.0f $unit".format(it) } ?: "-- $unit"
         is StreamState.Searching -> "Searching..."
         is StreamState.Idle -> "-- $unit"
-        is StreamState.NotAvailable -> "N/A"
+        is StreamState.NotAvailable -> "n/a"
         null -> "-- $unit"
     }
 }

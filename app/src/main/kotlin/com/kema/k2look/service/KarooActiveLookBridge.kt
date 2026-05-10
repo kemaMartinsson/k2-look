@@ -1299,7 +1299,7 @@ class KarooActiveLookBridge(context: Context) {
     /** Parse numeric value from display string (removes units, handles special cases) */
     private fun parseNumericValue(value: String): Float? {
         return when {
-            value == "--" || value == "..." || value == "N/A" -> null
+            value == "--" || value == "..." || value == "n/a" -> null
             else -> {
                 // Remove common units and parse
                 val cleaned = value.replace(Regex("[^0-9.-]"), "")

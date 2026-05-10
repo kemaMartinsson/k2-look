@@ -201,7 +201,7 @@ object MetricFormatter {
             }
 
             MetricState.SEARCHING -> "Searching..."
-            MetricState.NOT_AVAILABLE -> "N/A"
+            MetricState.NOT_AVAILABLE -> "n/a"
             MetricState.IDLE -> "--$unitStr"
         }
     }
@@ -220,7 +220,7 @@ object MetricFormatter {
             }
 
             MetricState.SEARCHING -> "Searching..."
-            MetricState.NOT_AVAILABLE -> "N/A"
+            MetricState.NOT_AVAILABLE -> "n/a"
             MetricState.IDLE -> "--"
         }
     }
