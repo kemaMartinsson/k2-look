@@ -706,14 +706,14 @@ class KarooActiveLookBridge(context: Context) {
     private fun getWarningBitmapSmall(): android.graphics.Bitmap =
             warningBitmapSmall
                     ?: android.graphics.BitmapFactory.decodeStream(
-                                    context.assets.open("warning_white_28.png")
+                                    context.assets.open("radar_white_28.png")
                             )
                             .also { warningBitmapSmall = it }
 
     private fun getWarningBitmapLarge(): android.graphics.Bitmap =
             warningBitmapLarge
                     ?: android.graphics.BitmapFactory.decodeStream(
-                                    context.assets.open("warning_white_40.png")
+                                    context.assets.open("radar_white_40.png")
                             )
                             .also { warningBitmapLarge = it }
 
@@ -1341,11 +1341,13 @@ class KarooActiveLookBridge(context: Context) {
     }
 
     private fun resolveZonedBarOverlayValue(field: com.kema.k2look.model.LayoutDataField): String {
-        return when (field.dataField.id) {
-            47 -> currentData.heartRate
-            48 -> currentData.power
-            else -> currentData.valueFor(field.dataField.id)
-        }
+        val raw =
+                when (field.dataField.id) {
+                    47 -> currentData.heartRate
+                    48 -> currentData.power
+                    else -> currentData.valueFor(field.dataField.id)
+                }
+        return parseNumericValue(raw)?.let { "%.0f".format(it) } ?: raw
     }
 
     private fun resolveZonedBarSourceMetricId(

@@ -214,3 +214,27 @@ internal fun formatStreamDataInt(streamState: StreamState?, unit: String): Strin
             is StreamState.NotAvailable -> "n/a"
             null -> "-- $unit"
         }
+
+/** Speed stream from Karoo is m/s; convert to km/h for display. */
+internal fun formatSpeedDataKmh(streamState: StreamState?): String =
+        when (streamState) {
+            is StreamState.Streaming ->
+                    streamState.dataPoint.singleValue?.let { "%.0f km/h".format(it * 3.6) }
+                            ?: "-- km/h"
+            is StreamState.Searching -> "..."
+            is StreamState.Idle -> "-- km/h"
+            is StreamState.NotAvailable -> "n/a"
+            null -> "-- km/h"
+        }
+
+/** Distance stream from Karoo is meters; convert to km for display. */
+internal fun formatDistanceDataKm(streamState: StreamState?): String =
+        when (streamState) {
+            is StreamState.Streaming ->
+                    streamState.dataPoint.singleValue?.let { "${formatValue(it / 1000.0)} km" }
+                            ?: "-- km"
+            is StreamState.Searching -> "..."
+            is StreamState.Idle -> "-- km"
+            is StreamState.NotAvailable -> "n/a"
+            null -> "-- km"
+        }

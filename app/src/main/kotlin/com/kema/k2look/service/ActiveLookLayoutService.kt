@@ -195,6 +195,17 @@ class ActiveLookLayoutService(internal val activeLookService: ActiveLookService)
             delay(1000)
         }
 
+        // Explicitly remove any previous config with the same name before rewriting.
+        // This guarantees stale definitions in a reused config namespace are dropped.
+        try {
+            glasses.cfgDelete(configName)
+            delay(COMMAND_DELAY_MS)
+            Log.d(TAG, "Deleted previous config '$configName' before cfgWrite")
+        } catch (e: Exception) {
+            // If config does not exist yet, delete may fail on some firmware; continue.
+            Log.d(TAG, "cfgDelete('$configName') skipped: ${e.message}")
+        }
+
         // ── Open config for writing ────────────────────────────────────────
         glasses.cfgWrite(configName, version.toInt(), 0)
         delay(COMMAND_DELAY_MS * 2)

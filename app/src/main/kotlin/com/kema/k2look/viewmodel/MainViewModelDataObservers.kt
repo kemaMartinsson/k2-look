@@ -3,6 +3,8 @@ package com.kema.k2look.viewmodel
 import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.kema.k2look.service.ActiveLookService
+import com.kema.k2look.service.formatDistanceDataKm
+import com.kema.k2look.service.formatSpeedDataKmh
 import io.hammerhead.karooext.models.RideState
 import io.hammerhead.karooext.models.StreamState
 import io.hammerhead.karooext.models.UserProfile
@@ -124,21 +126,21 @@ internal fun MainViewModel.observeKarooData() {
     // Observe speed data
     viewModelScope.launch {
         karooDataService.speedData.collect { streamState ->
-            _uiState.value = _uiState.value.copy(speed = formatStreamData(streamState, "km/h"))
+            _uiState.value = _uiState.value.copy(speed = formatUiSpeedDataKmh(streamState))
         }
     }
 
     // Observe average speed data
     viewModelScope.launch {
         karooDataService.averageSpeedData.collect { streamState ->
-            _uiState.value = _uiState.value.copy(avgSpeed = formatStreamData(streamState, "km/h"))
+            _uiState.value = _uiState.value.copy(avgSpeed = formatUiSpeedDataKmh(streamState))
         }
     }
 
     // Observe max speed data
     viewModelScope.launch {
         karooDataService.maxSpeedData.collect { streamState ->
-            _uiState.value = _uiState.value.copy(maxSpeed = formatStreamData(streamState, "km/h"))
+            _uiState.value = _uiState.value.copy(maxSpeed = formatUiSpeedDataKmh(streamState))
         }
     }
 
@@ -212,7 +214,7 @@ internal fun MainViewModel.observeKarooData() {
     // Observe distance data
     viewModelScope.launch {
         karooDataService.distanceData.collect { streamState ->
-            _uiState.value = _uiState.value.copy(distance = formatStreamData(streamState, "km"))
+            _uiState.value = _uiState.value.copy(distance = formatUiDistanceDataKm(streamState))
         }
     }
 
@@ -299,6 +301,12 @@ private fun formatStreamData(streamState: StreamState?, unit: String): String {
         null -> "-- $unit"
     }
 }
+
+internal fun formatUiSpeedDataKmh(streamState: StreamState?): String =
+        formatSpeedDataKmh(streamState)
+
+internal fun formatUiDistanceDataKm(streamState: StreamState?): String =
+        formatDistanceDataKm(streamState)
 
 /** Format time data (convert ms to HH:MM:SS) */
 private fun formatTimeData(streamState: StreamState?): String {
