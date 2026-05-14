@@ -693,14 +693,14 @@ class KarooActiveLookBridge(context: Context) {
     private fun getWarningBitmapSmall(): android.graphics.Bitmap =
             warningBitmapSmall
                     ?: android.graphics.BitmapFactory.decodeStream(
-                                    context.assets.open("warning_white_28.png")
+                                    context.assets.open("radar_white_28.png")
                             )
                             .also { warningBitmapSmall = it }
 
     private fun getWarningBitmapLarge(): android.graphics.Bitmap =
             warningBitmapLarge
                     ?: android.graphics.BitmapFactory.decodeStream(
-                                    context.assets.open("warning_white_40.png")
+                                    context.assets.open("radar_white_40.png")
                             )
                             .also { warningBitmapLarge = it }
 
