@@ -1275,11 +1275,13 @@ class KarooActiveLookBridge(context: Context) {
     }
 
     private fun resolveZonedBarOverlayValue(field: com.kema.k2look.model.LayoutDataField): String {
-        return when (field.dataField.id) {
-            47 -> currentData.heartRate
-            48 -> currentData.power
-            else -> currentData.valueFor(field.dataField.id)
-        }
+        val raw =
+                when (field.dataField.id) {
+                    47 -> currentData.heartRate
+                    48 -> currentData.power
+                    else -> currentData.valueFor(field.dataField.id)
+                }
+        return parseNumericValue(raw)?.let { "%.0f".format(it) } ?: raw
     }
 
     private fun resolveZonedBarSourceMetricId(

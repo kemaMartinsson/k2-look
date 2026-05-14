@@ -231,11 +231,13 @@ fun ActiveLookLayoutService.displayZoneCircles(
         // Clear the zone area — extend 24px above y0 so any label drawn above the zone
         // boundary (possible when txtY = cy-24 < y0 for short zones) is also erased.
         val eraseY0 = (geometry.y0 - 24).coerceAtLeast(0).toShort()
+        val eraseX0 = (geometry.x0 - 24).coerceAtLeast(0).toShort()
+        val eraseX2 = (geometry.x0 + geometry.width + 24).coerceAtMost(303).toShort()
         glasses.color(0)
         glasses.rectf(
-                geometry.x0.toShort(),
+                eraseX0,
                 eraseY0,
-                (geometry.x0 + geometry.width).toShort(),
+                eraseX2,
                 (geometry.y0 + geometry.height).toShort(),
         )
 
@@ -249,13 +251,13 @@ fun ActiveLookLayoutService.displayZoneCircles(
                 outlineCircle(glasses, cx, cy, rActive)
                 if (isHeartRateMode && overlayText != null) {
                     val hrText = overlayText
-                    val txtX = (cx + 17).toShort()
+                    val txtX = (cx + 16).toShort()
                     val txtYCenter = (cy + 10).toShort()
                     glasses.txt(txtX, txtYCenter, Rotation.TOP_LR, 1.toByte(), 15.toByte(), hrText)
                 }
             } else {
                 // Non-active zones are always visible.
-                glasses.color(2)
+                glasses.color(6)
                 outlineCircle(glasses, cx, cy, if (isHeartRateMode) rInactive else r)
             }
         }
