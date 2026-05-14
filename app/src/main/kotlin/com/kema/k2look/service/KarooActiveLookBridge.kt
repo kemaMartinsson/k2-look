@@ -635,42 +635,37 @@ class KarooActiveLookBridge(context: Context) {
             karooDataService.rideState.collect { state ->
                 currentData.rideState = state
                 currentData.isDirty = true
+                val previousRideState = if (isInActiveRide) RideState.Recording else RideState.Idle
                 val wasInActiveRide = isInActiveRide
-                isInActiveRide = state is RideState.Recording
-                when (state) {
-                    is RideState.Recording -> {
-                        if (!wasInActiveRide) {
-                            pendingRideStartCountdown = true
-                            Log.i(
-                                    TAG,
-                                    "Entered active ride - starting countdown and reconnect monitoring"
-                            )
-                            startContinuousReconnect()
-                            if (_bridgeState.value == BridgeState.FullyConnected) {
-                                playRideStartCountdownThenStartStreaming()
-                            }
-                        } else if (_bridgeState.value == BridgeState.FullyConnected &&
-                                        rideStartCountdownJob?.isActive != true &&
-                                        !pendingRideStartCountdown
-                        ) {
-                            startStreaming()
+                isInActiveRide = state !is RideState.Idle
+                when {
+                    shouldTriggerRideStartCountdown(previousRideState, state) -> {
+                        pendingRideStartCountdown = true
+                        Log.i(
+                                TAG,
+                                "Entered active ride - starting countdown and reconnect monitoring"
+                        )
+                        startContinuousReconnect()
+                        if (canPlayRideStartCountdown()) {
+                            playRideStartCountdownThenStartStreaming()
                         }
                     }
-                    else ->
-                            if (wasInActiveRide) {
-                                Log.i(
-                                        TAG,
-                                        "Exited active ride - stopping continuous reconnect monitoring"
-                                )
-                                stopContinuousReconnect()
-                                resetAutoSwitch()
-                                pendingRideStartCountdown = false
-                                rideStartCountdownJob?.cancel()
-                                rideStartCountdownJob = null
-                                // Battery display is gated by batteryDisplayEnabled, not ride
-                                // state.
-                                // Nothing to do here.
-                            }
+                    isInActiveRide &&
+                            _bridgeState.value == BridgeState.FullyConnected &&
+                            rideStartCountdownJob?.isActive != true &&
+                            !pendingRideStartCountdown -> {
+                        startStreaming()
+                    }
+                    !isInActiveRide && wasInActiveRide -> {
+                        Log.i(TAG, "Exited active ride - stopping continuous reconnect monitoring")
+                        stopContinuousReconnect()
+                        resetAutoSwitch()
+                        pendingRideStartCountdown = false
+                        rideStartCountdownJob?.cancel()
+                        rideStartCountdownJob = null
+                        // Battery display is gated by batteryDisplayEnabled, not ride state.
+                        // Nothing to do here.
+                    }
                 }
             }
         }
@@ -1169,9 +1164,11 @@ class KarooActiveLookBridge(context: Context) {
 
         rideStartCountdownJob =
                 scope.launch {
-                    if (_bridgeState.value != BridgeState.FullyConnected ||
-                                    !activeLookService.isConnected
-                    ) {
+                    if (!canPlayRideStartCountdown()) {
+                        Log.d(
+                                TAG,
+                                "Ride-start animation skipped: bridge=${_bridgeState.value} activeLookConnected=${activeLookService.isConnected}"
+                        )
                         return@launch
                     }
 
@@ -1182,6 +1179,10 @@ class KarooActiveLookBridge(context: Context) {
                     pendingRideStartCountdown = false
 
                     try {
+                        Log.i(
+                                TAG,
+                                "RIDE_START_ANIM: entering countdown branch bridge=${_bridgeState.value} karooConnected=${karooDataService.isConnected} activeLookConnected=${activeLookService.isConnected}"
+                        )
                         Log.i(TAG, "▶ Playing ride-start animation: 6_countdown_x_76_y_56")
                         glasses.cfgSet("ALooK")
                         glasses.clear()
@@ -1211,6 +1212,12 @@ class KarooActiveLookBridge(context: Context) {
                         startStreaming()
                     }
                 }
+    }
+
+    private fun canPlayRideStartCountdown(): Boolean {
+        return activeLookService.isConnected &&
+                (_bridgeState.value == BridgeState.FullyConnected ||
+                        _bridgeState.value == BridgeState.Streaming)
     }
 
     // ========== GAUGE & BAR VISUALIZATION ==========
@@ -1442,4 +1449,11 @@ internal fun resolveScanStartAction(
     } else {
         ScanStartAction.WAIT_FOR_KAROO
     }
+}
+
+internal fun shouldTriggerRideStartCountdown(
+        previousRideState: RideState,
+        newRideState: RideState
+): Boolean {
+    return previousRideState is RideState.Idle && newRideState !is RideState.Idle
 }

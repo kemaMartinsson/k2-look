@@ -577,7 +577,10 @@ class ActiveLookService(private val context: Context) {
             return
         }
 
-        // Log.i(TAG, "▶ Playing K2Look logo animation")
+        Log.i(
+                TAG,
+                "LOGO_ANIM: starting x=$x y=$y frameDelayMs=$frameDelayMs glasses=${glasses.javaClass.simpleName}@${Integer.toHexString(System.identityHashCode(glasses))}"
+        )
 
         var currentDelay = frameDelayMs
         for (index in 0..6) {

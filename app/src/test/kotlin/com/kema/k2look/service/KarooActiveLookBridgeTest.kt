@@ -1,7 +1,10 @@
 package com.kema.k2look.service
 
+import io.hammerhead.karooext.models.RideState
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -220,5 +223,43 @@ class KarooActiveLookBridgeScanStartPolicyTest {
                 resolveScanStartAction(karooConnected = false, pendingScanUntilKarooReady = true)
 
         assertEquals(ScanStartAction.NO_OP_ALREADY_PENDING, action)
+    }
+}
+
+class KarooActiveLookBridgeRideStartPolicyTest {
+
+    @Test
+    fun `entering paused ride from idle counts as active ride start`() {
+        assertTrue(shouldTriggerRideStartCountdown(RideState.Idle, RideState.Paused(auto = false)))
+    }
+
+    @Test
+    fun `entering recording ride from idle counts as active ride start`() {
+        assertTrue(shouldTriggerRideStartCountdown(RideState.Idle, RideState.Recording))
+    }
+
+    @Test
+    fun `remaining in paused ride does not retrigger countdown`() {
+        assertFalse(
+                shouldTriggerRideStartCountdown(
+                        RideState.Paused(auto = false),
+                        RideState.Paused(auto = true),
+                )
+        )
+    }
+
+    @Test
+    fun `transitioning from recording to paused does not retrigger countdown`() {
+        assertFalse(
+                shouldTriggerRideStartCountdown(
+                        RideState.Recording,
+                        RideState.Paused(auto = false),
+                )
+        )
+    }
+
+    @Test
+    fun `transitioning to idle does not trigger countdown`() {
+        assertFalse(shouldTriggerRideStartCountdown(RideState.Recording, RideState.Idle))
     }
 }
