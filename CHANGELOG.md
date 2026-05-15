@@ -2,6 +2,28 @@
 
 All notable changes to K2Look will be documented in this file.
 
+## [1.0.9] - 2026-05-15
+
+### Changed
+
+- Zone presentation
+  - Changed zone presentation to show current zone incl metric and inactive zones as smaller circles.
+- New radar warning icon
+
+### Fixed
+
+- Connect issue
+  - Fixed an issue where the app would fail to connect to glasses after new installation.  
+- Speed
+  - Fixed speed metric that was displayed in `m/s` instead of `km/h` or `mph` depending on user settings.
+- Distance
+  - Fixed distance metric that was displayed in `m` instead of `km` or `mi` depending on user settings.
+- Decimal places
+  - Fixed decimal places for metrics showing unnecessary precision.  
+    Distance now show one decimal place up till 100km, then no decimal places.
+    Other metrics show no decimal places.
+
+
 ## [1.0.8] - 2026-05-02
 
 ### Added
