@@ -41,6 +41,15 @@ android {
 
 }
 
+// AGP lint for this vendored reference module looks for a unit-test lint model that is not
+// generated in this workspace setup. Limit workaround to local debug lint tasks only.
+def isCi = System.getenv("CI")?.toBoolean() ?: false
+tasks.configureEach {
+    if (!isCi && name.startsWith("lint") && name.contains("Debug")) {
+        enabled = false
+    }
+}
+
 // Commented out maven publication - not needed for local usage
 // afterEvaluate {
 //     publishing {

@@ -58,6 +58,15 @@ android {
     // }
 }
 
+// AGP lint for this vendored reference module looks for a unit-test lint model that is not
+// generated in this workspace setup. Limit workaround to local debug lint tasks only.
+val isCi = providers.environmentVariable("CI").orNull?.toBoolean() == true
+tasks.configureEach {
+    if (!isCi && name.startsWith("lint") && name.contains("Debug")) {
+        enabled = false
+    }
+}
+
 // Commented out dokka documentation generation - not needed for local development
 // tasks.dokkaHtml.configure {
 //     moduleName = "karoo-ext"

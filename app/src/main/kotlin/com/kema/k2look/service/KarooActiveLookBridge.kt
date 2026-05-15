@@ -49,6 +49,7 @@ class KarooActiveLookBridge(context: Context) {
     private var autoConnectCollectionJob: Job? = null
     private var autoConnectTimeoutJob: Job? = null
     private var bluetoothRequested = false
+    private var pendingUserScanUntilKarooReady = false
 
     // Simulator mode (for Debug tab)
     internal var simulatorJob: Job? = null
@@ -100,6 +101,8 @@ class KarooActiveLookBridge(context: Context) {
     private var reconnectStartTime = 0L
     private var lastConnectedGlassesAddress: String? = null
     private var isInActiveRide = false
+    private var pendingRideStartCountdown = false
+    private var rideStartCountdownJob: Job? = null
     private val reconnectIntervalMs = 15000L // Try reconnect every 15 seconds
 
     // Add a lightweight heartbeat for idle logging (prevents logcat spam)
@@ -394,6 +397,33 @@ class KarooActiveLookBridge(context: Context) {
             return
         }
 
+        when (resolveScanStartAction(
+                        karooConnected = karooDataService.isConnected,
+                        pendingScanUntilKarooReady = pendingUserScanUntilKarooReady
+                )
+        ) {
+            ScanStartAction.WAIT_FOR_KAROO -> {
+                pendingUserScanUntilKarooReady = true
+                Log.i(
+                        TAG,
+                        "⏳ Deferring glasses scan until Karoo service is connected (first-launch race protection)"
+                )
+                if (karooDataService.connectionState.value !is
+                                KarooDataService.ConnectionState.Connecting
+                ) {
+                    connectKaroo()
+                }
+                return
+            }
+            ScanStartAction.NO_OP_ALREADY_PENDING -> {
+                Log.i(TAG, "⏳ Glasses scan already queued; waiting for Karoo connection")
+                return
+            }
+            ScanStartAction.START_NOW -> {
+                // Continue below
+            }
+        }
+
         // Cancel any previous scan jobs (including auto-connect jobs)
         Log.i(
                 TAG,
@@ -456,7 +486,6 @@ class KarooActiveLookBridge(context: Context) {
                         )
 
                         // Wait for SCAN_ATTEMPT_DURATION_MS, checking for results
-                        val scanStartTime = System.currentTimeMillis()
                         val collectJob = launch {
                             activeLookService.discoveredGlasses.collect { glassesList ->
                                 if (glassesList.isNotEmpty() && !glassesFound) {
@@ -498,6 +527,16 @@ class KarooActiveLookBridge(context: Context) {
                         updateBridgeState()
                     }
                 }
+    }
+
+    private fun resumePendingUserScanIfNeeded() {
+        if (!pendingUserScanUntilKarooReady) return
+        pendingUserScanUntilKarooReady = false
+        scope.launch {
+            // Give the Karoo system a short moment to process RequestBluetooth.
+            delay(250)
+            startActiveLookScan()
+        }
     }
 
     /** Stop scanning for ActiveLook glasses */
@@ -580,6 +619,7 @@ class KarooActiveLookBridge(context: Context) {
                         // it
                         requestBluetooth()
                         updateBridgeState()
+                        resumePendingUserScanIfNeeded()
                     }
                     is KarooDataService.ConnectionState.Error ->
                             _bridgeState.value = BridgeState.Error("Karoo: ${state.message}")
@@ -595,31 +635,37 @@ class KarooActiveLookBridge(context: Context) {
             karooDataService.rideState.collect { state ->
                 currentData.rideState = state
                 currentData.isDirty = true
+                val previousRideState = if (isInActiveRide) RideState.Recording else RideState.Idle
                 val wasInActiveRide = isInActiveRide
-                isInActiveRide = state is RideState.Recording
-                when (state) {
-                    is RideState.Recording -> {
-                        if (_bridgeState.value == BridgeState.FullyConnected) startStreaming()
-                        if (!wasInActiveRide) {
-                            Log.i(
-                                    TAG,
-                                    "Entered active ride - starting continuous reconnect monitoring"
-                            )
-                            startContinuousReconnect()
+                isInActiveRide = state !is RideState.Idle
+                when {
+                    shouldTriggerRideStartCountdown(previousRideState, state) -> {
+                        pendingRideStartCountdown = true
+                        Log.i(
+                                TAG,
+                                "Entered active ride - starting countdown and reconnect monitoring"
+                        )
+                        startContinuousReconnect()
+                        if (canPlayRideStartCountdown()) {
+                            playRideStartCountdownThenStartStreaming()
                         }
                     }
-                    else ->
-                            if (wasInActiveRide) {
-                                Log.i(
-                                        TAG,
-                                        "Exited active ride - stopping continuous reconnect monitoring"
-                                )
-                                stopContinuousReconnect()
-                                resetAutoSwitch()
-                                // Battery display is gated by batteryDisplayEnabled, not ride
-                                // state.
-                                // Nothing to do here.
-                            }
+                    isInActiveRide &&
+                            _bridgeState.value == BridgeState.FullyConnected &&
+                            rideStartCountdownJob?.isActive != true &&
+                            !pendingRideStartCountdown -> {
+                        startStreaming()
+                    }
+                    !isInActiveRide && wasInActiveRide -> {
+                        Log.i(TAG, "Exited active ride - stopping continuous reconnect monitoring")
+                        stopContinuousReconnect()
+                        resetAutoSwitch()
+                        pendingRideStartCountdown = false
+                        rideStartCountdownJob?.cancel()
+                        rideStartCountdownJob = null
+                        // Battery display is gated by batteryDisplayEnabled, not ride state.
+                        // Nothing to do here.
+                    }
                 }
             }
         }
@@ -655,14 +701,14 @@ class KarooActiveLookBridge(context: Context) {
     private fun getWarningBitmapSmall(): android.graphics.Bitmap =
             warningBitmapSmall
                     ?: android.graphics.BitmapFactory.decodeStream(
-                                    context.assets.open("warning_white_28.png")
+                                    context.assets.open("radar_white_28.png")
                             )
                             .also { warningBitmapSmall = it }
 
     private fun getWarningBitmapLarge(): android.graphics.Bitmap =
             warningBitmapLarge
                     ?: android.graphics.BitmapFactory.decodeStream(
-                                    context.assets.open("warning_white_40.png")
+                                    context.assets.open("radar_white_40.png")
                             )
                             .also { warningBitmapLarge = it }
 
@@ -856,8 +902,10 @@ class KarooActiveLookBridge(context: Context) {
                         }
 
                         updateBridgeState()
-                        // If Karoo is also connected and riding, start streaming
-                        if (karooDataService.isConnected) {
+                        // If a ride has just started, play countdown first, then show layout.
+                        if (isInActiveRide && pendingRideStartCountdown) {
+                            playRideStartCountdownThenStartStreaming()
+                        } else if (karooDataService.isConnected) {
                             startStreaming()
                         }
                     }
@@ -1019,9 +1067,19 @@ class KarooActiveLookBridge(context: Context) {
         val fields = mutableMapOf<String, String>()
         screen.dataFields.forEach { field ->
             val value = currentData.valueFor(field.dataField.id)
+            if ((field.visualizationType
+                            ?: VisualizationType.TEXT) ==
+                            com.kema.k2look.model.VisualizationType.ZONED_BAR &&
+                            field.zonedBar == null
+            ) {
+                Log.w(
+                        TAG,
+                        "ZONED_BAR field has null zonedBar model: metric=${field.dataField.name} id=${field.dataField.id} zone=${field.zoneId}. Re-save this field in builder."
+                )
+            }
             when (field.visualizationType ?: VisualizationType.TEXT) {
                 com.kema.k2look.model.VisualizationType.TEXT -> fields[field.zoneId] = value
-                else -> updateVisualization(field, value)
+                else -> updateVisualization(field, value, screen.id)
             }
         }
         if (fields.isNotEmpty()) {
@@ -1048,6 +1106,8 @@ class KarooActiveLookBridge(context: Context) {
 
         stopStreaming()
         stopContinuousReconnect()
+        rideStartCountdownJob?.cancel()
+        rideStartCountdownJob = null
         autoConnectCollectionJob?.cancel()
         autoConnectTimeoutJob?.cancel()
         releaseBluetooth()
@@ -1099,16 +1159,81 @@ class KarooActiveLookBridge(context: Context) {
         reconnectJob = null
     }
 
+    private fun playRideStartCountdownThenStartStreaming() {
+        if (rideStartCountdownJob?.isActive == true) return
+
+        rideStartCountdownJob =
+                scope.launch {
+                    if (!canPlayRideStartCountdown()) {
+                        Log.d(
+                                TAG,
+                                "Ride-start animation skipped: bridge=${_bridgeState.value} activeLookConnected=${activeLookService.isConnected}"
+                        )
+                        return@launch
+                    }
+
+                    val glasses = activeLookService.getConnectedGlasses() ?: return@launch
+                    val configToRestore = layoutService.activeConfigName
+
+                    stopStreaming()
+                    pendingRideStartCountdown = false
+
+                    try {
+                        Log.i(
+                                TAG,
+                                "RIDE_START_ANIM: entering countdown branch bridge=${_bridgeState.value} karooConnected=${karooDataService.isConnected} activeLookConnected=${activeLookService.isConnected}"
+                        )
+                        Log.i(TAG, "▶ Playing ride-start animation: 6_countdown_x_76_y_56")
+                        glasses.cfgSet("ALooK")
+                        glasses.clear()
+                        glasses.animDisplay(
+                                RIDE_START_COUNTDOWN_HANDLER_ID,
+                                RIDE_START_COUNTDOWN_ANIM_ID,
+                                RIDE_START_COUNTDOWN_FRAME_DELAY_MS,
+                                RIDE_START_COUNTDOWN_REPEAT,
+                                RIDE_START_COUNTDOWN_X,
+                                RIDE_START_COUNTDOWN_Y
+                        )
+                        delay(RIDE_START_COUNTDOWN_DURATION_MS)
+                        glasses.animClear(RIDE_START_COUNTDOWN_HANDLER_ID)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Ride-start countdown animation failed: ${e.message}", e)
+                    }
+
+                    try {
+                        configToRestore?.let { glasses.cfgSet(it) }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed to restore profile config after countdown: ${e.message}")
+                    }
+
+                    if (isInActiveRide && _bridgeState.value == BridgeState.FullyConnected) {
+                        currentData.isDirty = true
+                        flushToGlasses()
+                        startStreaming()
+                    }
+                }
+    }
+
+    private fun canPlayRideStartCountdown(): Boolean {
+        return activeLookService.isConnected &&
+                (_bridgeState.value == BridgeState.FullyConnected ||
+                        _bridgeState.value == BridgeState.Streaming)
+    }
+
     // ========== GAUGE & BAR VISUALIZATION ==========
 
     /** Initialize gauges for all fields in the profile that use gauge visualization */
 
     /** Update visualization (gauge or bar) with current metric value */
-    private fun updateVisualization(field: com.kema.k2look.model.LayoutDataField, value: String) {
+    private fun updateVisualization(
+            field: com.kema.k2look.model.LayoutDataField,
+            value: String,
+            screenId: Int
+    ) {
         when (field.visualizationType ?: VisualizationType.TEXT) {
             com.kema.k2look.model.VisualizationType.GAUGE -> updateGauge(field, value)
-            com.kema.k2look.model.VisualizationType.BAR -> updateProgressBar(field, value)
-            com.kema.k2look.model.VisualizationType.ZONED_BAR -> updateZonedBar(field, value)
+            com.kema.k2look.model.VisualizationType.BAR -> updateProgressBar(field, value, screenId)
+            com.kema.k2look.model.VisualizationType.ZONED_BAR -> updateZonedBar(field, screenId)
             com.kema.k2look.model.VisualizationType.TEXT -> {
                 /* handled by batch in flushWithEfficientMode */
             }
@@ -1136,7 +1261,11 @@ class KarooActiveLookBridge(context: Context) {
     }
 
     /** Update progress bar with current metric value */
-    private fun updateProgressBar(field: com.kema.k2look.model.LayoutDataField, value: String) {
+    private fun updateProgressBar(
+            field: com.kema.k2look.model.LayoutDataField,
+            value: String,
+            screenId: Int
+    ) {
         val bar = field.progressBar ?: return
 
         // Parse numeric value
@@ -1147,40 +1276,105 @@ class KarooActiveLookBridge(context: Context) {
         }
 
         // Render bar at the field's actual template zone position
-        scope.launch { layoutService.displayBarAtZone(bar, numericValue, field.zoneId) }
+        scope.launch { layoutService.displayBarAtZone(bar, numericValue, field.zoneId, screenId) }
 
         Log.d(TAG, "Bar ${bar.id}: ${field.dataField.name} = $numericValue")
     }
 
     /** Update zoned progress bar with current metric value */
-    private fun updateZonedBar(field: com.kema.k2look.model.LayoutDataField, value: String) {
-        val zonedBar = field.zonedBar ?: return
+    private fun updateZonedBar(field: com.kema.k2look.model.LayoutDataField, screenId: Int) {
+        val zonedBar =
+                field.zonedBar
+                        ?: run {
+                            Log.w(
+                                    TAG,
+                                    "Skipping zoned render: zonedBar is null for metric=${field.dataField.name} id=${field.dataField.id} zone=${field.zoneId}"
+                            )
+                            return
+                        }
+
+        val sourceMetricId = resolveZonedBarSourceMetricId(field, zonedBar)
+        val sourceValue = currentData.valueFor(sourceMetricId)
+        val activeZoneIndex = resolveZonedBarActiveZoneIndex(field, sourceValue)
+        val overlayValue = resolveZonedBarOverlayValue(field)
 
         // Parse numeric value
-        val numericValue = parseNumericValue(value)
+        val numericValue = parseNumericValue(sourceValue)
         if (numericValue == null) {
-            Log.d(TAG, "Cannot update zoned bar: non-numeric value '$value'")
+            Log.d(
+                    TAG,
+                    "Cannot update zoned bar: non-numeric value '$sourceValue' for metric $sourceMetricId (field=${field.dataField.name} id=${field.dataField.id} zone=${field.zoneId})"
+            )
             return
         }
 
         // Render zone circles at the field's actual template zone position.
         // Respect showIcon so toggling the icon off also removes it from zone circles.
-        val iconId = if (field.showIcon) field.dataField.icon28 else null
+        val iconId =
+                if (field.showIcon && sourceMetricId != 4 && sourceMetricId != 47)
+                        field.dataField.icon28
+                else null
         scope.launch {
-            layoutService.displayZoneCircles(zonedBar, numericValue, field.zoneId, iconId)
+            layoutService.displayZoneCircles(
+                    zonedBar,
+                    numericValue,
+                    field.zoneId,
+                    screenId,
+                    iconId,
+                    sourceMetricId,
+                    activeZoneIndex,
+                    overlayValue
+            )
         }
 
-        val currentZone = zonedBar.findZone(numericValue)
+        val currentZone =
+                if (activeZoneIndex != null) zonedBar.zones.getOrNull(activeZoneIndex - 1)
+                else zonedBar.findZone(numericValue)
         Log.d(
                 TAG,
-                "Zoned bar ${zonedBar.bar.id}: ${field.dataField.name} = $numericValue (${currentZone?.name ?: "?"})"
+                "Zoned bar ${zonedBar.bar.id}: ${field.dataField.name} source=$sourceMetricId = $sourceValue active=${currentZone?.name ?: "?"} overlay=$overlayValue"
         )
+    }
+
+    private fun resolveZonedBarActiveZoneIndex(
+            field: com.kema.k2look.model.LayoutDataField,
+            sourceValue: String
+    ): Int? {
+        return when (field.dataField.id) {
+            47 -> sourceValue.removePrefix("Z").toIntOrNull()
+            48 -> sourceValue.removePrefix("Z").toIntOrNull()
+            else -> null
+        }
+    }
+
+    private fun resolveZonedBarOverlayValue(field: com.kema.k2look.model.LayoutDataField): String {
+        val raw =
+                when (field.dataField.id) {
+                    47 -> currentData.heartRate
+                    48 -> currentData.power
+                    else -> currentData.valueFor(field.dataField.id)
+                }
+        return parseNumericValue(raw)?.let { "%.0f".format(it) } ?: raw
+    }
+
+    private fun resolveZonedBarSourceMetricId(
+            field: com.kema.k2look.model.LayoutDataField,
+            zonedBar: com.kema.k2look.model.ZonedProgressBar
+    ): Int {
+        val fieldId = field.dataField.id
+        val barId = zonedBar.bar.dataField.id
+        return when {
+            fieldId == 47 || barId == 47 -> 47
+            fieldId == 48 || barId == 48 -> 48
+            barId > 0 -> barId
+            else -> fieldId
+        }
     }
 
     /** Parse numeric value from display string (removes units, handles special cases) */
     private fun parseNumericValue(value: String): Float? {
         return when {
-            value == "--" || value == "..." || value == "N/A" -> null
+            value == "--" || value == "..." || value == "n/a" -> null
             else -> {
                 // Remove common units and parse
                 val cleaned = value.replace(Regex("[^0-9.-]"), "")
@@ -1226,5 +1420,40 @@ class KarooActiveLookBridge(context: Context) {
         private const val SCAN_RETRY_BASE_DELAY_MS = 2_000L
         /** Maximum number of scan attempts for UI-triggered scan */
         private const val MAX_SCAN_RETRIES = 3
+
+        // ActiveLook visual asset: 6_countdown_x_76_y_56
+        private const val RIDE_START_COUNTDOWN_ANIM_ID: Byte = 6
+        private const val RIDE_START_COUNTDOWN_HANDLER_ID: Byte = 106
+        private const val RIDE_START_COUNTDOWN_X: Short = 76
+        private const val RIDE_START_COUNTDOWN_Y: Short = 56
+        private const val RIDE_START_COUNTDOWN_FRAME_DELAY_MS: Short = 80
+        private const val RIDE_START_COUNTDOWN_REPEAT: Byte = 1
+        // Source GIF duration is 2960 ms; small guard to ensure final frame has cleared.
+        private const val RIDE_START_COUNTDOWN_DURATION_MS = 3100L
     }
+}
+
+internal enum class ScanStartAction {
+    START_NOW,
+    WAIT_FOR_KAROO,
+    NO_OP_ALREADY_PENDING,
+}
+
+internal fun resolveScanStartAction(
+        karooConnected: Boolean,
+        pendingScanUntilKarooReady: Boolean
+): ScanStartAction {
+    if (karooConnected) return ScanStartAction.START_NOW
+    return if (pendingScanUntilKarooReady) {
+        ScanStartAction.NO_OP_ALREADY_PENDING
+    } else {
+        ScanStartAction.WAIT_FOR_KAROO
+    }
+}
+
+internal fun shouldTriggerRideStartCountdown(
+        previousRideState: RideState,
+        newRideState: RideState
+): Boolean {
+    return previousRideState is RideState.Idle && newRideState !is RideState.Idle
 }

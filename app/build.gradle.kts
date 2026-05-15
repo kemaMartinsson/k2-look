@@ -151,11 +151,23 @@ android {
         compose = true
         buildConfig = true
     }
+    lint {
+        checkDependencies = false
+    }
     testOptions {
         unitTests.isReturnDefaultValues = true
         unitTests.all {
             it.reports.junitXml.required.set(true)
         }
+    }
+}
+
+// Local workspace workaround: AGP lint currently fails while resolving lint models from included
+// reference modules. Limit the workaround to local debug lint tasks only.
+val isCi = providers.environmentVariable("CI").orNull?.toBoolean() == true
+tasks.configureEach {
+    if (!isCi && name.startsWith("lint") && name.contains("Debug")) {
+        enabled = false
     }
 }
 

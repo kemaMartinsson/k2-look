@@ -7,8 +7,8 @@ import android.util.Log
  *
  * Receives radar data updates from [KarooActiveLookBridge] and transitions between:
  * - [State.HIDDEN] — no vehicle detected
- * - [State.VISIBLE_SMALL] — vehicle detected; warning_white_28 shown
- * - [State.VISIBLE_LARGE] — vehicle within [TTA_THRESHOLD_S] seconds; warning_white_40 shown
+ * - [State.VISIBLE_SMALL] — vehicle detected; radar_white_28 shown
+ * - [State.VISIBLE_LARGE] — vehicle within [TTA_THRESHOLD_S] seconds; radar_white_40 shown
  *
  * Render/erase is delegated to injected lambdas — no direct BLE or asset access here. All
  * transitions are synchronous within the calling coroutine; no background job is needed. * ⚠️ NOT

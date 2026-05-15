@@ -33,13 +33,19 @@ fun ActiveLookLayoutService.displayBarAtZone(
         bar: ProgressBar,
         currentValue: Float,
         zoneId: String,
+        screenId: Int,
 ) {
     if (!activeLookService.isConnected) return
     val glasses = activeLookService.getConnectedGlasses() ?: return
+    val geometryKey = "$screenId:$zoneId"
     val geometry =
-            screenGeometry[zoneId]
-                    ?: run {
-                        Log.w(TAG_VIS, "displayBarAtZone: no geometry for zone $zoneId — skipping")
+            screenGeometry[geometryKey]
+                    ?: screenGeometry[zoneId]
+                            ?: run {
+                        Log.w(
+                                TAG_VIS,
+                                "displayBarAtZone: no geometry for zone $zoneId (screen=$screenId key=$geometryKey) — skipping"
+                        )
                         return
                     }
 
@@ -165,16 +171,22 @@ fun ActiveLookLayoutService.displayZoneCircles(
         zonedBar: ZonedProgressBar,
         currentValue: Float,
         zoneId: String,
+        screenId: Int,
         iconId: Int?,
+        sourceMetricId: Int? = null,
+        activeZoneIndexOverride: Int? = null,
+        overlayText: String? = null,
 ) {
     if (!activeLookService.isConnected) return
     val glasses = activeLookService.getConnectedGlasses() ?: return
+    val geometryKey = "$screenId:$zoneId"
     val geometry =
-            screenGeometry[zoneId]
-                    ?: run {
+            screenGeometry[geometryKey]
+                    ?: screenGeometry[zoneId]
+                            ?: run {
                         Log.w(
                                 TAG_VIS,
-                                "displayZoneCircles: no geometry for zone $zoneId — skipping"
+                                "displayZoneCircles: no geometry for zone $zoneId (screen=$screenId key=$geometryKey) — skipping"
                         )
                         return
                     }
@@ -195,20 +207,18 @@ fun ActiveLookLayoutService.displayZoneCircles(
     val r = minOf(rBySlot, rByHeight).coerceAtLeast(2)
     val cy = geometry.y0 + geometry.height / 2
 
-    // Active-zone label: same anchor formula as Test 13.
-    // txtY = cy - 24 places font-1 text viewer-below the circle center.
-    val txtYAdjust = if (numZones >= 7) 3 else 0
-    val txtY = (cy - 24 + txtYAdjust).toShort()
-    val txtXAdjust = if (numZones >= 7) -2 else -8
+    val isHeartRateMode = sourceMetricId == 47
 
     // Determine active zone index (1-based). If value exceeds all zones, use last.
-    val activeZoneIdx: Int = run {
-        val idx =
-                zonedBar.zones.indexOfFirst {
-                    currentValue >= it.minValue && currentValue < it.maxValue
-                }
-        if (idx < 0) zonedBar.zones.size else idx + 1
-    }
+    val activeZoneIdx: Int =
+            activeZoneIndexOverride
+                    ?: run {
+                        val idx =
+                                zonedBar.zones.indexOfFirst {
+                                    currentValue >= it.minValue && currentValue < it.maxValue
+                                }
+                        if (idx < 0) zonedBar.zones.size else idx + 1
+                    }
 
     // Zone 1 (lowest effort) → highest display-x → viewer-left.
     // Zone N (max effort) → lowest display-x → viewer-right. Matches Test 13 geometry.
@@ -221,36 +231,39 @@ fun ActiveLookLayoutService.displayZoneCircles(
         // Clear the zone area — extend 24px above y0 so any label drawn above the zone
         // boundary (possible when txtY = cy-24 < y0 for short zones) is also erased.
         val eraseY0 = (geometry.y0 - 24).coerceAtLeast(0).toShort()
+        val eraseX0 = (geometry.x0 - 24).coerceAtLeast(0).toShort()
+        val eraseX2 = (geometry.x0 + geometry.width + 24).coerceAtMost(303).toShort()
         glasses.color(0)
         glasses.rectf(
-                geometry.x0.toShort(),
+                eraseX0,
                 eraseY0,
-                (geometry.x0 + geometry.width).toShort(),
+                eraseX2,
                 (geometry.y0 + geometry.height).toShort(),
         )
 
         for (z in 1..numZones) {
             val cx = zoneCx(z)
-            when {
-                z < activeZoneIdx -> {
-                    // Achieved zone: very dim fill, no label (like Test 13)
-                    glasses.color(2)
-                    filledCircle(glasses, cx, cy, r)
+            val rInactive = (r * 0.7f).toInt().coerceAtLeast(2)
+            val rActive = minOf((r * 1.3f).toInt(), geometry.height / 2).coerceAtLeast(r)
+            if (z == activeZoneIdx) {
+                // Active zone: bright white and larger.
+                glasses.color(15)
+                outlineCircle(glasses, cx, cy, rActive)
+                if (isHeartRateMode && overlayText != null) {
+                    val hrText = overlayText
+                    val txtX = (cx + 16).toShort() // TODO: Perhaps adjust to 15px
+                    val txtYCenter = (cy + 10).toShort()
+                    glasses.txt(txtX, txtYCenter, Rotation.TOP_LR, 1.toByte(), 15.toByte(), hrText)
                 }
-                z == activeZoneIdx -> {
-                    // Active zone: bright white fill, larger circle, label below
-                    val rActive = (r + 2).coerceAtMost(minOf(rBySlot, rByHeight))
-                    glasses.color(15)
-                    filledCircle(glasses, cx, cy, rActive)
-                    val txtX = (cx + slot / 2 + txtXAdjust).toShort()
-                    glasses.txt(txtX, txtY, Rotation.TOP_LR, 1.toByte(), 15.toByte(), "Z$z")
-                }
-            // z > activeZoneIdx: draw nothing (black background = inactive)
+            } else {
+                // Non-active zones are always visible.
+                glasses.color(6)
+                outlineCircle(glasses, cx, cy, if (isHeartRateMode) rInactive else r)
             }
         }
 
         // Icon pass: imgDisplay requires ALooK system config
-        if (iconId != null) {
+        if (iconId != null && !isHeartRateMode) {
             glasses.cfgSet("ALooK")
             glasses.imgDisplay(iconId.toByte(), iconX, (cy - iconPx / 2).toShort())
             activeConfigName?.let { glasses.cfgSet(it) }
@@ -282,4 +295,15 @@ private fun filledCircle(glasses: Glasses, cx: Int, cy: Int, r: Int) {
                 (cy + dy).toShort(),
         )
     }
+}
+
+/** Draws a circle outline at ([cx], [cy]) with radius [r] using a polyline. */
+private fun outlineCircle(glasses: Glasses, cx: Int, cy: Int, r: Int, steps: Int = 24) {
+    val pts = ShortArray((steps + 1) * 2)
+    for (i in 0..steps) {
+        val angle = 2 * Math.PI * i / steps
+        pts[i * 2] = (cx + (r * Math.cos(angle)).toInt()).toShort()
+        pts[i * 2 + 1] = (cy + (r * Math.sin(angle)).toInt()).toShort()
+    }
+    glasses.polyline(pts)
 }

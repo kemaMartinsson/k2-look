@@ -153,7 +153,7 @@ object ValueFormatter {
             }
             is StreamState.Searching -> "..."
             is StreamState.Idle -> "--"
-            is StreamState.NotAvailable -> "N/A"
+            is StreamState.NotAvailable -> "n/a"
             null -> "--"
         }
     }
@@ -185,7 +185,7 @@ object ValueFormatter {
      * @param intDigits target integer-part width (default 3 covers values up to 999)
      */
     fun padGhost(value: String, intDigits: Int = 3): String {
-        if (value == "--" || value == "..." || value == "N/A") return value
+        if (value == "--" || value == "..." || value == "n/a") return value
         val dotIndex = value.indexOfFirst { it == '.' || it == ':' }
         val intPart = if (dotIndex >= 0) value.substring(0, dotIndex) else value
         val padding = (intDigits - intPart.length).coerceAtLeast(0)
@@ -205,7 +205,7 @@ object ValueFormatter {
      * @param intDigits target integer-part column count
      */
     fun padSpace(value: String, intDigits: Int = 3): String {
-        if (value == "--" || value == "..." || value == "N/A") return value
+        if (value == "--" || value == "..." || value == "n/a") return value
         val dotIndex = value.indexOfFirst { it == '.' || it == ':' }
         val intPart = if (dotIndex >= 0) value.substring(0, dotIndex) else value
         val padding = (intDigits - intPart.length).coerceAtLeast(0)

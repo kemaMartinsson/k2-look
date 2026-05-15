@@ -3,8 +3,12 @@ package com.kema.k2look.viewmodel
 import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.kema.k2look.service.ActiveLookService
+import com.kema.k2look.service.formatDistanceDataKm
+import com.kema.k2look.service.formatSpeedDataKmh
+import io.hammerhead.karooext.models.RideState
 import io.hammerhead.karooext.models.StreamState
 import io.hammerhead.karooext.models.UserProfile
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 /**
@@ -96,28 +100,47 @@ internal fun MainViewModel.observeKarooData() {
     viewModelScope.launch {
         karooDataService.rideState.collect { state ->
             Log.d(TAG, "Ride state changed: $state")
-            _uiState.value = _uiState.value.copy(rideState = state)
+            val previousRideState = _uiState.value.rideState
+            val shouldDisableDebug =
+                    shouldDisableDebugModeForRideTransition(
+                            previousRideState = previousRideState,
+                            newRideState = state,
+                            debugModeEnabled = _uiState.value.debugModeEnabled,
+                    )
+
+            _uiState.value =
+                    _uiState.value.copy(
+                            rideState = state,
+                            debugModeEnabled =
+                                    if (shouldDisableDebug) false
+                                    else _uiState.value.debugModeEnabled,
+                    )
+
+            if (shouldDisableDebug) {
+                Log.w(TAG, "Ride started with debug mode enabled; disabling debug mode")
+                setDebugMode(false)
+            }
         }
     }
 
     // Observe speed data
     viewModelScope.launch {
         karooDataService.speedData.collect { streamState ->
-            _uiState.value = _uiState.value.copy(speed = formatStreamData(streamState, "km/h"))
+            _uiState.value = _uiState.value.copy(speed = formatUiSpeedDataKmh(streamState))
         }
     }
 
     // Observe average speed data
     viewModelScope.launch {
         karooDataService.averageSpeedData.collect { streamState ->
-            _uiState.value = _uiState.value.copy(avgSpeed = formatStreamData(streamState, "km/h"))
+            _uiState.value = _uiState.value.copy(avgSpeed = formatUiSpeedDataKmh(streamState))
         }
     }
 
     // Observe max speed data
     viewModelScope.launch {
         karooDataService.maxSpeedData.collect { streamState ->
-            _uiState.value = _uiState.value.copy(maxSpeed = formatStreamData(streamState, "km/h"))
+            _uiState.value = _uiState.value.copy(maxSpeed = formatUiSpeedDataKmh(streamState))
         }
     }
 
@@ -191,7 +214,7 @@ internal fun MainViewModel.observeKarooData() {
     // Observe distance data
     viewModelScope.launch {
         karooDataService.distanceData.collect { streamState ->
-            _uiState.value = _uiState.value.copy(distance = formatStreamData(streamState, "km"))
+            _uiState.value = _uiState.value.copy(distance = formatUiDistanceDataKm(streamState))
         }
     }
 
@@ -253,6 +276,16 @@ internal fun MainViewModel.observeKarooData() {
     }
 }
 
+internal fun shouldDisableDebugModeForRideTransition(
+        previousRideState: RideState,
+        newRideState: RideState,
+        debugModeEnabled: Boolean,
+): Boolean {
+    return debugModeEnabled &&
+            previousRideState is RideState.Idle &&
+            newRideState !is RideState.Idle
+}
+
 // ── Format helpers (file-private) ─────────────────────────────────────────
 
 /** Format stream data for display */
@@ -264,10 +297,16 @@ private fun formatStreamData(streamState: StreamState?, unit: String): String {
         }
         is StreamState.Searching -> "Searching..."
         is StreamState.Idle -> "-- $unit"
-        is StreamState.NotAvailable -> "N/A"
+        is StreamState.NotAvailable -> "n/a"
         null -> "-- $unit"
     }
 }
+
+internal fun formatUiSpeedDataKmh(streamState: StreamState?): String =
+        formatSpeedDataKmh(streamState)
+
+internal fun formatUiDistanceDataKm(streamState: StreamState?): String =
+        formatDistanceDataKm(streamState)
 
 /** Format time data (convert ms to HH:MM:SS) */
 private fun formatTimeData(streamState: StreamState?): String {
@@ -285,7 +324,7 @@ private fun formatTimeData(streamState: StreamState?): String {
         }
         is StreamState.Searching -> "--:--:--"
         is StreamState.Idle -> "--:--:--"
-        is StreamState.NotAvailable -> "N/A"
+        is StreamState.NotAvailable -> "n/a"
         null -> "--:--:--"
     }
 }
@@ -306,7 +345,7 @@ private fun formatStreamDataInt(streamState: StreamState?, unit: String): String
                 streamState.dataPoint.singleValue?.let { "%.0f $unit".format(it) } ?: "-- $unit"
         is StreamState.Searching -> "Searching..."
         is StreamState.Idle -> "-- $unit"
-        is StreamState.NotAvailable -> "N/A"
+        is StreamState.NotAvailable -> "n/a"
         null -> "-- $unit"
     }
 }

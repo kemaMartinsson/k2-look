@@ -61,6 +61,7 @@ fun DataFieldBuilderTab(
     val uiState by viewModel.uiState.collectAsState()
     var showFieldConfig by remember { mutableStateOf(false) }
     var editingField by remember { mutableStateOf<LayoutDataField?>(null) }
+    var editingScreenId by remember { mutableStateOf<Int?>(null) }
     var justAddedZone by remember { mutableStateOf<Pair<Int, String>?>(null) }
 
     // Set bridge when mainViewModel is available
@@ -80,6 +81,7 @@ fun DataFieldBuilderTab(
             val field = screen?.dataFields?.find { it.zoneId == zoneId }
             if (field != null) {
                 editingField = field
+                editingScreenId = screenId
                 showFieldConfig = true
                 justAddedZone = null
             }
@@ -110,22 +112,15 @@ fun DataFieldBuilderTab(
 
     // Show field configuration dialog if requested
     if (showFieldConfig && editingField != null) {
-        // Find which screen this field belongs to
-        val fieldScreen =
-                uiState.activeProfile?.screens?.find { screen ->
-                    screen.dataFields.any { it.zoneId == editingField!!.zoneId }
-                }
-
         FieldConfigurationDialog(
                 field = editingField!!,
                 onDismiss = {
                     showFieldConfig = false
                     editingField = null
+                    editingScreenId = null
                 },
                 onSave = { updatedField ->
-                    // Use the screen where the field actually exists, not the currently selected
-                    // tab!
-                    val screenIdToUpdate = fieldScreen?.id ?: uiState.selectedScreen
+                    val screenIdToUpdate = editingScreenId ?: uiState.selectedScreen
                     android.util.Log.i(
                             "DataFieldBuilder",
                             "Saving field to screen $screenIdToUpdate (currently viewing ${uiState.selectedScreen})"
@@ -133,6 +128,7 @@ fun DataFieldBuilderTab(
                     viewModel.updateField(screenIdToUpdate, updatedField)
                     showFieldConfig = false
                     editingField = null
+                    editingScreenId = null
                 }
         )
     }
@@ -302,6 +298,7 @@ fun DataFieldBuilderTab(
                             },
                             onFieldEdit = { field ->
                                 editingField = field
+                                editingScreenId = validSelectedScreen
                                 showFieldConfig = true
                             },
                             onFieldRemove = { zoneId ->

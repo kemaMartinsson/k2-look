@@ -18,7 +18,7 @@ internal fun formatStreamData(streamState: StreamState?, unit: String): String =
                             ?: "-- $unit"
             is StreamState.Searching -> "..."
             is StreamState.Idle -> "-- $unit"
-            is StreamState.NotAvailable -> "N/A"
+            is StreamState.NotAvailable -> "n/a"
             null -> "-- $unit"
         }
 
@@ -50,7 +50,7 @@ internal fun formatZoneData(streamState: StreamState?, max: Int): String =
                             ?: "--"
             is StreamState.Searching -> "..."
             is StreamState.Idle, null -> "--"
-            is StreamState.NotAvailable -> "N/A"
+            is StreamState.NotAvailable -> "n/a"
         }
 
 /** Percentage (0-100) → "72%" */
@@ -60,7 +60,7 @@ internal fun formatPercent(streamState: StreamState?): String =
                     streamState.dataPoint.singleValue?.let { "%.0f%%".format(it) } ?: "--%"
             is StreamState.Searching -> "...%"
             is StreamState.Idle, null -> "--%"
-            is StreamState.NotAvailable -> "N/A"
+            is StreamState.NotAvailable -> "n/a"
         }
 
 /** Elevation grade with sign → "+5.2%" / "-3.1%" */
@@ -73,7 +73,7 @@ internal fun formatGrade(streamState: StreamState?): String =
                             ?: "--%"
             is StreamState.Searching -> "...%"
             is StreamState.Idle, null -> "--%"
-            is StreamState.NotAvailable -> "N/A"
+            is StreamState.NotAvailable -> "n/a"
         }
 
 /** Integer metric (lap #, shift count, assist mode level) */
@@ -83,7 +83,7 @@ internal fun formatInteger(streamState: StreamState?): String =
                             ?: "--"
             is StreamState.Searching -> "..."
             is StreamState.Idle, null -> "--"
-            is StreamState.NotAvailable -> "N/A"
+            is StreamState.NotAvailable -> "n/a"
         }
 
 /** Lap / last-lap time (milliseconds) → MM:SS or H:MM:SS */
@@ -131,7 +131,7 @@ internal fun formatDuration(streamState: StreamState?): String =
             }
             is StreamState.Searching -> "..."
             is StreamState.Idle, null -> "--"
-            is StreamState.NotAvailable -> "N/A"
+            is StreamState.NotAvailable -> "n/a"
         }
 
 /** Distance to next turn → "150 m" (<1 km) or "1.2 km" (≥1 km) */
@@ -144,7 +144,7 @@ internal fun formatDistanceToTurn(streamState: StreamState?): String =
                             ?: "-- m"
             is StreamState.Searching -> "..."
             is StreamState.Idle, null -> "-- m"
-            is StreamState.NotAvailable -> "N/A"
+            is StreamState.NotAvailable -> "n/a"
         }
 
 /** Gear position as "current/max" (e.g. "3/11") from multi-field DataPoint. */
@@ -162,7 +162,7 @@ internal fun formatGear(streamState: StreamState?, gearField: String, maxField: 
             }
             is StreamState.Searching -> "..."
             is StreamState.Idle, null -> "--"
-            is StreamState.NotAvailable -> "N/A"
+            is StreamState.NotAvailable -> "n/a"
         }
 
 /**
@@ -181,7 +181,7 @@ internal fun formatShiftingBattery(streamState: StreamState?): String {
         }
         is StreamState.Searching -> "..."
         is StreamState.Idle, null -> "--"
-        is StreamState.NotAvailable -> "N/A"
+        is StreamState.NotAvailable -> "n/a"
     }
 }
 
@@ -193,7 +193,7 @@ internal fun formatHeading(streamState: StreamState?): String {
                 dirs.getOrElse(streamState.dataPoint.singleValue?.toInt() ?: 8) { "--" }
         is StreamState.Searching -> "..."
         is StreamState.Idle, null -> "--"
-        is StreamState.NotAvailable -> "N/A"
+        is StreamState.NotAvailable -> "n/a"
     }
 }
 
@@ -211,6 +211,30 @@ internal fun formatStreamDataInt(streamState: StreamState?, unit: String): Strin
                     streamState.dataPoint.singleValue?.let { "%.0f $unit".format(it) } ?: "-- $unit"
             is StreamState.Searching -> "..."
             is StreamState.Idle -> "-- $unit"
-            is StreamState.NotAvailable -> "N/A"
+            is StreamState.NotAvailable -> "n/a"
             null -> "-- $unit"
+        }
+
+/** Speed stream from Karoo is m/s; convert to km/h for display. */
+internal fun formatSpeedDataKmh(streamState: StreamState?): String =
+        when (streamState) {
+            is StreamState.Streaming ->
+                    streamState.dataPoint.singleValue?.let { "%.0f km/h".format(it * 3.6) }
+                            ?: "-- km/h"
+            is StreamState.Searching -> "..."
+            is StreamState.Idle -> "-- km/h"
+            is StreamState.NotAvailable -> "n/a"
+            null -> "-- km/h"
+        }
+
+/** Distance stream from Karoo is meters; convert to km for display. */
+internal fun formatDistanceDataKm(streamState: StreamState?): String =
+        when (streamState) {
+            is StreamState.Streaming ->
+                    streamState.dataPoint.singleValue?.let { "${formatValue(it / 1000.0)} km" }
+                            ?: "-- km"
+            is StreamState.Searching -> "..."
+            is StreamState.Idle -> "-- km"
+            is StreamState.NotAvailable -> "n/a"
+            null -> "-- km"
         }

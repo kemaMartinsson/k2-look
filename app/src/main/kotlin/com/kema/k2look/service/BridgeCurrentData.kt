@@ -210,6 +210,6 @@ internal data class CurrentData(
                 102 -> levRange
                 103 -> levAssistMode
                 104 -> levMotorPower
-                else -> "N/A"
+                else -> "n/a"
             }
 }

@@ -273,6 +273,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     /** Toggle debug mode on/off */
     fun setDebugMode(enabled: Boolean) {
+        if (!resolveDebugModeRequest(enabled, _uiState.value.rideState)) {
+            Log.w(TAG, "Debug mode cannot be enabled during an active ride")
+            _uiState.value = _uiState.value.copy(debugModeEnabled = false)
+            stopDebugLogging()
+            stopSimulator()
+            return
+        }
+
         Log.i(TAG, "Debug mode ${if (enabled) "enabled" else "disabled"}")
         _uiState.value = _uiState.value.copy(debugModeEnabled = enabled)
 
@@ -507,4 +515,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     companion object {
         private const val TAG = "MainViewModel"
     }
+}
+
+internal fun resolveDebugModeRequest(requestedEnabled: Boolean, rideState: RideState): Boolean {
+    return !requestedEnabled || rideState is RideState.Idle
 }

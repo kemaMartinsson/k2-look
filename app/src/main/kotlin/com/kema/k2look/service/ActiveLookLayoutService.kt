@@ -195,6 +195,17 @@ class ActiveLookLayoutService(internal val activeLookService: ActiveLookService)
             delay(1000)
         }
 
+        // Explicitly remove any previous config with the same name before rewriting.
+        // This guarantees stale definitions in a reused config namespace are dropped.
+        try {
+            glasses.cfgDelete(configName)
+            delay(COMMAND_DELAY_MS)
+            Log.d(TAG, "Deleted previous config '$configName' before cfgWrite")
+        } catch (e: Exception) {
+            // If config does not exist yet, delete may fail on some firmware; continue.
+            Log.d(TAG, "cfgDelete('$configName') skipped: ${e.message}")
+        }
+
         // ── Open config for writing ────────────────────────────────────────
         glasses.cfgWrite(configName, version.toInt(), 0)
         delay(COMMAND_DELAY_MS * 2)
@@ -333,11 +344,13 @@ class ActiveLookLayoutService(internal val activeLookService: ActiveLookService)
                 val isText =
                         field.visualizationType == VisualizationType.TEXT ||
                                 field.visualizationType == null
+                val normalizedValue =
+                        if (isText) stripTrailingUnit(value, field.dataField.unit) else value
                 val paddedValue =
                         if (isText) {
                             val maxDigits = ValueFormatter.unitMaxDigits(field.dataField.unit)
-                            ValueFormatter.padSpace(value, maxDigits)
-                        } else value
+                            ValueFormatter.padSpace(normalizedValue, maxDigits)
+                        } else normalizedValue
                 val (extraCmd, renderValue) =
                         DynamicLayoutRenderer.buildExtraCmd(
                                 paddedValue,
@@ -420,6 +433,14 @@ class ActiveLookLayoutService(internal val activeLookService: ActiveLookService)
                 glasses.holdFlush(com.activelook.activelooksdk.types.holdFlushAction.FLUSH)
             } catch (_: Exception) {}
         }
+    }
+
+    private fun stripTrailingUnit(value: String, unit: String): String {
+        if (unit.isEmpty() || value == "--" || value == "..." || value == "n/a") {
+            return value
+        }
+        val suffix = " $unit"
+        return if (value.endsWith(suffix)) value.removeSuffix(suffix).trimEnd() else value
     }
 
     // ──────────────────────────────────────────────────────────────────────

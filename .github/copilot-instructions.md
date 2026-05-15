@@ -1,5 +1,8 @@
 # K2Look — Copilot Instructions & Session Handoff
 
+Use `caveman` skills unless absolutely necessary.
+
+
 ## Project Overview
 
 **K2Look** is a Kotlin/Android app for the **Karoo 2** cycling computer that mirrors ride metrics
