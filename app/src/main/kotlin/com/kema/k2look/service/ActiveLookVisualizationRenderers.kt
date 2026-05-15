@@ -251,7 +251,7 @@ fun ActiveLookLayoutService.displayZoneCircles(
                 outlineCircle(glasses, cx, cy, rActive)
                 if (isHeartRateMode && overlayText != null) {
                     val hrText = overlayText
-                    val txtX = (cx + 16).toShort()
+                    val txtX = (cx + 16).toShort() // TODO: Perhaps adjust to 15px
                     val txtYCenter = (cy + 10).toShort()
                     glasses.txt(txtX, txtYCenter, Rotation.TOP_LR, 1.toByte(), 15.toByte(), hrText)
                 }
