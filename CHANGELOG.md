@@ -2,6 +2,12 @@
 
 All notable changes to K2Look will be documented in this file.
 
+## [1.0.10] - 2026-05-17
+
+### Added
+
+- Countdown start animation
+
 ## [1.0.9] - 2026-05-15
 
 ### Changed
