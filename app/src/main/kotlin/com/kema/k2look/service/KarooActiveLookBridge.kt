@@ -1183,21 +1183,19 @@ class KarooActiveLookBridge(context: Context) {
                                 TAG,
                                 "RIDE_START_ANIM: entering countdown branch bridge=${_bridgeState.value} karooConnected=${karooDataService.isConnected} activeLookConnected=${activeLookService.isConnected}"
                         )
-                        Log.i(TAG, "▶ Playing ride-start animation: 6_countdown_x_76_y_56")
+                        Log.d(TAG, "  cfgSet(ALooK)...")
                         glasses.cfgSet("ALooK")
+                        Log.d(TAG, "  clear()...")
                         glasses.clear()
-                        glasses.animDisplay(
-                                RIDE_START_COUNTDOWN_HANDLER_ID,
-                                RIDE_START_COUNTDOWN_ANIM_ID,
-                                RIDE_START_COUNTDOWN_FRAME_DELAY_MS,
-                                RIDE_START_COUNTDOWN_REPEAT,
-                                RIDE_START_COUNTDOWN_X,
-                                RIDE_START_COUNTDOWN_Y
-                        )
-                        delay(RIDE_START_COUNTDOWN_DURATION_MS)
-                        glasses.animClear(RIDE_START_COUNTDOWN_HANDLER_ID)
+                        Log.i(TAG, "▶ Playing ride-start software countdown: 3-2-1-GO")
+                        playSoftwareRideStartCountdown(glasses)
+                        Log.i(TAG, "✓ Ride-start countdown animation completed")
                     } catch (e: Exception) {
-                        Log.w(TAG, "Ride-start countdown animation failed: ${e.message}", e)
+                        Log.e(
+                                TAG,
+                                "❌ Ride-start countdown animation failed: ${e.javaClass.simpleName}: ${e.message}",
+                                e
+                        )
                     }
 
                     try {
@@ -1206,10 +1204,24 @@ class KarooActiveLookBridge(context: Context) {
                         Log.w(TAG, "Failed to restore profile config after countdown: ${e.message}")
                     }
 
-                    if (isInActiveRide && _bridgeState.value == BridgeState.FullyConnected) {
+                    val canResumeStreaming =
+                            isInActiveRide &&
+                                    karooDataService.isConnected &&
+                                    activeLookService.isConnected
+
+                    if (canResumeStreaming) {
+                        Log.i(
+                                TAG,
+                                "RIDE_START_ANIM: resuming metrics after countdown (bridge=${_bridgeState.value}, rideState=${currentData.rideState})"
+                        )
                         currentData.isDirty = true
                         flushToGlasses()
                         startStreaming()
+                    } else {
+                        Log.w(
+                                TAG,
+                                "RIDE_START_ANIM: not resuming after countdown (isInActiveRide=$isInActiveRide, karooConnected=${karooDataService.isConnected}, activeLookConnected=${activeLookService.isConnected}, bridge=${_bridgeState.value}, rideState=${currentData.rideState})"
+                        )
                     }
                 }
     }
@@ -1218,6 +1230,30 @@ class KarooActiveLookBridge(context: Context) {
         return activeLookService.isConnected &&
                 (_bridgeState.value == BridgeState.FullyConnected ||
                         _bridgeState.value == BridgeState.Streaming)
+    }
+
+    private suspend fun playSoftwareRideStartCountdown(
+            glasses: com.activelook.activelooksdk.Glasses
+    ) {
+        val countdownFrames = listOf("3", "2", "1", "GO")
+        countdownFrames.forEach { frame ->
+            glasses.holdFlush(com.activelook.activelooksdk.types.holdFlushAction.HOLD)
+            glasses.clear()
+            val textX = if (frame == "GO") SOFTWARE_COUNTDOWN_GO_X else SOFTWARE_COUNTDOWN_DIGIT_X
+            val font =
+                    if (frame == "GO") SOFTWARE_COUNTDOWN_GO_FONT else SOFTWARE_COUNTDOWN_DIGIT_FONT
+            glasses.txt(
+                    textX,
+                    SOFTWARE_COUNTDOWN_Y,
+                    com.activelook.activelooksdk.types.Rotation.TOP_LR,
+                    font,
+                    SOFTWARE_COUNTDOWN_COLOR,
+                    frame
+            )
+            glasses.holdFlush(com.activelook.activelooksdk.types.holdFlushAction.FLUSH)
+            delay(SOFTWARE_COUNTDOWN_STEP_MS)
+        }
+        glasses.clear()
     }
 
     // ========== GAUGE & BAR VISUALIZATION ==========
@@ -1421,15 +1457,13 @@ class KarooActiveLookBridge(context: Context) {
         /** Maximum number of scan attempts for UI-triggered scan */
         private const val MAX_SCAN_RETRIES = 3
 
-        // ActiveLook visual asset: 6_countdown_x_76_y_56
-        private const val RIDE_START_COUNTDOWN_ANIM_ID: Byte = 6
-        private const val RIDE_START_COUNTDOWN_HANDLER_ID: Byte = 106
-        private const val RIDE_START_COUNTDOWN_X: Short = 76
-        private const val RIDE_START_COUNTDOWN_Y: Short = 56
-        private const val RIDE_START_COUNTDOWN_FRAME_DELAY_MS: Short = 80
-        private const val RIDE_START_COUNTDOWN_REPEAT: Byte = 1
-        // Source GIF duration is 2960 ms; small guard to ensure final frame has cleared.
-        private const val RIDE_START_COUNTDOWN_DURATION_MS = 3100L
+        private const val SOFTWARE_COUNTDOWN_STEP_MS = 700L
+        private const val SOFTWARE_COUNTDOWN_DIGIT_X: Short = 136
+        private const val SOFTWARE_COUNTDOWN_GO_X: Short = 116
+        private const val SOFTWARE_COUNTDOWN_Y: Short = 118
+        private const val SOFTWARE_COUNTDOWN_DIGIT_FONT: Byte = 3
+        private const val SOFTWARE_COUNTDOWN_GO_FONT: Byte = 2
+        private const val SOFTWARE_COUNTDOWN_COLOR: Byte = 15
     }
 }
 

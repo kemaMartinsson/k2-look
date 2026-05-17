@@ -19,9 +19,9 @@ internal fun KarooActiveLookBridge.observeCoreMetrics() {
     observe(karooDataService.speedData) { speed = formatSpeedDataKmh(it) }
     observe(karooDataService.maxSpeedData) { maxSpeed = formatSpeedDataKmh(it) }
     observe(karooDataService.averageSpeedData) { avgSpeed = formatSpeedDataKmh(it) }
-    observe(karooDataService.heartRateData) { heartRate = formatStreamData(it, "bpm") }
-    observe(karooDataService.maxHeartRateData) { maxHeartRate = formatStreamData(it, "bpm") }
-    observe(karooDataService.averageHeartRateData) { avgHeartRate = formatStreamData(it, "bpm") }
+    observe(karooDataService.heartRateData) { heartRate = formatStreamDataInt(it, "bpm") }
+    observe(karooDataService.maxHeartRateData) { maxHeartRate = formatStreamDataInt(it, "bpm") }
+    observe(karooDataService.averageHeartRateData) { avgHeartRate = formatStreamDataInt(it, "bpm") }
     observe(karooDataService.hrZoneData) { hrZone = formatHRZoneData(it) }
     observe(karooDataService.cadenceData) { cadence = formatStreamDataInt(it, "rpm") }
     observe(karooDataService.maxCadenceData) { maxCadence = formatStreamDataInt(it, "rpm") }
@@ -32,8 +32,8 @@ internal fun KarooActiveLookBridge.observeCoreMetrics() {
     observe(karooDataService.smoothed3sPowerData) { power3s = formatStreamDataInt(it, "w") }
     observe(karooDataService.distanceData) { distance = formatDistanceDataKm(it) }
     observe(karooDataService.timeData) { time = formatTimeData(it) }
-    observe(karooDataService.vamData) { vam = formatStreamData(it, "m/h") }
-    observe(karooDataService.avgVamData) { avgVam = formatStreamData(it, "m/h") }
+    observe(karooDataService.vamData) { vam = formatStreamDataInt(it, "m/h") }
+    observe(karooDataService.avgVamData) { avgVam = formatStreamDataInt(it, "m/h") }
 }
 
 // ── General additions ──────────────────────────────────────────────────
@@ -87,10 +87,10 @@ internal fun KarooActiveLookBridge.observeSpeedCadenceMetrics() {
 
 internal fun KarooActiveLookBridge.observeElevationMetrics() {
     observe(karooDataService.elevationGradeData) { elevationGrade = formatGrade(it) }
-    observe(karooDataService.elevationGainData) { elevationGain = formatStreamData(it, "m") }
-    observe(karooDataService.elevationLossData) { elevationLoss = formatStreamData(it, "m") }
-    observe(karooDataService.altitudeData) { altitude = formatStreamData(it, "m") }
-    observe(karooDataService.vam30sData) { vam30s = formatStreamData(it, "m/h") }
+    observe(karooDataService.elevationGainData) { elevationGain = formatStreamDataInt(it, "m") }
+    observe(karooDataService.elevationLossData) { elevationLoss = formatStreamDataInt(it, "m") }
+    observe(karooDataService.altitudeData) { altitude = formatStreamDataInt(it, "m") }
+    observe(karooDataService.vam30sData) { vam30s = formatStreamDataInt(it, "m/h") }
 }
 
 // ── Lap ───────────────────────────────────────────────────────────────
@@ -100,11 +100,11 @@ internal fun KarooActiveLookBridge.observeLapMetrics() {
     observe(karooDataService.lapTimeData) { lapTime = formatLapTime(it) }
     observe(karooDataService.lapDistanceData) { lapDistance = formatDistanceDataKm(it) }
     observe(karooDataService.lapSpeedData) { lapSpeed = formatSpeedDataKmh(it) }
-    observe(karooDataService.lapHrData) { lapHr = formatStreamData(it, "bpm") }
+    observe(karooDataService.lapHrData) { lapHr = formatStreamDataInt(it, "bpm") }
     observe(karooDataService.lapPowerData) { lapPower = formatStreamDataInt(it, "w") }
     observe(karooDataService.lapNpData) { lapNp = formatStreamDataInt(it, "w") }
     observe(karooDataService.lapCadenceData) { lapCadence = formatStreamDataInt(it, "rpm") }
-    observe(karooDataService.lapAscentData) { lapAscent = formatStreamData(it, "m") }
+    observe(karooDataService.lapAscentData) { lapAscent = formatStreamDataInt(it, "m") }
 }
 
 // ── Last Lap ──────────────────────────────────────────────────────────
@@ -113,7 +113,7 @@ internal fun KarooActiveLookBridge.observeLastLapMetrics() {
     observe(karooDataService.lastLapTimeData) { lastLapTime = formatLapTime(it) }
     observe(karooDataService.lastLapDistanceData) { lastLapDistance = formatDistanceDataKm(it) }
     observe(karooDataService.lastLapSpeedData) { lastLapSpeed = formatSpeedDataKmh(it) }
-    observe(karooDataService.lastLapHrData) { lastLapHr = formatStreamData(it, "bpm") }
+    observe(karooDataService.lastLapHrData) { lastLapHr = formatStreamDataInt(it, "bpm") }
     observe(karooDataService.lastLapPowerData) { lastLapPower = formatStreamDataInt(it, "w") }
     observe(karooDataService.lastLapNpData) { lastLapNp = formatStreamDataInt(it, "w") }
 }

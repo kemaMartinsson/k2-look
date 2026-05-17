@@ -162,6 +162,11 @@ class ActiveLookLayoutService(internal val activeLookService: ActiveLookService)
         val configName = configNameFor(profile.id)
         val version = versionFor(profile)
 
+        // Precompute layout IDs and geometry BEFORE fast/full path split.
+        // This ensures IDs are always assigned in profile.screens list order, regardless of
+        // which screen's displayAllFieldValues() is called first after restart.
+        precomputeLayoutIdsAndGeometry(profile)
+
         // ── Fast path ──────────────────────────────────────────────────────
         if (configVersionCache[configName] == version) {
             Log.i(TAG, "✅ Config '$configName' up-to-date → cfgSet only")
@@ -207,8 +212,13 @@ class ActiveLookLayoutService(internal val activeLookService: ActiveLookService)
         }
 
         // ── Open config for writing ────────────────────────────────────────
-        glasses.cfgWrite(configName, version.toInt(), 0)
-        delay(COMMAND_DELAY_MS * 2)
+        try {
+            glasses.cfgWrite(configName, version.toInt(), 0)
+            delay(COMMAND_DELAY_MS * 2)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to open config '$configName' for writing: ${e.message}", e)
+            return false
+        }
 
         // ── Save layouts (for first screen) ───────────────────────────────
         val layoutsOk = saveProfileLayouts(profile)
@@ -217,15 +227,28 @@ class ActiveLookLayoutService(internal val activeLookService: ActiveLookService)
         saveProfileGauges(profile)
 
         // ── Activate the config ────────────────────────────────────────────
-        glasses.cfgSet(configName)
-        activeConfigName = configName
-        delay(COMMAND_DELAY_MS)
+        try {
+            glasses.cfgSet(configName)
+            activeConfigName = configName
+            delay(COMMAND_DELAY_MS)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to activate config '$configName': ${e.message}", e)
+            return false
+        }
 
+        // ⚠️ CRITICAL: Update cache REGARDLESS of layout save success.
+        // If cfgSet() completed, the config IS activated on the glasses, so the cache
+        // MUST reflect that. If we skip caching a config that is actually live on the
+        // glasses, the next flushToGlasses() will check isProfileSaved() → cache miss →
+        // displayAllFieldValues() never called → NO METRICS DISPLAYED.
+        configVersionCache[configName] = version
         if (layoutsOk) {
-            configVersionCache[configName] = version
             Log.i(TAG, "✅ Config '$configName' saved and activated")
         } else {
-            Log.w(TAG, "⚠️ Config '$configName' partially saved (some layouts failed)")
+            Log.w(
+                    TAG,
+                    "⚠️ Config '$configName' partially saved (some layouts failed), but added to cache since cfgSet completed"
+            )
         }
         return layoutsOk
     }
