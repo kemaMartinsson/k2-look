@@ -7,65 +7,55 @@ import android.util.Log
  *
  * Receives radar data updates from [KarooActiveLookBridge] and transitions between:
  * - [State.HIDDEN] — no vehicle detected
- * - [State.VISIBLE_SMALL] — vehicle detected; radar_white_28 shown
- * - [State.VISIBLE_LARGE] — vehicle within [TTA_THRESHOLD_S] seconds; radar_white_40 shown
+ * - [State.VISIBLE_SMALL] — threat level 2; radar_white_24 shown
+ * - [State.VISIBLE_LARGE] — threat level 3; radar_white_40 shown
+ * - [State.VISIBLE_CRITICAL] — threat level 4; alert_white_40 shown
  *
  * Render/erase is delegated to injected lambdas — no direct BLE or asset access here. All
  * transitions are synchronous within the calling coroutine; no background job is needed. * ⚠️ NOT
  * thread-safe. All calls must be made from the same coroutine/thread context.
  */
 class RadarWarningController(
-        private val renderSmall: () -> Unit,
-        private val eraseSmall: () -> Unit,
-        private val renderLarge: () -> Unit,
-        private val eraseLarge: () -> Unit
+    private val renderSmall: () -> Unit,
+    private val eraseSmall: () -> Unit,
+    private val renderLarge: () -> Unit,
+    private val eraseLarge: () -> Unit,
+    private val renderCritical: () -> Unit,
+    private val eraseCritical: () -> Unit
 ) {
     private enum class State {
         HIDDEN,
         VISIBLE_SMALL,
-        VISIBLE_LARGE
+        VISIBLE_LARGE,
+        VISIBLE_CRITICAL
     }
 
     private var state = State.HIDDEN
     private var enabled = true
 
-    // Velocity estimation — last sample
-    private var prevRangeM: Float = 0f
-    private var prevTimeMs: Long = 0L
-
     /**
      * Called on every radar packet while streaming.
      *
-     * @param threatLevel Value of RADAR_THREAT_LEVEL. 0 = no threat.
-     * @param closestRangeM Closest target range in metres, or null if no targets present.
-     * @param elapsedMs Override for elapsed time since last sample (used in tests). Pass 0 to
-     * ```
-     *                   use wall clock (default).
-     * ```
+     * @param threatLevel Value of RADAR_THREAT_LEVEL.
+    * - 1: hidden
+    * - 2: small warning icon
+    * - 3: large warning icon
+    * - 4: critical warning icon
+     * @param closestRangeM Unused by threat-level mapping; kept for API compatibility.
+     * @param elapsedMs Unused by threat-level mapping; kept for API compatibility.
      */
     fun onRadarUpdate(threatLevel: Int, closestRangeM: Float?, elapsedMs: Long = 0L) {
         if (!enabled) return
 
-        val nowMs = if (elapsedMs > 0L) prevTimeMs + elapsedMs else System.currentTimeMillis()
-        val tta = computeTta(closestRangeM, nowMs)
-
-        // Update velocity sample for next call
-        if (closestRangeM != null && closestRangeM > 0f) {
-            prevRangeM = closestRangeM
-            prevTimeMs = nowMs
-        }
-
         val targetState =
                 when {
-                    threatLevel == 0 || closestRangeM == null -> State.HIDDEN
-                    tta <= TTA_THRESHOLD_S -> State.VISIBLE_LARGE
-                    else -> State.VISIBLE_SMALL
+                    threatLevel >= 4 -> State.VISIBLE_CRITICAL
+                    threatLevel == 3 -> State.VISIBLE_LARGE
+                    threatLevel == 2 -> State.VISIBLE_SMALL
+                    else -> State.HIDDEN
                 }
 
         transition(targetState)
-        if (targetState == State.HIDDEN) {
-            clearVelocitySample()
-        }
     }
 
     /** Live-toggle the feature. Erases current icon immediately if disabling. */
@@ -75,7 +65,6 @@ class RadarWarningController(
         if (!enabled) {
             eraseCurrentIcon()
             state = State.HIDDEN
-            clearVelocitySample()
         }
         Log.i(TAG, "Radar warning ${if (enabled) "enabled" else "disabled"}")
     }
@@ -86,7 +75,6 @@ class RadarWarningController(
      */
     fun reset() {
         state = State.HIDDEN
-        clearVelocitySample()
         Log.d(TAG, "RadarWarningController reset")
     }
 
@@ -98,16 +86,34 @@ class RadarWarningController(
         when (state to target) {
             State.HIDDEN to State.VISIBLE_SMALL -> renderSmall()
             State.HIDDEN to State.VISIBLE_LARGE -> renderLarge()
+            State.HIDDEN to State.VISIBLE_CRITICAL -> renderCritical()
             State.VISIBLE_SMALL to State.VISIBLE_LARGE -> {
                 eraseSmall()
                 renderLarge()
+            }
+            State.VISIBLE_SMALL to State.VISIBLE_CRITICAL -> {
+                eraseSmall()
+                renderCritical()
             }
             State.VISIBLE_LARGE to State.VISIBLE_SMALL -> {
                 eraseLarge()
                 renderSmall()
             }
+            State.VISIBLE_LARGE to State.VISIBLE_CRITICAL -> {
+                eraseLarge()
+                renderCritical()
+            }
+            State.VISIBLE_CRITICAL to State.VISIBLE_LARGE -> {
+                eraseCritical()
+                renderLarge()
+            }
+            State.VISIBLE_CRITICAL to State.VISIBLE_SMALL -> {
+                eraseCritical()
+                renderSmall()
+            }
             State.VISIBLE_SMALL to State.HIDDEN -> eraseSmall()
             State.VISIBLE_LARGE to State.HIDDEN -> eraseLarge()
+            State.VISIBLE_CRITICAL to State.HIDDEN -> eraseCritical()
         }
         state = target
     }
@@ -116,29 +122,14 @@ class RadarWarningController(
         when (state) {
             State.VISIBLE_SMALL -> eraseSmall()
             State.VISIBLE_LARGE -> eraseLarge()
+            State.VISIBLE_CRITICAL -> eraseCritical()
             State.HIDDEN -> {
                 /* nothing to erase */
             }
         }
     }
 
-    private fun computeTta(closestRangeM: Float?, nowMs: Long): Float {
-        if (closestRangeM == null || closestRangeM <= 0f) return Float.MAX_VALUE
-        if (prevTimeMs == 0L) return Float.MAX_VALUE // no prior sample
-        val elapsedS = (nowMs - prevTimeMs) / 1000f
-        if (elapsedS <= 0f) return Float.MAX_VALUE
-        val velocityMps = (prevRangeM - closestRangeM) / elapsedS
-        if (velocityMps <= 0f) return Float.MAX_VALUE // not closing
-        return closestRangeM / velocityMps
-    }
-
-    private fun clearVelocitySample() {
-        prevRangeM = 0f
-        prevTimeMs = 0L
-    }
-
     private companion object {
         private const val TAG = "RadarWarningController"
-        private const val TTA_THRESHOLD_S = 5.0f
     }
 }

@@ -95,6 +95,7 @@ class KarooActiveLookBridge(context: Context) {
     // ── Radar warning ────────────────────────────────────────────────
     private var warningBitmapSmall: android.graphics.Bitmap? = null
     private var warningBitmapLarge: android.graphics.Bitmap? = null
+    private var warningBitmapCritical: android.graphics.Bitmap? = null
     private var radarWarningEnabled: Boolean = true
 
     // Reconnect tracking
@@ -701,7 +702,7 @@ class KarooActiveLookBridge(context: Context) {
     private fun getWarningBitmapSmall(): android.graphics.Bitmap =
             warningBitmapSmall
                     ?: android.graphics.BitmapFactory.decodeStream(
-                                    context.assets.open("radar_white_28.png")
+                                    context.assets.open("radar_white_24.png")
                             )
                             .also { warningBitmapSmall = it }
 
@@ -711,6 +712,13 @@ class KarooActiveLookBridge(context: Context) {
                                     context.assets.open("radar_white_40.png")
                             )
                             .also { warningBitmapLarge = it }
+
+        private fun getWarningBitmapCritical(): android.graphics.Bitmap =
+            warningBitmapCritical
+                ?: android.graphics.BitmapFactory.decodeStream(
+                        context.assets.open("alert_white_40.png")
+                    )
+                    .also { warningBitmapCritical = it }
 
     private val renderWarningSmall: () -> Unit = {
         try {
@@ -770,12 +778,31 @@ class KarooActiveLookBridge(context: Context) {
         }
     }
 
+    private val renderWarningCritical: () -> Unit = {
+        try {
+            activeLookService
+                    .getConnectedGlasses()
+                    ?.imgStream(
+                            getWarningBitmapCritical(),
+                            com.activelook.activelooksdk.types.ImgStreamFormat.MONO_4BPP_HEATSHRINK,
+                            30,
+                            25
+                    )
+        } catch (e: Exception) {
+            Log.e(TAG, "renderWarningCritical failed: ${e.message}", e)
+        }
+    }
+
+    private val eraseWarningCritical: () -> Unit = eraseWarningLarge
+
     private val radarWarningController =
             RadarWarningController(
                     renderSmall = renderWarningSmall,
                     eraseSmall = eraseWarningSmall,
                     renderLarge = renderWarningLarge,
-                    eraseLarge = eraseWarningLarge
+                eraseLarge = eraseWarningLarge,
+                renderCritical = renderWarningCritical,
+                eraseCritical = eraseWarningCritical
             )
 
     /** Enable or disable the radar warning overlay. */
@@ -913,6 +940,7 @@ class KarooActiveLookBridge(context: Context) {
                         radarWarningController.reset()
                         warningBitmapSmall = null
                         warningBitmapLarge = null
+                        warningBitmapCritical = null
                         // Auto-reconnect if we have a known glasses address
                         if (lastConnectedGlassesAddress != null) {
                             Log.w(

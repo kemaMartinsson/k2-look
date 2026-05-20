@@ -2,6 +2,13 @@
 
 All notable changes to K2Look will be documented in this file.
 
+## [1.0.101] - 2026-05-20
+
+### Changed
+
+- Changed how radar icon is displayed.
+  Now using Varia threat levels 1 -4 instead of calculating threat level based on distance and speed. This should give more accurate and consistent warnings, as the Varia already takes into account various factors to determine threat level.  
+
 ## [1.0.10] - 2026-05-17
 
 ### Added
