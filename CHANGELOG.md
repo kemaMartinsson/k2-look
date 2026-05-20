@@ -2,7 +2,7 @@
 
 All notable changes to K2Look will be documented in this file.
 
-## [1.0.101] - 2026-05-20
+## [1.0.11] - 2026-05-20
 
 ### Changed
 
