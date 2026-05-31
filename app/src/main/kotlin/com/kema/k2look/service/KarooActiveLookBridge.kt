@@ -46,6 +46,7 @@ class KarooActiveLookBridge(context: Context) {
     private var scanJob: Job? = null
     private var scanTimeoutJob: Job? = null
     private var statusLogJob: Job? = null
+    private var activeLookStateJob: Job? = null
     private var autoConnectCollectionJob: Job? = null
     private var autoConnectTimeoutJob: Job? = null
     private var bluetoothRequested = false
@@ -70,6 +71,7 @@ class KarooActiveLookBridge(context: Context) {
     // Auto profile switching on ride start
     private var hasAutoSwitchedProfile = false // Track if we've auto-switched this ride
     private var lastKarooProfileName: String? = null // Track last seen Karoo profile
+    private var pendingBatteryRedraw = false
 
     // Update throttling — 2-second interval. Radar updates bypass this (see radarFlushImmediate).
     private var lastUpdateTime = 0L
@@ -138,20 +140,46 @@ class KarooActiveLookBridge(context: Context) {
 
         if (activeLookService.isConnected) {
             scope.launch {
+                val deferredBeforeSave = shouldDeferCountdownSensitiveRedraw()
                 // saveAndActivateProfile handles cfgWrite/cfgSet (fast path if already stored)
                 val success = layoutService.saveAndActivateProfile(profile)
+                val deferredAfterSave = shouldDeferCountdownSensitiveRedraw()
                 if (success) {
                     Log.i(TAG, "✅ Profile '${profile.name}' activated on glasses")
                     // Battery layout is saved inside saveAndActivateProfile (slow path) and
                     // always needs a redraw after the display was cleared.
-                    layoutService.updateBatteryDisplay(currentBatteryLevel)
+                    if (deferredAfterSave) {
+                        pendingBatteryRedraw = true
+                        Log.i(TAG, "Deferring battery redraw until ride-start countdown completes")
+                    } else {
+                        applyBatteryDisplayRedraw(
+                                reason =
+                                        if (shouldApplyDeferredProfileRedrawAfterSave(
+                                                        deferredBeforeSave = deferredBeforeSave,
+                                                        pendingRideStartCountdown =
+                                                                pendingRideStartCountdown,
+                                                        rideStartCountdownActive =
+                                                                rideStartCountdownJob?.isActive ==
+                                                                        true
+                                                )
+                                        ) {
+                                            "profile apply completed after countdown ended"
+                                        } else {
+                                            "profile apply"
+                                        }
+                        )
+                    }
                 } else {
                     Log.w(TAG, "⚠️ Failed to activate profile '${profile.name}' on glasses")
                 }
 
                 currentData.isDirty = true
-                flushToGlasses()
-                Log.i(TAG, "✅ Display updated after profile apply")
+                if (deferredAfterSave) {
+                    Log.i(TAG, "Deferring profile redraw until ride-start countdown completes")
+                } else {
+                    flushToGlasses()
+                    Log.i(TAG, "✅ Display updated after profile apply")
+                }
             }
         }
     }
@@ -400,7 +428,10 @@ class KarooActiveLookBridge(context: Context) {
 
         when (resolveScanStartAction(
                         karooConnected = karooDataService.isConnected,
-                        pendingScanUntilKarooReady = pendingUserScanUntilKarooReady
+                        pendingScanUntilKarooReady = pendingUserScanUntilKarooReady,
+                        karooConnecting =
+                                karooDataService.connectionState.value is
+                                        KarooDataService.ConnectionState.Connecting
                 )
         ) {
             ScanStartAction.WAIT_FOR_KAROO -> {
@@ -713,12 +744,12 @@ class KarooActiveLookBridge(context: Context) {
                             )
                             .also { warningBitmapLarge = it }
 
-        private fun getWarningBitmapCritical(): android.graphics.Bitmap =
+    private fun getWarningBitmapCritical(): android.graphics.Bitmap =
             warningBitmapCritical
-                ?: android.graphics.BitmapFactory.decodeStream(
-                        context.assets.open("alert_white_40.png")
-                    )
-                    .also { warningBitmapCritical = it }
+                    ?: android.graphics.BitmapFactory.decodeStream(
+                                    context.assets.open("alert_white_40.png")
+                            )
+                            .also { warningBitmapCritical = it }
 
     private val renderWarningSmall: () -> Unit = {
         try {
@@ -800,9 +831,9 @@ class KarooActiveLookBridge(context: Context) {
                     renderSmall = renderWarningSmall,
                     eraseSmall = eraseWarningSmall,
                     renderLarge = renderWarningLarge,
-                eraseLarge = eraseWarningLarge,
-                renderCritical = renderWarningCritical,
-                eraseCritical = eraseWarningCritical
+                    eraseLarge = eraseWarningLarge,
+                    renderCritical = renderWarningCritical,
+                    eraseCritical = eraseWarningCritical
             )
 
     /** Enable or disable the radar warning overlay. */
@@ -825,7 +856,7 @@ class KarooActiveLookBridge(context: Context) {
     /** Enable or disable the glasses battery. */
     fun setBatteryDisplayEnabled(enabled: Boolean) {
         layoutService.batteryDisplayEnabled = enabled
-        layoutService.updateBatteryDisplay(if (enabled) currentBatteryLevel else -1)
+        requestBatteryDisplayRedraw(reason = "battery overlay toggled")
         Log.d(TAG, "Battery overlay: ${if (enabled) "enabled" else "disabled"}")
     }
 
@@ -835,9 +866,38 @@ class KarooActiveLookBridge(context: Context) {
         scope.launch {
             activeLookService.glassesBatteryLevel.collect { level ->
                 currentBatteryLevel = level
-                layoutService.updateBatteryDisplay(level)
+                requestBatteryDisplayRedraw(reason = "battery level update")
             }
         }
+    }
+
+    private fun shouldDeferCountdownSensitiveRedraw(): Boolean {
+        return shouldDeferProfileRedrawForRideStartCountdown(
+                pendingRideStartCountdown = pendingRideStartCountdown,
+                rideStartCountdownActive = rideStartCountdownJob?.isActive == true
+        )
+    }
+
+    private fun requestBatteryDisplayRedraw(reason: String) {
+        if (!shouldUpdateBatteryDisplayNow(
+                        pendingRideStartCountdown = pendingRideStartCountdown,
+                        rideStartCountdownActive = rideStartCountdownJob?.isActive == true
+                )
+        ) {
+            pendingBatteryRedraw = true
+            Log.i(TAG, "Deferring battery redraw until ride-start countdown completes ($reason)")
+            return
+        }
+
+        applyBatteryDisplayRedraw(reason)
+    }
+
+    private fun applyBatteryDisplayRedraw(reason: String) {
+        pendingBatteryRedraw = false
+        val batteryLevelToRender =
+                if (layoutService.batteryDisplayEnabled) currentBatteryLevel else -1
+        layoutService.updateBatteryDisplay(batteryLevelToRender)
+        Log.d(TAG, "Battery overlay redrawn ($reason): level=$batteryLevelToRender")
     }
 
     private fun observeRadar() {
@@ -895,69 +955,82 @@ class KarooActiveLookBridge(context: Context) {
 
     /** Observe ActiveLook connection state */
     private fun observeActiveLookState() {
-        scope.launch {
-            activeLookService.connectionState.collect { state ->
-                Log.d(TAG, "ActiveLook connection state: $state")
-                when (state) {
-                    is ActiveLookService.ConnectionState.Connected -> {
-                        // Stop reconnect loop now that we're connected
-                        stopContinuousReconnect()
+        if (activeLookStateJob?.isActive == true) return
+        activeLookStateJob =
+                scope.launch {
+                    activeLookService.connectionState.collect { state ->
+                        Log.d(TAG, "ActiveLook connection state: $state")
+                        when (state) {
+                            is ActiveLookService.ConnectionState.Connected -> {
+                                // Stop reconnect loop now that we're connected
+                                stopContinuousReconnect()
 
-                        // Save the connected glasses address for reconnect attempts
-                        lastConnectedGlassesAddress = state.glasses.address
-                        Log.d(
-                                TAG,
-                                "Tracking connected glasses address: $lastConnectedGlassesAddress"
-                        )
+                                // Save the connected glasses address for reconnect attempts
+                                lastConnectedGlassesAddress = state.glasses.address
+                                Log.d(
+                                        TAG,
+                                        "Tracking connected glasses address: $lastConnectedGlassesAddress"
+                                )
 
-                        // Refresh config cache so fast-path cfgSet works immediately
-                        scope.launch { layoutService.refreshConfigCache() }
+                                // Refresh config cache so fast-path cfgSet works immediately
+                                scope.launch { layoutService.refreshConfigCache() }
 
-                        // Re-upload active profile on (re)connect so glasses have layout data
-                        activeProfile?.let { profile ->
-                            scope.launch {
-                                val success = layoutService.saveAndActivateProfile(profile)
-                                if (success) {
-                                    Log.i(
-                                            TAG,
-                                            "✅ Profile '${profile.name}' re-uploaded on reconnect"
-                                    )
-                                } else {
-                                    Log.w(TAG, "⚠️ Failed to re-upload profile on reconnect")
+                                // Re-upload active profile on (re)connect so glasses have layout
+                                // data
+                                activeProfile?.let { profile ->
+                                    scope.launch {
+                                        val success = layoutService.saveAndActivateProfile(profile)
+                                        if (success) {
+                                            Log.i(
+                                                    TAG,
+                                                    "✅ Profile '${profile.name}' re-uploaded on reconnect"
+                                            )
+                                        } else {
+                                            Log.w(
+                                                    TAG,
+                                                    "⚠️ Failed to re-upload profile on reconnect"
+                                            )
+                                        }
+                                    }
+                                }
+
+                                updateBridgeState()
+                                // If a ride has just started, play countdown first, then show
+                                // layout.
+                                if (isInActiveRide && pendingRideStartCountdown) {
+                                    playRideStartCountdownThenStartStreaming()
+                                } else if (karooDataService.isConnected) {
+                                    startStreaming()
                                 }
                             }
-                        }
-
-                        updateBridgeState()
-                        // If a ride has just started, play countdown first, then show layout.
-                        if (isInActiveRide && pendingRideStartCountdown) {
-                            playRideStartCountdownThenStartStreaming()
-                        } else if (karooDataService.isConnected) {
-                            startStreaming()
+                            is ActiveLookService.ConnectionState.Disconnected -> {
+                                radarWarningController.reset()
+                                warningBitmapSmall = null
+                                warningBitmapLarge = null
+                                warningBitmapCritical = null
+                                // Auto-reconnect only during active rides.
+                                if (lastConnectedGlassesAddress != null && isInActiveRide) {
+                                    Log.w(
+                                            TAG,
+                                            "Glasses disconnected - will attempt reconnect to $lastConnectedGlassesAddress"
+                                    )
+                                    startContinuousReconnect()
+                                } else if (lastConnectedGlassesAddress != null) {
+                                    Log.i(
+                                            TAG,
+                                            "Glasses disconnected while idle - not starting continuous reconnect loop"
+                                    )
+                                }
+                                updateBridgeState()
+                            }
+                            is ActiveLookService.ConnectionState.Error -> {
+                                _bridgeState.value =
+                                        BridgeState.Error("ActiveLook: ${state.message}")
+                            }
+                            else -> updateBridgeState()
                         }
                     }
-                    is ActiveLookService.ConnectionState.Disconnected -> {
-                        radarWarningController.reset()
-                        warningBitmapSmall = null
-                        warningBitmapLarge = null
-                        warningBitmapCritical = null
-                        // Auto-reconnect if we have a known glasses address
-                        if (lastConnectedGlassesAddress != null) {
-                            Log.w(
-                                    TAG,
-                                    "Glasses disconnected - will attempt reconnect to $lastConnectedGlassesAddress"
-                            )
-                            startContinuousReconnect()
-                        }
-                        updateBridgeState()
-                    }
-                    is ActiveLookService.ConnectionState.Error -> {
-                        _bridgeState.value = BridgeState.Error("ActiveLook: ${state.message}")
-                    }
-                    else -> updateBridgeState()
                 }
-            }
-        }
     }
 
     /** Update bridge state based on both service states */
@@ -1138,6 +1211,8 @@ class KarooActiveLookBridge(context: Context) {
         rideStartCountdownJob = null
         autoConnectCollectionJob?.cancel()
         autoConnectTimeoutJob?.cancel()
+        activeLookStateJob?.cancel()
+        activeLookStateJob = null
         releaseBluetooth()
         karooDataService.disconnect()
         activeLookService.cleanup()
@@ -1168,8 +1243,20 @@ class KarooActiveLookBridge(context: Context) {
                     while (true) {
                         delay(reconnectIntervalMs)
 
-                        if (activeLookService.isConnected) {
+                        val activeLookState = activeLookService.connectionState.value
+                        if (activeLookState is ActiveLookService.ConnectionState.Connected) {
                             Log.d(TAG, "Reconnect loop: glasses already connected")
+                            continue
+                        }
+
+                        if (activeLookState is ActiveLookService.ConnectionState.Connecting ||
+                                        activeLookState is
+                                                ActiveLookService.ConnectionState.Scanning
+                        ) {
+                            Log.d(
+                                    TAG,
+                                    "Reconnect loop: active look state is $activeLookState, skipping this cycle"
+                            )
                             continue
                         }
 
@@ -1242,6 +1329,9 @@ class KarooActiveLookBridge(context: Context) {
                                 TAG,
                                 "RIDE_START_ANIM: resuming metrics after countdown (bridge=${_bridgeState.value}, rideState=${currentData.rideState})"
                         )
+                        if (pendingBatteryRedraw) {
+                            applyBatteryDisplayRedraw("ride-start countdown completed")
+                        }
                         currentData.isDirty = true
                         flushToGlasses()
                         startStreaming()
@@ -1503,10 +1593,11 @@ internal enum class ScanStartAction {
 
 internal fun resolveScanStartAction(
         karooConnected: Boolean,
-        pendingScanUntilKarooReady: Boolean
+        pendingScanUntilKarooReady: Boolean,
+        karooConnecting: Boolean,
 ): ScanStartAction {
     if (karooConnected) return ScanStartAction.START_NOW
-    return if (pendingScanUntilKarooReady) {
+    return if (pendingScanUntilKarooReady && karooConnecting) {
         ScanStartAction.NO_OP_ALREADY_PENDING
     } else {
         ScanStartAction.WAIT_FOR_KAROO
@@ -1518,4 +1609,33 @@ internal fun shouldTriggerRideStartCountdown(
         newRideState: RideState
 ): Boolean {
     return previousRideState is RideState.Idle && newRideState !is RideState.Idle
+}
+
+internal fun shouldDeferProfileRedrawForRideStartCountdown(
+        pendingRideStartCountdown: Boolean,
+        rideStartCountdownActive: Boolean
+): Boolean {
+    return pendingRideStartCountdown || rideStartCountdownActive
+}
+
+internal fun shouldApplyDeferredProfileRedrawAfterSave(
+        deferredBeforeSave: Boolean,
+        pendingRideStartCountdown: Boolean,
+        rideStartCountdownActive: Boolean
+): Boolean {
+    return deferredBeforeSave &&
+            !shouldDeferProfileRedrawForRideStartCountdown(
+                    pendingRideStartCountdown = pendingRideStartCountdown,
+                    rideStartCountdownActive = rideStartCountdownActive
+            )
+}
+
+internal fun shouldUpdateBatteryDisplayNow(
+        pendingRideStartCountdown: Boolean,
+        rideStartCountdownActive: Boolean
+): Boolean {
+    return !shouldDeferProfileRedrawForRideStartCountdown(
+            pendingRideStartCountdown = pendingRideStartCountdown,
+            rideStartCountdownActive = rideStartCountdownActive
+    )
 }

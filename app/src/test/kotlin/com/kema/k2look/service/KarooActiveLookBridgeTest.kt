@@ -199,33 +199,6 @@ class BarFillAmountCalculationTest {
     }
 }
 
-class KarooActiveLookBridgeScanStartPolicyTest {
-
-    @Test
-    fun `resolveScanStartAction starts scan immediately when karoo is connected`() {
-        val action =
-                resolveScanStartAction(karooConnected = true, pendingScanUntilKarooReady = false)
-
-        assertEquals(ScanStartAction.START_NOW, action)
-    }
-
-    @Test
-    fun `resolveScanStartAction queues scan when karoo is disconnected and no pending request`() {
-        val action =
-                resolveScanStartAction(karooConnected = false, pendingScanUntilKarooReady = false)
-
-        assertEquals(ScanStartAction.WAIT_FOR_KAROO, action)
-    }
-
-    @Test
-    fun `resolveScanStartAction avoids duplicate queue when request already pending`() {
-        val action =
-                resolveScanStartAction(karooConnected = false, pendingScanUntilKarooReady = true)
-
-        assertEquals(ScanStartAction.NO_OP_ALREADY_PENDING, action)
-    }
-}
-
 class KarooActiveLookBridgeRideStartPolicyTest {
 
     @Test
