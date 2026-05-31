@@ -45,6 +45,7 @@ fun FieldConfigurationDialog(
         var showUnit by remember { mutableStateOf(field.showUnit) }
         var showIcon by remember { mutableStateOf(field.showIcon) }
         var iconSize by remember { mutableStateOf(field.iconSize) }
+        var largeFont by remember { mutableStateOf(field.largeFont) }
         var visualizationType by remember {
                 mutableStateOf(field.visualizationType ?: VisualizationType.TEXT)
         }
@@ -127,10 +128,10 @@ fun FieldConfigurationDialog(
 
                                         HorizontalDivider()
 
-                                        // Info: Font size determined by zone
+                                        // Info: Font size can be overridden per field
                                         Text(
                                                 text =
-                                                        "ℹ️ Font size is automatically set based on the zone position",
+                                                        "ℹ️ Use \"Large Font\" to force font 3; otherwise font 2 is used",
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color =
                                                         MaterialTheme.colorScheme.onSurface.copy(
@@ -373,6 +374,54 @@ fun FieldConfigurationDialog(
                                                                                                         null
                                                                         )
                                                                 }
+                                                        }
+
+                                                        // Large Font Toggle
+                                                        Row(
+                                                                modifier = Modifier.fillMaxWidth(),
+                                                                horizontalArrangement =
+                                                                        Arrangement.SpaceBetween,
+                                                                verticalAlignment =
+                                                                        Alignment.CenterVertically
+                                                        ) {
+                                                                Column(
+                                                                        modifier =
+                                                                                Modifier.weight(1f)
+                                                                ) {
+                                                                        Text(
+                                                                                text = "Large Font",
+                                                                                style =
+                                                                                        MaterialTheme
+                                                                                                .typography
+                                                                                                .bodyLarge
+                                                                        )
+                                                                        Text(
+                                                                                text =
+                                                                                        if (largeFont
+                                                                                        )
+                                                                                                "Font 3"
+                                                                                        else
+                                                                                                "Font 2",
+                                                                                style =
+                                                                                        MaterialTheme
+                                                                                                .typography
+                                                                                                .bodySmall,
+                                                                                color =
+                                                                                        MaterialTheme
+                                                                                                .colorScheme
+                                                                                                .onSurface
+                                                                                                .copy(
+                                                                                                        alpha =
+                                                                                                                0.6f
+                                                                                                )
+                                                                        )
+                                                                }
+                                                                Switch(
+                                                                        checked = largeFont,
+                                                                        onCheckedChange = {
+                                                                                largeFont = it
+                                                                        }
+                                                                )
                                                         }
                                                 } // End TEXT visualization options (icon options)
                                         } // End TEXT conditional
@@ -746,6 +795,7 @@ fun FieldConfigurationDialog(
                                                                         showUnit = showUnit,
                                                                         showIcon = showIcon,
                                                                         iconSize = iconSize,
+                                                                        largeFont = largeFont,
                                                                         gauge = gauge,
                                                                         progressBar = progressBar,
                                                                         zonedBar = zonedBar

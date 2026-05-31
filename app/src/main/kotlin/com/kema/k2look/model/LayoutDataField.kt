@@ -10,57 +10,58 @@ package com.kema.k2look.model
  * @param showUnit Whether to show the unit
  * @param showIcon Whether to display icon next to label
  * @param iconSize Icon size (28×28 or 40×40)
+ * @param largeFont Whether to force large value font (3). If false, value font is 2.
  * @param gauge Gauge configuration (if visualizationType is GAUGE)
  * @param progressBar Bar configuration (if visualizationType is BAR)
  * @param zonedBar Zoned bar configuration (if visualizationType is ZONED_BAR)
  */
 data class LayoutDataField(
-    val dataField: DataField,
-    val zoneId: String,
-    val visualizationType: VisualizationType? = VisualizationType.TEXT,
-    val showLabel: Boolean = true,
-    val showUnit: Boolean = true,
-    val showIcon: Boolean = true,
-    val iconSize: IconSize = IconSize.SMALL,
-    val gauge: Gauge? = null,
-    val progressBar: ProgressBar? = null,
-    val zonedBar: ZonedProgressBar? = null
+        val dataField: DataField,
+        val zoneId: String,
+        val visualizationType: VisualizationType? = VisualizationType.TEXT,
+        val showLabel: Boolean = true,
+        val showUnit: Boolean = true,
+        val showIcon: Boolean = true,
+        val iconSize: IconSize = IconSize.SMALL,
+        val largeFont: Boolean = false,
+        val gauge: Gauge? = null,
+        val progressBar: ProgressBar? = null,
+        val zonedBar: ZonedProgressBar? = null
 ) {
-    /**
-     * Legacy constructor for backward compatibility with Position-based layouts
-     */
+    /** Legacy constructor for backward compatibility with Position-based layouts */
     @Deprecated(
-        "Use zoneId instead of position",
-        ReplaceWith("LayoutDataField(dataField, zoneId, showLabel, showUnit, showIcon, iconSize)")
+            "Use zoneId instead of position",
+            ReplaceWith(
+                    "LayoutDataField(dataField, zoneId, showLabel, showUnit, showIcon, iconSize)"
+            )
     )
     constructor(
-        dataField: DataField,
-        position: Position,
-        fontSize: FontSize = FontSize.MEDIUM,
-        showLabel: Boolean = true,
-        showUnit: Boolean = true,
-        showIcon: Boolean = true,
-        iconSize: IconSize = IconSize.SMALL
+            dataField: DataField,
+            position: Position,
+            fontSize: FontSize = FontSize.MEDIUM,
+            showLabel: Boolean = true,
+            showUnit: Boolean = true,
+            showIcon: Boolean = true,
+            iconSize: IconSize = IconSize.SMALL
     ) : this(
-        dataField = dataField,
-        zoneId = when (position) {
-            Position.TOP -> "3D_FULL_H"
-            Position.MIDDLE -> "3D_FULL_M"
-            Position.BOTTOM -> "3D_FULL_L"
-        },
-        showLabel = showLabel,
-        showUnit = showUnit,
-        showIcon = showIcon,
-        iconSize = iconSize
+            dataField = dataField,
+            zoneId =
+                    when (position) {
+                        Position.TOP -> "3D_FULL_H"
+                        Position.MIDDLE -> "3D_FULL_M"
+                        Position.BOTTOM -> "3D_FULL_L"
+                    },
+            showLabel = showLabel,
+            showUnit = showUnit,
+            showIcon = showIcon,
+            iconSize = iconSize
     )
 }
 
-/**
- * Types of data visualization
- */
+/** Types of data visualization */
 enum class VisualizationType {
-    TEXT,       // Traditional text display (current default)
-    GAUGE,      // Circular/arc gauge
-    BAR,        // Simple progress bar
-    ZONED_BAR   // Multi-zone progress bar (e.g., HR zones)
+    TEXT, // Traditional text display (current default)
+    GAUGE, // Circular/arc gauge
+    BAR, // Simple progress bar
+    ZONED_BAR // Multi-zone progress bar (e.g., HR zones)
 }
