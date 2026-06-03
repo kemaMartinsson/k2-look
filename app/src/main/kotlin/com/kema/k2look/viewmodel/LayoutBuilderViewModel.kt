@@ -47,7 +47,7 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
             val isRiding: Boolean = false,
             val karooSyncEnabled: Boolean = true,
             val radarWarningEnabled: Boolean = true,
-            val batteryDisplayEnabled: Boolean = false
+            val batteryDisplayEnabled: Boolean = true
     )
 
     init {

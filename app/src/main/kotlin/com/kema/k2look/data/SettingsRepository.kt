@@ -35,7 +35,7 @@ class SettingsRepository(context: Context) {
     }
 
     private val _batteryDisplayEnabled =
-            MutableStateFlow(prefs.getBoolean(KEY_BATTERY_DISPLAY, false))
+            MutableStateFlow(prefs.getBoolean(KEY_BATTERY_DISPLAY, true))
     val batteryDisplayEnabled: StateFlow<Boolean> = _batteryDisplayEnabled.asStateFlow()
 
     fun setBatteryDisplayEnabled(enabled: Boolean) {
