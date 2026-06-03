@@ -77,7 +77,7 @@ class ActiveLookLayoutService(internal val activeLookService: ActiveLookService)
      * Whether to show the battery overlay. Set by [KarooActiveLookBridge.setBatteryDisplayEnabled].
      * The overlay is driven by [updateBatteryDisplay], not the per-frame render loop.
      */
-    var batteryDisplayEnabled: Boolean = false
+    var batteryDisplayEnabled: Boolean = true
 
     companion object {
         private const val TAG = "ActiveLookLayoutService"
