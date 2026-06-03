@@ -8,7 +8,6 @@ import com.kema.k2look.data.ProfileRepository
 import com.kema.k2look.data.SeedProfile
 import com.kema.k2look.data.SettingsRepository
 import com.kema.k2look.model.DataFieldProfile
-import com.kema.k2look.sharing.KarooProfileImporter
 import io.hammerhead.karooext.models.RideProfile
 import io.hammerhead.karooext.models.RideState
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,7 +15,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.launch
 
 /**
  * ViewModel for managing DataField Builder state and profile management.
@@ -250,19 +248,9 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
     // -------------------------------------------------------------------------
 
     fun importFromKaroo(rideProfile: RideProfile) {
-        viewModelScope.launch {
-            try {
-                val profile = KarooProfileImporter.import(rideProfile)
-                repository.saveProfile(profile)
-                val allProfiles = reloadAllProfiles()
-                _uiState.value =
-                        _uiState.value.copy(profiles = allProfiles, activeProfile = profile)
-                Log.i(TAG, "Imported Karoo profile '${rideProfile.name}' → '${profile.name}'")
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to import Karoo profile", e)
-                _uiState.value = _uiState.value.copy(error = "Import failed: ${e.message}")
-            }
-        }
+        // TODO: Re-enable Karoo profile import after the layout mapper supports all page shapes.
+        Log.w(TAG, "Karoo import is temporarily disabled for profile '${rideProfile.name}'")
+        _uiState.value = _uiState.value.copy(error = "Karoo import is temporarily disabled")
     }
 
     // -------------------------------------------------------------------------
