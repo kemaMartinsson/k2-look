@@ -43,17 +43,15 @@ import com.kema.k2look.model.DataField
 import com.kema.k2look.model.LayoutDataField
 import com.kema.k2look.model.LayoutScreen
 
-/**
- * Zone-based screen editor for configuring datafields using layout templates
- */
+/** Zone-based screen editor for configuring datafields using layout templates */
 @Composable
 fun ZoneBasedScreenEditor(
-    screen: LayoutScreen,
-    onTemplateChange: (String) -> Unit,
-    onFieldAdd: (String, DataField) -> Unit,
-    onFieldEdit: (LayoutDataField) -> Unit,
-    onFieldRemove: (String) -> Unit,
-    modifier: Modifier = Modifier
+        screen: LayoutScreen,
+        onTemplateChange: (String) -> Unit,
+        onFieldAdd: (String, DataField) -> Unit,
+        onFieldEdit: (LayoutDataField) -> Unit,
+        onFieldRemove: (String) -> Unit,
+        modifier: Modifier = Modifier
 ) {
     var showTemplateSelector by remember { mutableStateOf(false) }
     var showMetricSelector by remember { mutableStateOf(false) }
@@ -64,71 +62,66 @@ fun ZoneBasedScreenEditor(
     // Template selector dialog
     if (showTemplateSelector) {
         LayoutTemplateSelectorDialog(
-            currentTemplateId = screen.templateId ?: "3D_FULL",
-            onTemplateSelected = { newTemplate ->
-                onTemplateChange(newTemplate.id)
-                showTemplateSelector = false
-            },
-            onDismiss = { showTemplateSelector = false }
+                currentTemplateId = screen.templateId ?: "3D_FULL",
+                onTemplateSelected = { newTemplate ->
+                    onTemplateChange(newTemplate.id)
+                    showTemplateSelector = false
+                },
+                onDismiss = { showTemplateSelector = false }
         )
     }
 
     // Metric selector dialog
     if (showMetricSelector && selectedZoneId != null) {
         MetricSelectorDialog(
-            onDismiss = {
-                showMetricSelector = false
-                selectedZoneId = null
-            },
-            onSelect = { dataField ->
-                onFieldAdd(selectedZoneId!!, dataField)
-                showMetricSelector = false
-                selectedZoneId = null
-            }
+                onDismiss = {
+                    showMetricSelector = false
+                    selectedZoneId = null
+                },
+                onSelect = { dataField ->
+                    onFieldAdd(selectedZoneId!!, dataField)
+                    showMetricSelector = false
+                    selectedZoneId = null
+                }
         )
     }
 
     Card(
-        modifier = modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
+            modifier = modifier.fillMaxWidth(),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(max = 600.dp) // Limit height to enable scrolling
-                .verticalScroll(rememberScrollState())
-                .padding(12.dp), // Reduced from 16.dp
-            verticalArrangement = Arrangement.spacedBy(8.dp) // Reduced from 12.dp
+                modifier =
+                        Modifier.fillMaxWidth()
+                                .heightIn(max = 600.dp) // Limit height to enable scrolling
+                                .verticalScroll(rememberScrollState())
+                                .padding(12.dp), // Reduced from 16.dp
+                verticalArrangement = Arrangement.spacedBy(8.dp) // Reduced from 12.dp
         ) {
             // Screen header
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = screen.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                        text = screen.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "${screen.dataFields.size}/${template.maxFields} fields",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (screen.dataFields.size == template.maxFields)
-                        MaterialTheme.colorScheme.primary
-                    else
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        text = "${screen.dataFields.size}/${template.maxFields} fields",
+                        style = MaterialTheme.typography.bodySmall,
+                        color =
+                                if (screen.dataFields.size == template.maxFields)
+                                        MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )
             }
 
             // Layout template selector button
-            Button(
-                onClick = { showTemplateSelector = true },
-                modifier = Modifier.fillMaxWidth()
-            ) {
+            Button(onClick = { showTemplateSelector = true }, modifier = Modifier.fillMaxWidth()) {
                 Icon(Icons.Default.Settings, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
                 Text("Layout: ${template.name}")
@@ -139,147 +132,154 @@ fun ZoneBasedScreenEditor(
             template.zones.forEach { zone ->
                 val field = screen.dataFields.find { it.zoneId == zone.id }
                 ZoneDataFieldSlot(
-                    zone = zone,
-                    field = field,
-                    onAdd = {
-                        selectedZoneId = zone.id
-                        showMetricSelector = true
-                    },
-                    onEdit = { onFieldEdit(it) },
-                    onRemove = { onFieldRemove(zone.id) }
+                        zone = zone,
+                        field = field,
+                        onAdd = {
+                            selectedZoneId = zone.id
+                            showMetricSelector = true
+                        },
+                        onEdit = { onFieldEdit(it) },
+                        onRemove = { onFieldRemove(zone.id) }
                 )
             }
         }
     }
 }
 
-/**
- * Individual datafield slot for a specific zone
- */
+/** Individual datafield slot for a specific zone */
 @Composable
 fun ZoneDataFieldSlot(
-    zone: com.kema.k2look.model.LayoutZone,
-    field: LayoutDataField?,
-    onAdd: () -> Unit,
-    onEdit: (LayoutDataField) -> Unit,
-    onRemove: () -> Unit,
-    modifier: Modifier = Modifier
+        zone: com.kema.k2look.model.LayoutZone,
+        field: LayoutDataField?,
+        onAdd: () -> Unit,
+        onEdit: (LayoutDataField) -> Unit,
+        onRemove: () -> Unit,
+        modifier: Modifier = Modifier
 ) {
     Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(90.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(
-                if (field != null)
-                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-                else
-                    MaterialTheme.colorScheme.surface
-            )
-            .border(
-                width = 1.dp,
-                color = if (field != null)
-                    MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                else
-                    MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                shape = RoundedCornerShape(8.dp)
-            )
-            .clickable(enabled = field == null) { onAdd() }
-            .padding(12.dp)
+            modifier =
+                    modifier.fillMaxWidth()
+                            .height(90.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(
+                                    if (field != null)
+                                            MaterialTheme.colorScheme.primaryContainer.copy(
+                                                    alpha = 0.3f
+                                            )
+                                    else MaterialTheme.colorScheme.surface
+                            )
+                            .border(
+                                    width = 1.dp,
+                                    color =
+                                            if (field != null)
+                                                    MaterialTheme.colorScheme.primary.copy(
+                                                            alpha = 0.5f
+                                                    )
+                                            else
+                                                    MaterialTheme.colorScheme.outline.copy(
+                                                            alpha = 0.3f
+                                                    ),
+                                    shape = RoundedCornerShape(8.dp)
+                            )
+                            .clickable(enabled = field == null) { onAdd() }
+                            .padding(12.dp)
     ) {
         if (field != null) {
             // Filled slot
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = zone.displayName,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            text = zone.displayName,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = field.dataField.name,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold
+                            text = field.dataField.name,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(2.dp))
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         // Show visualization type for GAUGE/BAR/ZONED_BAR, or font/icon for TEXT
                         when (field.visualizationType
-                            ?: com.kema.k2look.model.VisualizationType.TEXT) {
+                                        ?: com.kema.k2look.model.VisualizationType.TEXT
+                        ) {
                             com.kema.k2look.model.VisualizationType.GAUGE -> {
                                 Text(
-                                    text = "⊙ Gauge",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                                    fontWeight = FontWeight.Bold
+                                        text = "⊙ Gauge",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color =
+                                                MaterialTheme.colorScheme.primary.copy(
+                                                        alpha = 0.8f
+                                                ),
+                                        fontWeight = FontWeight.Bold
                                 )
                             }
-
                             com.kema.k2look.model.VisualizationType.BAR -> {
                                 Text(
-                                    text = "▬ Bar",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                                    fontWeight = FontWeight.Bold
+                                        text = "▬ Bar",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color =
+                                                MaterialTheme.colorScheme.primary.copy(
+                                                        alpha = 0.8f
+                                                ),
+                                        fontWeight = FontWeight.Bold
                                 )
                             }
-
                             com.kema.k2look.model.VisualizationType.ZONED_BAR -> {
                                 Text(
-                                    text = "▦ Zoned Bar",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                                    fontWeight = FontWeight.Bold
+                                        text = "▦ Zoned Bar",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color =
+                                                MaterialTheme.colorScheme.primary.copy(
+                                                        alpha = 0.8f
+                                                ),
+                                        fontWeight = FontWeight.Bold
                                 )
                             }
-
                             com.kema.k2look.model.VisualizationType.TEXT -> {
                                 Text(
-                                    text = "Font: ${zone.fontSize.name}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                        text =
+                                                if (field.largeFont) "Font: 3 (Large)"
+                                                else "Font: 2",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color =
+                                                MaterialTheme.colorScheme.onSurface.copy(
+                                                        alpha = 0.7f
+                                                )
                                 )
                                 if (field.showIcon) {
                                     Text(
-                                        text = "• Icon: ${field.iconSize.name}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                            text = "• Icon: ${field.iconSize.name}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color =
+                                                    MaterialTheme.colorScheme.onSurface.copy(
+                                                            alpha = 0.7f
+                                                    )
                                     )
                                 }
                             }
                         }
                     }
                 }
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    IconButton(
-                        onClick = { onEdit(field) },
-                        modifier = Modifier.size(32.dp)
-                    ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    IconButton(onClick = { onEdit(field) }, modifier = Modifier.size(32.dp)) {
                         Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = "Edit field",
-                            tint = MaterialTheme.colorScheme.primary
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Edit field",
+                                tint = MaterialTheme.colorScheme.primary
                         )
                     }
-                    IconButton(
-                        onClick = onRemove,
-                        modifier = Modifier.size(32.dp)
-                    ) {
+                    IconButton(onClick = onRemove, modifier = Modifier.size(32.dp)) {
                         Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Remove field",
-                            tint = MaterialTheme.colorScheme.error
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Remove field",
+                                tint = MaterialTheme.colorScheme.error
                         )
                     }
                 }
@@ -287,31 +287,30 @@ fun ZoneDataFieldSlot(
         } else {
             // Empty slot
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Add field",
-                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
-                    modifier = Modifier.size(24.dp)
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Add field",
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                        modifier = Modifier.size(24.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     Text(
-                        text = zone.displayName,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            text = zone.displayName,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                     )
                     Text(
-                        text = "Tap to add field • ${zone.fontSize.name} font",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                            text = "Tap to add field • ${zone.fontSize.name} font",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                     )
                 }
             }
         }
     }
 }
-

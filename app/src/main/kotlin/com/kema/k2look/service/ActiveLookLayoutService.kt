@@ -276,7 +276,7 @@ class ActiveLookLayoutService(internal val activeLookService: ActiveLookService)
                 val zoneY = zone?.y ?: 0
                 val zoneWidth = zone?.width ?: LayoutPositionDefaults.ZONE_WIDTH
                 val zoneHeight = zone?.height ?: 50
-                val font = sizeToFont(heightToSize(zoneHeight))
+                val font = if (field.largeFont) 3 else 2
                 val layoutId = getLayoutIdForZone(screen.id, field.zoneId)
                 screenGeometry["${screen.id}:${field.zoneId}"] =
                         ScreenFieldGeometry(layoutId, zoneX, zoneY, zoneWidth, zoneHeight, font)
@@ -522,7 +522,7 @@ class ActiveLookLayoutService(internal val activeLookService: ActiveLookService)
                 val zoneY = zone?.y ?: 0
                 val zoneWidth = zone?.width ?: LayoutPositionDefaults.ZONE_WIDTH
                 val zoneHeight = zone?.height ?: 50
-                val font = sizeToFont(heightToSize(zoneHeight))
+                val font = if (field.largeFont) 3 else 2
                 val hasIcon =
                         field.showIcon &&
                                 (field.dataField.icon28 != null || field.dataField.icon40 != null)
