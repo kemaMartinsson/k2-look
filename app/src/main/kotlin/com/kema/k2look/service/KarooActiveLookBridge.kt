@@ -426,6 +426,10 @@ class KarooActiveLookBridge(context: Context) {
             return
         }
 
+                // A previous disconnect may have started a reconnect loop. Stop it before beginning a
+                // fresh user-initiated scan so the old loop cannot keep re-triggering searches.
+                stopContinuousReconnect()
+
         when (resolveScanStartAction(
                         karooConnected = karooDataService.isConnected,
                         pendingScanUntilKarooReady = pendingUserScanUntilKarooReady,
