@@ -270,9 +270,9 @@ class KarooActiveLookBridge(context: Context) {
                         TAG,
                         "👓 Auto-connect to glasses enabled, will attempt connection to: $lastGlassesAddress"
                 )
-            // Defer startup auto-connect until Karoo is connected and BLE request is active.
-            pendingStartupAutoConnectAddress = lastGlassesAddress
-            tryStartPendingStartupAutoConnect()
+                // Defer startup auto-connect until Karoo is connected and BLE request is active.
+                pendingStartupAutoConnectAddress = lastGlassesAddress
+                tryStartPendingStartupAutoConnect()
             } else {
                 android.util.Log.i(
                         TAG,
@@ -318,20 +318,14 @@ class KarooActiveLookBridge(context: Context) {
         val address = pendingStartupAutoConnectAddress ?: return
 
         if (!karooDataService.isConnected) {
-            Log.i(
-                    TAG,
-                    "⏳ Deferring startup auto-connect until Karoo system is connected"
-            )
+            Log.i(TAG, "⏳ Deferring startup auto-connect until Karoo system is connected")
             return
         }
 
         pendingStartupAutoConnectAddress = null
         scope.launch {
             if (!ensureBleAdapterReadyForScan()) {
-                Log.e(
-                        TAG,
-                        "❌ BLE adapter not ready for startup auto-connect scan"
-                )
+                Log.e(TAG, "❌ BLE adapter not ready for startup auto-connect scan")
                 return@launch
             }
             attemptAutoConnectToGlasses(address)
