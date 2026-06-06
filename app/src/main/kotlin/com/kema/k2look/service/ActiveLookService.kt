@@ -180,6 +180,10 @@ class ActiveLookService(private val context: Context) {
         val sdkInstance = sdk
         if (sdkInstance == null) {
             Log.w(TAG, "SDK not initialized")
+            _isScanning.value = false
+            if (_connectionState.value is ConnectionState.Scanning) {
+                _connectionState.value = ConnectionState.Disconnected
+            }
             return
         }
 
@@ -191,15 +195,16 @@ class ActiveLookService(private val context: Context) {
 
         try {
             sdkInstance.stopScan()
-            _isScanning.value = false
-
-            if (_connectionState.value is ConnectionState.Scanning) {
-                _connectionState.value = ConnectionState.Disconnected
-            }
-
             Log.i(TAG, "✓ Scan stopped")
         } catch (e: Exception) {
             Log.e(TAG, "Error stopping scan: ${e.message}", e)
+        } finally {
+            // Always reset local scan state even if platform stopScan throws
+            // (e.g. adapter turned OFF) to avoid permanent "Searching" UI.
+            _isScanning.value = false
+            if (_connectionState.value is ConnectionState.Scanning) {
+                _connectionState.value = ConnectionState.Disconnected
+            }
         }
     }
 
@@ -358,23 +363,47 @@ class ActiveLookService(private val context: Context) {
 
     /** Disconnect from glasses */
     fun disconnect() {
-        val glasses = connectedGlasses
-        if (glasses == null) {
-            Log.w(TAG, "No glasses connected")
-            return
+        val connected = connectedGlasses
+        val connecting = connectingGlasses
+
+        Log.i(
+                TAG,
+                "Disconnect requested (connected=${connected != null}, connecting=${connecting != null}, scanning=${_isScanning.value})"
+        )
+
+        // Stop scan first so it cannot immediately rediscover and reconnect while disconnecting.
+        if (_isScanning.value) {
+            stopScanning()
         }
 
-        Log.i(TAG, "Disconnecting from glasses: ${glasses.name}...")
-
-        try {
-            glasses.disconnect()
-            connectedGlasses = null
-            _connectionState.value = ConnectionState.Disconnected
-            Log.i(TAG, "✓ Disconnected successfully")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error during disconnect: ${e.message}", e)
-            _connectionState.value = ConnectionState.Error("Disconnect error: ${e.message}")
+        // Cancel any in-flight connect attempt to avoid stale "Connecting" state.
+        connectionTimeoutJob?.cancel()
+        connectionTimeoutJob = null
+        if (connecting != null) {
+            try {
+                connecting.cancelConnection()
+                Log.i(TAG, "Canceled in-flight connection attempt")
+            } catch (e: Exception) {
+                Log.w(TAG, "cancelConnection threw: ${e.message}")
+            }
         }
+        connectingGlasses = null
+
+        if (connected != null) {
+            try {
+                Log.i(TAG, "Disconnecting from glasses: ${connected.name}...")
+                connected.disconnect()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error during disconnect: ${e.message}", e)
+            }
+        } else {
+            Log.i(TAG, "No active connected glasses to disconnect")
+        }
+
+        connectedGlasses = null
+        _glassesBatteryLevel.value = -1
+        _connectionState.value = ConnectionState.Disconnected
+        Log.i(TAG, "✓ Disconnect state reset complete")
     }
 
     /** Delete a layout from glasses memory (Phase 4.2) */

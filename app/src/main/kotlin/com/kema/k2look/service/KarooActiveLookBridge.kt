@@ -49,8 +49,10 @@ class KarooActiveLookBridge(context: Context) {
     private var activeLookStateJob: Job? = null
     private var autoConnectCollectionJob: Job? = null
     private var autoConnectTimeoutJob: Job? = null
+    private var karooObserversStarted = false
     private var bluetoothRequested = false
     private var pendingUserScanUntilKarooReady = false
+    private var pendingStartupAutoConnectAddress: String? = null
 
     // Simulator mode (for Debug tab)
     internal var simulatorJob: Job? = null
@@ -268,8 +270,9 @@ class KarooActiveLookBridge(context: Context) {
                         TAG,
                         "👓 Auto-connect to glasses enabled, will attempt connection to: $lastGlassesAddress"
                 )
-                // Start scanning to find the previously connected glasses
-                attemptAutoConnectToGlasses(lastGlassesAddress)
+            // Defer startup auto-connect until Karoo is connected and BLE request is active.
+            pendingStartupAutoConnectAddress = lastGlassesAddress
+            tryStartPendingStartupAutoConnect()
             } else {
                 android.util.Log.i(
                         TAG,
@@ -309,6 +312,30 @@ class KarooActiveLookBridge(context: Context) {
                         )
                     }
                 }
+    }
+
+    private fun tryStartPendingStartupAutoConnect() {
+        val address = pendingStartupAutoConnectAddress ?: return
+
+        if (!karooDataService.isConnected) {
+            Log.i(
+                    TAG,
+                    "⏳ Deferring startup auto-connect until Karoo system is connected"
+            )
+            return
+        }
+
+        pendingStartupAutoConnectAddress = null
+        scope.launch {
+            if (!ensureBleAdapterReadyForScan()) {
+                Log.e(
+                        TAG,
+                        "❌ BLE adapter not ready for startup auto-connect scan"
+                )
+                return@launch
+            }
+            attemptAutoConnectToGlasses(address)
+        }
     }
 
     /** Attempt to auto-connect to previously connected glasses */
@@ -395,8 +422,13 @@ class KarooActiveLookBridge(context: Context) {
 
         karooDataService.connect()
 
-        // Start observing Karoo data
-        observeKarooData()
+        // Start observers once per bridge lifecycle; duplicate collectors can cause
+        // repeated scan/reconnect triggers after reconnects.
+        if (!karooObserversStarted) {
+            observeKarooData()
+            karooObserversStarted = true
+            Log.d(TAG, "Karoo observers started")
+        }
     }
 
     /** Disconnect from Karoo System */
@@ -486,23 +518,15 @@ class KarooActiveLookBridge(context: Context) {
 
         scanJob =
                 scope.launch {
-                    // Wait for the BLE adapter to become enabled after RequestBluetooth dispatch.
-                    // The Karoo system enables BLE asynchronously — polling until ready (max 5s).
-                    val btManager =
-                            context.getSystemService(android.content.Context.BLUETOOTH_SERVICE) as?
-                                    android.bluetooth.BluetoothManager
-                    var bleWaitMs = 0
-                    while (btManager?.adapter?.isEnabled != true && bleWaitMs < 5000) {
-                        delay(250)
-                        bleWaitMs += 250
-                    }
-                    if (btManager?.adapter?.isEnabled == true) {
-                        Log.i(TAG, "✅ BLE adapter ready after ${bleWaitMs}ms")
-                    } else {
-                        Log.w(
+                    // Wait for BLE adapter readiness and perform one forced re-request if needed.
+                    if (!ensureBleAdapterReadyForScan()) {
+                        Log.e(
                                 TAG,
-                                "⚠️ BLE adapter still not enabled after ${bleWaitMs}ms — scanning anyway"
+                                "❌ BLE adapter not enabled after recovery attempts — aborting scan"
                         )
+                        scanJob = null
+                        updateBridgeState()
+                        return@launch
                     }
 
                     while (scanAttempt < MAX_SCAN_RETRIES && !glassesFound) {
@@ -656,6 +680,7 @@ class KarooActiveLookBridge(context: Context) {
                         requestBluetooth()
                         updateBridgeState()
                         resumePendingUserScanIfNeeded()
+                        tryStartPendingStartupAutoConnect()
                     }
                     is KarooDataService.ConnectionState.Error ->
                             _bridgeState.value = BridgeState.Error("Karoo: ${state.message}")
@@ -1547,15 +1572,51 @@ class KarooActiveLookBridge(context: Context) {
      * Request the Karoo OS to keep BLE radio available for this app. Without this, the OS may
      * power-save the BLE adapter, causing scans to find 0 devices.
      */
-    private fun requestBluetooth() {
-        if (bluetoothRequested) return
+    private fun requestBluetooth(force: Boolean = false) {
+        if (bluetoothRequested && !force) return
         try {
             karooDataService.getKarooSystem().dispatch(RequestBluetooth(BT_RESOURCE_ID))
             bluetoothRequested = true
-            Log.i(TAG, "📡 RequestBluetooth dispatched")
+            Log.i(TAG, "📡 RequestBluetooth dispatched${if (force) " (forced)" else ""}")
         } catch (e: Exception) {
             Log.w(TAG, "Failed to request Bluetooth: ${e.message}")
         }
+    }
+
+    private suspend fun ensureBleAdapterReadyForScan(): Boolean {
+        val btManager =
+                context.getSystemService(android.content.Context.BLUETOOTH_SERVICE) as?
+                        android.bluetooth.BluetoothManager
+
+        suspend fun waitUntilEnabled(maxWaitMs: Int): Int {
+            var waitedMs = 0
+            while (btManager?.adapter?.isEnabled != true && waitedMs < maxWaitMs) {
+                delay(250)
+                waitedMs += 250
+            }
+            return waitedMs
+        }
+
+        val firstWaitMs = waitUntilEnabled(maxWaitMs = 5000)
+        if (btManager?.adapter?.isEnabled == true) {
+            Log.i(TAG, "✅ BLE adapter ready after ${firstWaitMs}ms")
+            return true
+        }
+
+        Log.w(
+                TAG,
+                "⚠️ BLE adapter still disabled after ${firstWaitMs}ms — forcing RequestBluetooth retry"
+        )
+        requestBluetooth(force = true)
+
+        val secondWaitMs = waitUntilEnabled(maxWaitMs = 3000)
+        if (btManager?.adapter?.isEnabled == true) {
+            Log.i(TAG, "✅ BLE adapter recovered after forced retry (${secondWaitMs}ms)")
+            return true
+        }
+
+        Log.e(TAG, "BLE adapter remained disabled after forced retry (${secondWaitMs}ms)")
+        return false
     }
 
     private fun releaseBluetooth() {
