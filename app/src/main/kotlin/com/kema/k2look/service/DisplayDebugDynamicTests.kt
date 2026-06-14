@@ -1,6 +1,6 @@
 package com.kema.k2look.service
 
-import android.util.Log
+import com.kema.k2look.service.AppLog as Log
 import com.activelook.activelooksdk.types.Rotation
 import com.activelook.activelooksdk.types.holdFlushAction
 import com.kema.k2look.service.DisplayDebugService.DebugMetric
@@ -272,3 +272,4 @@ fun DisplayDebugService.testZoneBar() {
         safeFlush(g)
     }
 }
+

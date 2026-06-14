@@ -1,6 +1,6 @@
-﻿package com.kema.k2look.layout
+package com.kema.k2look.layout
 
-import android.util.Log
+import com.kema.k2look.service.AppLog as Log
 import com.kema.k2look.R
 import com.kema.k2look.model.LayoutTemplate
 

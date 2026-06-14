@@ -1,6 +1,6 @@
 package com.kema.k2look.extension
 
-import android.util.Log
+import com.kema.k2look.service.AppLog as Log
 import com.kema.k2look.K2LookApplication
 import io.hammerhead.karooext.extension.KarooExtension
 
@@ -32,3 +32,4 @@ class K2LookExtension : KarooExtension("k2look", "1.0") {
         private const val TAG = "K2LookExtension"
     }
 }
+

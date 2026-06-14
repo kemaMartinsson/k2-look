@@ -1,6 +1,6 @@
 package com.kema.k2look.service
 
-import android.util.Log
+import com.kema.k2look.service.AppLog as Log
 import com.activelook.activelooksdk.Glasses
 import com.activelook.activelooksdk.types.Rotation
 import com.activelook.activelooksdk.types.holdFlushAction
@@ -307,3 +307,4 @@ private fun outlineCircle(glasses: Glasses, cx: Int, cy: Int, r: Int, steps: Int
     }
     glasses.polyline(pts)
 }
+

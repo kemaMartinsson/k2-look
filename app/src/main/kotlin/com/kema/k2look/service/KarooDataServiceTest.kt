@@ -1,7 +1,7 @@
 package com.kema.k2look.service
 
 import android.content.Context
-import android.util.Log
+import com.kema.k2look.service.AppLog as Log
 
 /**
  * Test utility for KarooDataService
@@ -116,4 +116,5 @@ class KarooDataServiceTest(private val context: Context) {
         private const val TAG = "KarooDataServiceTest"
     }
 }
+
 

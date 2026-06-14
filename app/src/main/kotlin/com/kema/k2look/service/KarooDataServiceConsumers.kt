@@ -1,6 +1,6 @@
-﻿package com.kema.k2look.service
+package com.kema.k2look.service
 
-import android.util.Log
+import com.kema.k2look.service.AppLog as Log
 import io.hammerhead.karooext.models.ActiveRideProfile
 import io.hammerhead.karooext.models.DataType
 import io.hammerhead.karooext.models.OnStreamState
@@ -353,3 +353,4 @@ internal fun KarooDataService.registerConsumers() {
         _connectionState.value = ConnectionState.Error("Failed to register consumers")
     }
 }
+

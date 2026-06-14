@@ -1,7 +1,6 @@
 package com.kema.k2look.viewmodel
 
 import com.kema.k2look.service.KarooDataService
-import io.hammerhead.karooext.models.RideState
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -18,36 +17,16 @@ class MainViewModelTest {
         val initialState = MainViewModel.UiState()
 
         assertEquals(KarooDataService.ConnectionState.Disconnected, initialState.connectionState)
-        assertFalse(initialState.debugModeEnabled)
+        assertFalse(initialState.simulatorModeEnabled)
         assertEquals("--", initialState.speed)
     }
 
     @Test
-    fun `setDebugMode updates state`() {
-        val initialState = MainViewModel.UiState(debugModeEnabled = false)
-        val updatedState = initialState.copy(debugModeEnabled = true)
+    fun `setSimulatorMode updates state`() {
+        val initialState = MainViewModel.UiState(simulatorModeEnabled = false)
+        val updatedState = initialState.copy(simulatorModeEnabled = true)
 
-        assertTrue(updatedState.debugModeEnabled)
-    }
-
-    @Test
-    fun `debug mode is forced off when ride starts`() {
-        val shouldDisable =
-                shouldDisableDebugModeForRideTransition(
-                        previousRideState = RideState.Idle,
-                        newRideState = RideState.Recording,
-                        debugModeEnabled = true,
-                )
-
-        assertTrue(shouldDisable)
-    }
-
-    @Test
-    fun `debug mode cannot be enabled during active ride`() {
-        val resolvedDebugMode =
-                resolveDebugModeRequest(requestedEnabled = true, rideState = RideState.Recording)
-
-        assertFalse(resolvedDebugMode)
+        assertTrue(updatedState.simulatorModeEnabled)
     }
 
     @Test

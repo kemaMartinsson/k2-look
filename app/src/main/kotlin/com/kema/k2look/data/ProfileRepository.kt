@@ -2,7 +2,7 @@ package com.kema.k2look.data
 
 import android.content.Context
 import android.content.SharedPreferences
-import android.util.Log
+import com.kema.k2look.service.AppLog as Log
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.kema.k2look.model.DataFieldProfile
@@ -81,4 +81,5 @@ class ProfileRepository(private val context: Context) {
         private const val TAG = "ProfileRepository"
     }
 }
+
 

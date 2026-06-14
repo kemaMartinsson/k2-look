@@ -1,6 +1,6 @@
 package com.kema.k2look.layout
 
-import android.util.Log
+import com.kema.k2look.service.AppLog as Log
 import com.kema.k2look.model.LayoutDataField
 import com.kema.k2look.model.LayoutScreen
 
@@ -193,3 +193,4 @@ class LayoutBuilder {
                 return emptyList()
         }
 }
+

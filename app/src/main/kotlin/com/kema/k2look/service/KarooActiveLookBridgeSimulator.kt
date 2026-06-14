@@ -1,6 +1,6 @@
 package com.kema.k2look.service
 
-import android.util.Log
+import com.kema.k2look.service.AppLog as Log
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -207,3 +207,4 @@ private fun formatSimulatedTime(seconds: Int): String {
     val s = seconds % 60
     return String.format(java.util.Locale.ROOT, "%02d:%02d:%02d", h, m, s)
 }
+

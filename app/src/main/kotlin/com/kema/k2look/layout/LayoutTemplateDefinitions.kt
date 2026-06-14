@@ -1,6 +1,6 @@
 package com.kema.k2look.layout
 
-import android.util.Log
+import com.kema.k2look.service.AppLog as Log
 import com.kema.k2look.R
 import com.kema.k2look.model.FontSize
 import com.kema.k2look.model.LayoutTemplate
@@ -579,3 +579,4 @@ internal fun LayoutTemplateRegistry.registerAllTemplates() {
     )
     */
 }
+

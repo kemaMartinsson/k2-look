@@ -1,6 +1,6 @@
 package com.kema.k2look.service
 
-import android.util.Log
+import com.kema.k2look.service.AppLog as Log
 
 /**
  * State machine that drives the radar warning overlay on the ActiveLook display.
@@ -152,3 +152,4 @@ class RadarWarningController(
         private const val TAG = "RadarWarningController"
     }
 }
+

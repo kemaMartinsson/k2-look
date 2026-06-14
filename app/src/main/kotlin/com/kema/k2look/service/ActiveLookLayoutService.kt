@@ -1,6 +1,6 @@
 package com.kema.k2look.service
 
-import android.util.Log
+import com.kema.k2look.service.AppLog as Log
 import com.activelook.activelooksdk.Glasses
 import com.activelook.activelooksdk.types.ConfigurationDescription
 import com.activelook.activelooksdk.types.FreeSpace
@@ -817,3 +817,4 @@ class ActiveLookLayoutService(internal val activeLookService: ActiveLookService)
     //   fun ActiveLookLayoutService.displayBarAtZone(...)
     //   fun ActiveLookLayoutService.displayZoneCircles(...)
 }
+

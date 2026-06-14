@@ -32,6 +32,7 @@ import com.kema.k2look.model.DataField
 import com.kema.k2look.model.IconSize
 import com.kema.k2look.model.LayoutDataField
 import com.kema.k2look.model.VisualizationType
+import com.kema.k2look.service.AppLog as Log
 
 /** Dialog for configuring datafield display options */
 @Composable
@@ -440,19 +441,16 @@ fun FieldConfigurationDialog(
                                         Spacer(modifier = Modifier.padding(horizontal = 4.dp))
                                         Button(
                                                 onClick = {
-                                                        android.util.Log.i(
-                                                                "FieldConfig",
-                                                                "💾 SAVE clicked"
-                                                        )
-                                                        android.util.Log.i(
+                                                        Log.i("FieldConfig", "💾 SAVE clicked")
+                                                        Log.i(
                                                                 "FieldConfig",
                                                                 "  Selected metric: ${selectedDataField.name} (id=${selectedDataField.id})"
                                                         )
-                                                        android.util.Log.i(
+                                                        Log.i(
                                                                 "FieldConfig",
                                                                 "  Visualization type: $visualizationType"
                                                         )
-                                                        android.util.Log.i(
+                                                        Log.i(
                                                                 "FieldConfig",
                                                                 "  Zone ID: ${field.zoneId}"
                                                         )
@@ -464,7 +462,7 @@ fun FieldConfigurationDialog(
                                                                         com.kema.k2look.model
                                                                                 .VisualizationType
                                                                                 .GAUGE -> {
-                                                                                android.util.Log.i(
+                                                                                Log.i(
                                                                                         "FieldConfig",
                                                                                         "  Creating GAUGE..."
                                                                                 )
@@ -567,7 +565,7 @@ fun FieldConfigurationDialog(
                                                                                                         dataField =
                                                                                                                 selectedDataField
                                                                                                 )
-                                                                                android.util.Log.i(
+                                                                                Log.i(
                                                                                         "FieldConfig",
                                                                                         "    ✅ Gauge created with metric: ${updatedGauge.dataField.name}"
                                                                                 )
@@ -580,7 +578,7 @@ fun FieldConfigurationDialog(
                                                                         com.kema.k2look.model
                                                                                 .VisualizationType
                                                                                 .BAR -> {
-                                                                                android.util.Log.i(
+                                                                                Log.i(
                                                                                         "FieldConfig",
                                                                                         "  Creating BAR..."
                                                                                 )
@@ -670,7 +668,7 @@ fun FieldConfigurationDialog(
                                                                                                 dataField =
                                                                                                         selectedDataField
                                                                                         )
-                                                                                android.util.Log.i(
+                                                                                Log.i(
                                                                                         "FieldConfig",
                                                                                         "    ✅ Bar created with metric: ${updatedBar.dataField.name}"
                                                                                 )
@@ -683,7 +681,7 @@ fun FieldConfigurationDialog(
                                                                         com.kema.k2look.model
                                                                                 .VisualizationType
                                                                                 .ZONED_BAR -> {
-                                                                                android.util.Log.i(
+                                                                                Log.i(
                                                                                         "FieldConfig",
                                                                                         "  Creating ZONED_BAR..."
                                                                                 )
@@ -768,7 +766,7 @@ fun FieldConfigurationDialog(
                                                                         com.kema.k2look.model
                                                                                 .VisualizationType
                                                                                 .TEXT -> {
-                                                                                android.util.Log.i(
+                                                                                Log.i(
                                                                                         "FieldConfig",
                                                                                         "  TEXT visualization (no gauge/bar)"
                                                                                 )
@@ -780,7 +778,7 @@ fun FieldConfigurationDialog(
                                                                         }
                                                                 }
 
-                                                        android.util.Log.i(
+                                                        Log.i(
                                                                 "FieldConfig",
                                                                 "  Result: gauge=${gauge != null}, bar=${progressBar != null}, zonedBar=${zonedBar != null}"
                                                         )
@@ -801,23 +799,23 @@ fun FieldConfigurationDialog(
                                                                         zonedBar = zonedBar
                                                                 )
 
-                                                        android.util.Log.i(
+                                                        Log.i(
                                                                 "FieldConfig",
                                                                 "  ✅ Calling onSave with updatedField"
                                                         )
-                                                        android.util.Log.i(
+                                                        Log.i(
                                                                 "FieldConfig",
                                                                 "     - dataField: ${updatedField.dataField.name}"
                                                         )
-                                                        android.util.Log.i(
+                                                        Log.i(
                                                                 "FieldConfig",
                                                                 "     - visualizationType: ${updatedField.visualizationType}"
                                                         )
-                                                        android.util.Log.i(
+                                                        Log.i(
                                                                 "FieldConfig",
                                                                 "     - gauge: ${updatedField.gauge?.dataField?.name}"
                                                         )
-                                                        android.util.Log.i(
+                                                        Log.i(
                                                                 "FieldConfig",
                                                                 "     - bar: ${updatedField.progressBar?.dataField?.name}"
                                                         )

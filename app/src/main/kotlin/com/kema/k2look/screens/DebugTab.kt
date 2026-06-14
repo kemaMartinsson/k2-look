@@ -28,12 +28,14 @@ import com.kema.k2look.viewmodel.MainViewModel
 
 @Composable
 fun DebugTab(viewModel: MainViewModel, uiState: MainViewModel.UiState) {
-        // Hoist debugEnabled so it can be used across the whole screen
-        var debugEnabled by remember { mutableStateOf(uiState.debugModeEnabled) }
+        val layoutBuilderViewModel = viewModel.layoutBuilderViewModel
+
+        // Hoist simulatorModeEnabled so it can be used across the whole screen
+        var simulatorModeEnabled by remember { mutableStateOf(uiState.simulatorModeEnabled) }
 
         // Keep local switch state in sync with ViewModel state (e.g., after process recreation)
-        androidx.compose.runtime.LaunchedEffect(uiState.debugModeEnabled) {
-                debugEnabled = uiState.debugModeEnabled
+        androidx.compose.runtime.LaunchedEffect(uiState.simulatorModeEnabled) {
+                simulatorModeEnabled = uiState.simulatorModeEnabled
         }
 
         Column(
@@ -54,13 +56,13 @@ fun DebugTab(viewModel: MainViewModel, uiState: MainViewModel.UiState) {
                 ) {
                         Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                                 Text(
-                                        text = "Debug Mode",
+                                        text = "Simulator Mode",
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold,
                                         modifier = Modifier.padding(bottom = 8.dp)
                                 )
                                 Text(
-                                        text = "Enable debug logging and simulator features",
+                                        text = "Enable synthetic metrics and display debug tests",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.padding(bottom = 12.dp)
@@ -72,25 +74,82 @@ fun DebugTab(viewModel: MainViewModel, uiState: MainViewModel.UiState) {
                                         verticalAlignment = Alignment.CenterVertically
                                 ) {
                                         Text(
-                                                text = "Debug Mode:",
+                                                text = "Simulator Mode:",
                                                 style = MaterialTheme.typography.bodyLarge,
                                                 fontWeight = FontWeight.Medium
                                         )
 
                                         androidx.compose.material3.Switch(
-                                                checked = debugEnabled,
+                                                checked = simulatorModeEnabled,
                                                 onCheckedChange = {
-                                                        debugEnabled = it
-                                                        viewModel.setDebugMode(it)
+                                                        simulatorModeEnabled = it
+                                                        viewModel.setSimulatorMode(it)
                                                 }
                                         )
                                 }
 
-                                if (debugEnabled) {
+                                if (simulatorModeEnabled) {
                                         Text(
-                                                text = "✓ Logging to: /sdcard/k2look_debug.log",
+                                                text = "✓ Simulator metrics enabled",
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.padding(top = 8.dp)
+                                        )
+                                }
+                        }
+                }
+
+                // Save Logs to File Card
+                Card(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                        colors =
+                                CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.background
+                                ),
+                        shape = androidx.compose.ui.graphics.RectangleShape
+                ) {
+                        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                                Text(
+                                        text = "Save Logs to File",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(bottom = 8.dp)
+                                )
+                                Text(
+                                        text =
+                                                "Enable persistent logging for bug reports. Retrieve logs via adb pull from app external files logs/ directory.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(bottom = 12.dp)
+                                )
+
+                                Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                        Text(
+                                                text = "Save to File:",
+                                                style = MaterialTheme.typography.bodyLarge,
+                                                fontWeight = FontWeight.Medium
+                                        )
+
+                                        androidx.compose.material3.Switch(
+                                                checked = uiState.saveLogsToFileEnabled,
+                                                enabled = layoutBuilderViewModel != null,
+                                                onCheckedChange = { enabled ->
+                                                        layoutBuilderViewModel
+                                                                ?.setSaveLogsToFileEnabled(enabled)
+                                                }
+                                        )
+                                }
+
+                                if (layoutBuilderViewModel == null) {
+                                        Text(
+                                                text =
+                                                        "Log settings unavailable until layout services initialize",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.error,
                                                 modifier = Modifier.padding(top = 8.dp)
                                         )
                                 }
@@ -104,7 +163,7 @@ fun DebugTab(viewModel: MainViewModel, uiState: MainViewModel.UiState) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
                 )
 
-                // Simulator Card (always show, but functionality depends on Debug Mode)
+                // Simulator Card (always show, but functionality depends on Simulator Mode)
                 Card(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                         colors =
@@ -130,15 +189,17 @@ fun DebugTab(viewModel: MainViewModel, uiState: MainViewModel.UiState) {
                                 // Simulator controls
                                 var simulatorActive by remember { mutableStateOf(false) }
 
-                                // Reset simulator state when debug mode is disabled
-                                androidx.compose.runtime.LaunchedEffect(uiState.debugModeEnabled) {
-                                        if (!uiState.debugModeEnabled) {
+                                // Reset simulator state when simulator mode is disabled
+                                androidx.compose.runtime.LaunchedEffect(
+                                        uiState.simulatorModeEnabled
+                                ) {
+                                        if (!uiState.simulatorModeEnabled) {
                                                 simulatorActive = false
                                         }
                                 }
 
-                                if (!uiState.debugModeEnabled) {
-                                        // Show disabled state when debug mode is off
+                                if (!uiState.simulatorModeEnabled) {
+                                        // Show disabled state when simulator mode is off
                                         Button(
                                                 onClick = {},
                                                 modifier = Modifier.fillMaxWidth(),
@@ -146,7 +207,7 @@ fun DebugTab(viewModel: MainViewModel, uiState: MainViewModel.UiState) {
                                         ) { Text("Start Simulator") }
                                         Text(
                                                 text =
-                                                        "⚠️ Enable Debug Mode above to use simulator",
+                                                        "⚠️ Enable Simulator Mode above to use simulator",
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.error,
                                                 modifier = Modifier.padding(top = 8.dp)
@@ -238,7 +299,7 @@ fun DebugTab(viewModel: MainViewModel, uiState: MainViewModel.UiState) {
                                         val glassesConnected =
                                                 uiState.activeLookState is
                                                         ActiveLookService.ConnectionState.Connected
-                                        val testsEnabled = debugEnabled && glassesConnected
+                                        val testsEnabled = simulatorModeEnabled && glassesConnected
 
                                         data class DebugTest(
                                                 val num: Int,
@@ -404,8 +465,8 @@ fun DebugTab(viewModel: MainViewModel, uiState: MainViewModel.UiState) {
                                                 Text(
                                                         text =
                                                                 when {
-                                                                        !debugEnabled ->
-                                                                                "⚠️ Enable Debug Mode above"
+                                                                        !simulatorModeEnabled ->
+                                                                                "⚠️ Enable Simulator Mode above"
                                                                         !glassesConnected ->
                                                                                 "⚠️ Connect glasses first"
                                                                         else -> ""
@@ -462,7 +523,7 @@ fun DebugTab(viewModel: MainViewModel, uiState: MainViewModel.UiState) {
                                         )
 
                                         val simEnabled =
-                                                debugEnabled &&
+                                                simulatorModeEnabled &&
                                                         uiState.activeLookState is
                                                                 ActiveLookService.ConnectionState.Connected
 
@@ -476,8 +537,8 @@ fun DebugTab(viewModel: MainViewModel, uiState: MainViewModel.UiState) {
                                                 Text(
                                                         text =
                                                                 when {
-                                                                        !debugEnabled ->
-                                                                                "⚠️ Enable Debug Mode above"
+                                                                        !simulatorModeEnabled ->
+                                                                                "⚠️ Enable Simulator Mode above"
                                                                         else ->
                                                                                 "⚠️ Connect glasses first"
                                                                 },

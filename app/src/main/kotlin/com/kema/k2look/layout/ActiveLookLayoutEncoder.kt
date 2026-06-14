@@ -1,6 +1,6 @@
 package com.kema.k2look.layout
 
-import android.util.Log
+import com.kema.k2look.service.AppLog as Log
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -154,3 +154,4 @@ class ActiveLookLayoutEncoder {
         return layouts.map { encodeLayout(it) }
     }
 }
+

@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kema.k2look.model.LayoutDataField
+import com.kema.k2look.service.AppLog as Log
 import com.kema.k2look.viewmodel.LayoutBuilderViewModel
 import com.kema.k2look.viewmodel.addScreen
 import com.kema.k2look.viewmodel.applyProfileToGlasses
@@ -70,7 +71,7 @@ fun DataFieldBuilderTab(
             viewModel.setBridge(vm.getBridge())
             // Also set the LayoutBuilderViewModel reference in MainViewModel for gesture actions
             vm.setLayoutBuilderViewModel(viewModel)
-            android.util.Log.d("DataFieldBuilderTab", "Bridge and LayoutBuilder references set")
+            Log.d("DataFieldBuilderTab", "Bridge and LayoutBuilder references set")
         }
     }
 
@@ -121,7 +122,7 @@ fun DataFieldBuilderTab(
                 },
                 onSave = { updatedField ->
                     val screenIdToUpdate = editingScreenId ?: uiState.selectedScreen
-                    android.util.Log.i(
+                    Log.i(
                             "DataFieldBuilder",
                             "Saving field to screen $screenIdToUpdate (currently viewing ${uiState.selectedScreen})"
                     )
@@ -195,21 +196,21 @@ fun DataFieldBuilderTab(
             // Screen Tabs
             if (profile.screens.isNotEmpty()) {
                 // Calculate validSelectedScreen once at the top to avoid race conditions
-                android.util.Log.d(
+                Log.d(
                         "DataFieldBuilder",
                         "Recomposing: screens=${profile.screens.map { it.id }}, selectedScreen=${uiState.selectedScreen}"
                 )
 
                 val validSelectedScreen =
                         if (profile.screens.any { it.id == uiState.selectedScreen }) {
-                            android.util.Log.d(
+                            Log.d(
                                     "DataFieldBuilder",
                                     "Selected screen ${uiState.selectedScreen} exists"
                             )
                             uiState.selectedScreen
                         } else {
                             val fallback = profile.screens.firstOrNull()?.id ?: 1
-                            android.util.Log.w(
+                            Log.w(
                                     "DataFieldBuilder",
                                     "Selected screen ${uiState.selectedScreen} NOT FOUND, falling back to $fallback"
                             )
@@ -231,7 +232,7 @@ fun DataFieldBuilderTab(
                                 else -> rawIndex
                             }.coerceIn(0, maxOf(0, tabCount - 1))
 
-                    android.util.Log.d(
+                    Log.d(
                             "DataFieldBuilder",
                             "rawIndex=$rawIndex, safeIndex=$safeIndex, tabCount=$tabCount"
                     )

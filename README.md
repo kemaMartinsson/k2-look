@@ -565,12 +565,35 @@ This is a personal development project.
 If you have suggestions or find issues, feel free to open an
 issue or discussion.
 
-**Bug Reports:** Please include:
+### Bug Reports (Recommended Workflow)
+
+K2Look now includes **Save Logs to File** to make bug reports much easier to diagnose.
+
+Before reproducing an issue:
+
+1. Open K2Look on your Karoo2
+2. Go to **About → Debug**
+3. Enable **Save Logs to File**
+4. Reproduce the problem
+5. Keep the app running until you've finished reproducing
+6. Pull logs from the device and attach the latest `.log` file to your GitHub issue
+
+#### Pulling Logs with ADB
+
+```bash
+adb pull /sdcard/Android/data/com.kema.k2look/files/logs
+```
+
+The folder contains timestamped session logs (for example: `k2look_YYYYMMDD_HHmmss.log`).
+
+#### Please include in the issue
 
 - Karoo firmware version
 - ActiveLook glasses model
 - Steps to reproduce
-- LogCat output (if available)
+- What you expected to happen vs what actually happened
+- Approximate time of reproduction (so logs are easier to correlate)
+- Attached log file from `.../files/logs/` (preferred) or LogCat output
 
 ## License
 

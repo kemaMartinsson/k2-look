@@ -1,6 +1,6 @@
 package com.kema.k2look.viewmodel
 
-import android.util.Log
+import com.kema.k2look.service.AppLog as Log
 import androidx.lifecycle.viewModelScope
 import com.kema.k2look.model.DataField
 import com.kema.k2look.model.IconSize
@@ -255,3 +255,4 @@ fun LayoutBuilderViewModel.assignMetricToZone(screenId: Int, zoneId: String, dat
 fun LayoutBuilderViewModel.removeMetricFromZone(screenId: Int, zoneId: String) {
     removeField(screenId, zoneId)
 }
+

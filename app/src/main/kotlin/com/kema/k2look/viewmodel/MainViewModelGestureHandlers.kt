@@ -1,6 +1,6 @@
 package com.kema.k2look.viewmodel
 
-import android.util.Log
+import com.kema.k2look.service.AppLog as Log
 import androidx.lifecycle.viewModelScope
 import com.kema.k2look.model.GestureAction
 import com.kema.k2look.model.TouchAction
@@ -179,3 +179,4 @@ fun MainViewModel.setTouchEnabled(enabled: Boolean) {
     Log.i(TAG, "Setting touch enabled: $enabled")
     gesturePreferences.setTouchEnabled(enabled)
 }
+

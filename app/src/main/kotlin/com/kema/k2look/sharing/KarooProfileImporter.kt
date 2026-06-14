@@ -1,6 +1,6 @@
 package com.kema.k2look.sharing
 
-import android.util.Log
+import com.kema.k2look.service.AppLog as Log
 import com.kema.k2look.data.DataFieldRegistry
 import com.kema.k2look.layout.LayoutTemplateRegistry
 import com.kema.k2look.model.DataFieldProfile
@@ -92,3 +92,4 @@ object KarooProfileImporter {
         else -> "6D"
     }
 }
+

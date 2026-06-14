@@ -1,6 +1,6 @@
 package com.kema.k2look.service
 
-import android.util.Log
+import com.kema.k2look.service.AppLog as Log
 import com.activelook.activelooksdk.types.LayoutExtraCmd
 import com.activelook.activelooksdk.types.LayoutParameters
 import com.activelook.activelooksdk.types.Rotation
@@ -266,3 +266,4 @@ fun DisplayDebugService.testExtraCommands() {
         safeFlush(g)
     }
 }
+

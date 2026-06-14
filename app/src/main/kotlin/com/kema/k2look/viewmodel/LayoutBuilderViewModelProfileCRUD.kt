@@ -1,6 +1,6 @@
 package com.kema.k2look.viewmodel
 
-import android.util.Log
+import com.kema.k2look.service.AppLog as Log
 import androidx.lifecycle.viewModelScope
 import com.kema.k2look.data.SeedProfile
 import com.kema.k2look.model.DataFieldProfile
@@ -257,3 +257,4 @@ fun LayoutBuilderViewModel.updateProfile(profile: DataFieldProfile) {
         }
     }
 }
+

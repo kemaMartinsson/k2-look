@@ -1,10 +1,10 @@
 package com.kema.k2look.service
 
 import android.content.Context
-import android.util.Log
 import com.activelook.activelooksdk.DiscoveredGlasses
 import com.kema.k2look.data.ProfileRepository
 import com.kema.k2look.model.VisualizationType
+import com.kema.k2look.service.AppLog as Log
 import com.kema.k2look.util.PreferencesManager
 import io.hammerhead.karooext.models.DataType
 import io.hammerhead.karooext.models.ReleaseBluetooth
@@ -70,8 +70,7 @@ class KarooActiveLookBridge(context: Context) {
     // Currently displayed screen ID (updated by gesture cycling / profile selection)
     private var activeScreenId: Int? = null
 
-    // Auto profile switching on ride start
-    private var hasAutoSwitchedProfile = false // Track if we've auto-switched this ride
+    // Auto profile switching based on Karoo profile selection
     private var lastKarooProfileName: String? = null // Track last seen Karoo profile
     private var pendingBatteryRedraw = false
 
@@ -212,19 +211,24 @@ class KarooActiveLookBridge(context: Context) {
     fun setProfileLookup(lookup: (String) -> com.kema.k2look.model.DataFieldProfile?) {
         profileLookup = lookup
         Log.i(TAG, "Profile lookup callback registered for auto-switching")
+
+        // If Karoo already has an active profile when the callback is registered (common on app
+        // startup), try to align immediately.
+        val currentKarooProfileName = karooDataService.activeRideProfile.value?.name
+        if (currentKarooProfileName != null) {
+            Log.i(
+                    TAG,
+                    "Evaluating startup profile sync for Karoo profile '$currentKarooProfileName'"
+            )
+            tryAutoSwitchProfile(currentKarooProfileName)
+        }
     }
 
     /**
-     * Attempt to auto-switch profile based on Karoo profile name Only happens once at ride start,
-     * not mid-ride
+     * Attempt to auto-switch profile based on Karoo profile name. This is allowed before and during
+     * rides.
      */
     private fun tryAutoSwitchProfile(karooProfileName: String) {
-        // Don't switch if we already auto-switched this ride
-        if (hasAutoSwitchedProfile) {
-            Log.d(TAG, "Already auto-switched this ride, ignoring Karoo profile change")
-            return
-        }
-
         // Look up matching K2Look profile
         val matchingProfile = profileLookup?.invoke(karooProfileName)
 
@@ -234,39 +238,37 @@ class KarooActiveLookBridge(context: Context) {
                     "🎯 Auto-switching to K2Look profile '${matchingProfile.name}' (matches Karoo profile '$karooProfileName')"
             )
             setActiveProfile(matchingProfile)
-            hasAutoSwitchedProfile = true
         } else {
             Log.d(TAG, "No matching K2Look profile found for Karoo profile '$karooProfileName'")
         }
     }
 
-    /** Reset auto-switch flag when ride ends (allows auto-switch on next ride) */
+    /** Reset tracked Karoo profile name when ride ends. */
     private fun resetAutoSwitch() {
-        hasAutoSwitchedProfile = false
         lastKarooProfileName = null
-        Log.d(TAG, "Auto-switch reset - ready for next ride")
+        Log.d(TAG, "Auto-switch tracking reset - ready for next ride")
     }
 
     /** Initialize both services and auto-connect based on preferences */
     fun initialize() {
-        android.util.Log.i(TAG, "🚀 === Initializing KarooActiveLookBridge ===")
+        Log.i(TAG, "🚀 === Initializing KarooActiveLookBridge ===")
 
         // Initialize ActiveLook SDK
         activeLookService.initializeSdk()
 
         // Auto-connect to Karoo System if enabled (default: true)
         if (preferencesManager.isAutoConnectKarooEnabled()) {
-            android.util.Log.i(TAG, "✅ Auto-connecting to Karoo System (enabled in preferences)...")
+            Log.i(TAG, "✅ Auto-connecting to Karoo System (enabled in preferences)...")
             connectKaroo()
         } else {
-            android.util.Log.i(TAG, "⏭️ Auto-connect to Karoo disabled in preferences")
+            Log.i(TAG, "⏭️ Auto-connect to Karoo disabled in preferences")
         }
 
         // Auto-connect to last paired glasses if enabled
         if (preferencesManager.isAutoConnectActiveLookEnabled()) {
             val lastGlassesAddress = preferencesManager.getLastConnectedGlassesAddress()
             if (lastGlassesAddress != null) {
-                android.util.Log.i(
+                Log.i(
                         TAG,
                         "👓 Auto-connect to glasses enabled, will attempt connection to: $lastGlassesAddress"
                 )
@@ -274,18 +276,18 @@ class KarooActiveLookBridge(context: Context) {
                 pendingStartupAutoConnectAddress = lastGlassesAddress
                 tryStartPendingStartupAutoConnect()
             } else {
-                android.util.Log.i(
+                Log.i(
                         TAG,
                         "👓 Auto-connect enabled but no previous address — waiting for user to tap Connect"
                 )
             }
         } else {
-            android.util.Log.i(TAG, "⏭️ Auto-connect to glasses disabled in preferences")
+            Log.i(TAG, "⏭️ Auto-connect to glasses disabled in preferences")
         }
 
         startPeriodicStatusLogging()
 
-        android.util.Log.i(TAG, "✅ Bridge initialized")
+        Log.i(TAG, "✅ Bridge initialized")
     }
 
     private fun startPeriodicStatusLogging() {
@@ -341,10 +343,7 @@ class KarooActiveLookBridge(context: Context) {
         // ActiveLook glasses stop advertising after 3 minutes without a connection (API §2.2)
         val timeoutMs = 3 * 60 * 1000L
 
-        android.util.Log.i(
-                TAG,
-                "🔍 Scanning for previously connected glasses: $targetAddress (timeout: 3min)"
-        )
+        Log.i(TAG, "🔍 Scanning for previously connected glasses: $targetAddress (timeout: 3min)")
 
         // Stop any existing scan before starting fresh
         if (activeLookService.isScanning.value) {
@@ -360,19 +359,17 @@ class KarooActiveLookBridge(context: Context) {
         autoConnectCollectionJob =
                 scope.launch {
                     activeLookService.discoveredGlasses.collect { glassesList ->
-                        android.util.Log.d(
+                        Log.d(
                                 TAG,
                                 "📋 Discovered glasses list updated: ${glassesList.size} devices"
                         )
-                        glassesList.forEach {
-                            android.util.Log.d(TAG, "  - ${it.name} (${it.address})")
-                        }
+                        glassesList.forEach { Log.d(TAG, "  - ${it.name} (${it.address})") }
 
                         // Look for the target glasses
                         val targetGlasses = glassesList.find { it.address == targetAddress }
                         if (targetGlasses != null && !glassesFound) {
                             glassesFound = true
-                            android.util.Log.i(
+                            Log.i(
                                     TAG,
                                     "✅ Found previously connected glasses: ${targetGlasses.name}"
                             )
@@ -382,7 +379,7 @@ class KarooActiveLookBridge(context: Context) {
                             // Connect to the glasses
                             connectActiveLook(targetGlasses)
                         } else if (glassesList.isNotEmpty() && !glassesFound) {
-                            android.util.Log.w(
+                            Log.w(
                                     TAG,
                                     "⚠️ Found glasses but not matching target address $targetAddress"
                             )
@@ -395,11 +392,11 @@ class KarooActiveLookBridge(context: Context) {
                 scope.launch {
                     delay(timeoutMs)
                     if (!glassesFound && activeLookService.isScanning.value) {
-                        android.util.Log.w(
+                        Log.w(
                                 TAG,
                                 "⏱️ Startup auto-connect timeout (3min): Could not find glasses with address $targetAddress"
                         )
-                        android.util.Log.i(
+                        Log.i(
                                 TAG,
                                 "🔄 Service will continue running and will attempt reconnect when ride starts"
                         )
@@ -727,20 +724,13 @@ class KarooActiveLookBridge(context: Context) {
         scope.launch {
             karooDataService.activeRideProfile.collect { rideProfile ->
                 val profileName = rideProfile?.name
-                if (profileName != null && profileName != lastKarooProfileName) {
+                if (shouldAttemptAutoSwitchForKarooProfile(
+                                profileName = profileName,
+                                lastKarooProfileName = lastKarooProfileName
+                        )
+                ) {
                     Log.i(TAG, "Karoo profile changed: '$lastKarooProfileName' → '$profileName'")
-                    if (!hasAutoSwitchedProfile && isInActiveRide) {
-                        Log.i(
-                                TAG,
-                                "Ride starting with Karoo profile '$profileName', checking for matching K2Look profile..."
-                        )
-                        tryAutoSwitchProfile(profileName)
-                    } else if (hasAutoSwitchedProfile && isInActiveRide) {
-                        Log.i(
-                                TAG,
-                                "Karoo profile changed mid-ride to '$profileName', keeping current K2Look profile (no auto-switch)"
-                        )
-                    }
+                    tryAutoSwitchProfile(checkNotNull(profileName))
                     lastKarooProfileName = profileName
                 } else if (profileName == null && lastKarooProfileName != null) {
                     Log.d(TAG, "Karoo profile cleared")
@@ -1700,4 +1690,11 @@ internal fun shouldUpdateBatteryDisplayNow(
             pendingRideStartCountdown = pendingRideStartCountdown,
             rideStartCountdownActive = rideStartCountdownActive
     )
+}
+
+internal fun shouldAttemptAutoSwitchForKarooProfile(
+        profileName: String?,
+        lastKarooProfileName: String?
+): Boolean {
+    return profileName != null && profileName != lastKarooProfileName
 }

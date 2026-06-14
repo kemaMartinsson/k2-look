@@ -1,13 +1,13 @@
 package com.kema.k2look.viewmodel
 
 import android.app.Application
-import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.kema.k2look.data.ProfileRepository
 import com.kema.k2look.data.SeedProfile
 import com.kema.k2look.data.SettingsRepository
 import com.kema.k2look.model.DataFieldProfile
+import com.kema.k2look.service.AppLog as Log
 import io.hammerhead.karooext.models.RideProfile
 import io.hammerhead.karooext.models.RideState
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,7 +45,8 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
             val isRiding: Boolean = false,
             val karooSyncEnabled: Boolean = true,
             val radarWarningEnabled: Boolean = true,
-            val batteryDisplayEnabled: Boolean = true
+            val batteryDisplayEnabled: Boolean = true,
+            val saveLogsToFileEnabled: Boolean = false
     )
 
     init {
@@ -78,6 +79,18 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
                 .onEach { enabled ->
                     _uiState.value = _uiState.value.copy(batteryDisplayEnabled = enabled)
                     bridge?.setBatteryDisplayEnabled(enabled)
+                }
+                .launchIn(viewModelScope)
+        _uiState.value =
+                _uiState.value.copy(
+                        saveLogsToFileEnabled = settingsRepository.saveLogsToFileEnabled.value
+                )
+        settingsRepository
+                .saveLogsToFileEnabled
+                .onEach { enabled ->
+                    _uiState.value = _uiState.value.copy(saveLogsToFileEnabled = enabled)
+                    com.kema.k2look.K2LookApplication.getAppLogger()?.enableFileLogging(enabled)
+                    Log.i(TAG, "Save logs to file: ${if (enabled) "enabled" else "disabled"}")
                 }
                 .launchIn(viewModelScope)
         loadProfiles()
@@ -286,6 +299,11 @@ class LayoutBuilderViewModel(application: Application) : AndroidViewModel(applic
     fun setBatteryDisplayEnabled(enabled: Boolean) {
         settingsRepository.setBatteryDisplayEnabled(enabled)
         Log.i(TAG, "Battery overlay ${if (enabled) "enabled" else "disabled"}")
+    }
+
+    fun setSaveLogsToFileEnabled(enabled: Boolean) {
+        settingsRepository.setSaveLogsToFileEnabled(enabled)
+        Log.i(TAG, "Save logs to file setting changed: $enabled")
     }
 
     companion object {

@@ -3,7 +3,7 @@ package com.kema.k2look.service
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.graphics.BitmapFactory
-import android.util.Log
+import com.kema.k2look.service.AppLog as Log
 import com.activelook.activelooksdk.DiscoveredGlasses
 import com.activelook.activelooksdk.Glasses
 import com.activelook.activelooksdk.Sdk
@@ -637,3 +637,4 @@ class ActiveLookService(private val context: Context) {
         private const val CONNECTION_TIMEOUT_MS = 15_000L
     }
 }
+

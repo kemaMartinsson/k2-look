@@ -1,6 +1,6 @@
 package com.kema.k2look.layout
 
-import android.util.Log
+import com.kema.k2look.service.AppLog as Log
 import com.kema.k2look.layout.LayoutPositionDefaults.AVAILABLE_HEIGHT
 import com.kema.k2look.layout.LayoutPositionDefaults.MIN_GAP
 import com.kema.k2look.layout.LayoutPositionDefaults.ZONE_WIDTH
@@ -322,3 +322,4 @@ object DynamicLayoutEngine {
         return (fillFraction * 100).toInt().coerceIn(0, 100)
     }
 }
+

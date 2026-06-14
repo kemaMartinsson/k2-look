@@ -1,11 +1,10 @@
 package com.kema.k2look.viewmodel
 
-import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.kema.k2look.service.ActiveLookService
+import com.kema.k2look.service.AppLog as Log
 import com.kema.k2look.service.formatDistanceDataKm
 import com.kema.k2look.service.formatSpeedDataKmh
-import io.hammerhead.karooext.models.RideState
 import io.hammerhead.karooext.models.StreamState
 import io.hammerhead.karooext.models.UserProfile
 import kotlinx.coroutines.flow.collect
@@ -100,26 +99,7 @@ internal fun MainViewModel.observeKarooData() {
     viewModelScope.launch {
         karooDataService.rideState.collect { state ->
             Log.d(TAG, "Ride state changed: $state")
-            val previousRideState = _uiState.value.rideState
-            val shouldDisableDebug =
-                    shouldDisableDebugModeForRideTransition(
-                            previousRideState = previousRideState,
-                            newRideState = state,
-                            debugModeEnabled = _uiState.value.debugModeEnabled,
-                    )
-
-            _uiState.value =
-                    _uiState.value.copy(
-                            rideState = state,
-                            debugModeEnabled =
-                                    if (shouldDisableDebug) false
-                                    else _uiState.value.debugModeEnabled,
-                    )
-
-            if (shouldDisableDebug) {
-                Log.w(TAG, "Ride started with debug mode enabled; disabling debug mode")
-                setDebugMode(false)
-            }
+            _uiState.value = _uiState.value.copy(rideState = state)
         }
     }
 
@@ -274,16 +254,6 @@ internal fun MainViewModel.observeKarooData() {
             _uiState.value = _uiState.value.copy(avgVam = formatStreamData(streamState, "m/h"))
         }
     }
-}
-
-internal fun shouldDisableDebugModeForRideTransition(
-        previousRideState: RideState,
-        newRideState: RideState,
-        debugModeEnabled: Boolean,
-): Boolean {
-    return debugModeEnabled &&
-            previousRideState is RideState.Idle &&
-            newRideState !is RideState.Idle
 }
 
 // ── Format helpers (file-private) ─────────────────────────────────────────

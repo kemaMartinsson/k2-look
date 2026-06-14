@@ -1,6 +1,6 @@
 package com.kema.k2look.service
 
-import android.util.Log
+import com.kema.k2look.service.AppLog as Log
 import com.activelook.activelooksdk.Glasses
 import com.activelook.activelooksdk.types.holdFlushAction
 import com.kema.k2look.layout.DynamicLayoutEngine
@@ -263,3 +263,4 @@ class DisplayDebugService(internal val activeLookService: ActiveLookService) {
         g.polyline(pts)
     }
 }
+

@@ -1,7 +1,7 @@
-﻿package com.kema.k2look.service
+package com.kema.k2look.service
 
 import android.content.Context
-import android.util.Log
+import com.kema.k2look.service.AppLog as Log
 import io.hammerhead.karooext.KarooSystemService
 import io.hammerhead.karooext.models.ActiveRideProfile
 import io.hammerhead.karooext.models.DataType
@@ -414,4 +414,5 @@ class KarooDataService(context: Context) {
         private const val TAG = "KarooDataService"
     }
 }
+
 

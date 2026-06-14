@@ -1,6 +1,6 @@
 package com.kema.k2look.service
 
-import android.util.Log
+import com.kema.k2look.service.AppLog as Log
 import com.activelook.activelooksdk.types.holdFlushAction
 
 /**
@@ -275,3 +275,4 @@ suspend fun ActiveLookService.displayZonedBar(
         false
     }
 }
+

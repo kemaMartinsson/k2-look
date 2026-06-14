@@ -14,6 +14,7 @@ class SettingsRepository(context: Context) {
         private const val KEY_KAROO_SYNC = "karoo_sync_enabled"
         private const val KEY_RADAR_WARNING = "radar_warning_enabled"
         private const val KEY_BATTERY_DISPLAY = "battery_display_enabled"
+        private const val KEY_SAVE_LOGS_TO_FILE = "save_logs_to_file_enabled"
     }
 
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -41,5 +42,14 @@ class SettingsRepository(context: Context) {
     fun setBatteryDisplayEnabled(enabled: Boolean) {
         prefs.edit { putBoolean(KEY_BATTERY_DISPLAY, enabled) }
         _batteryDisplayEnabled.value = enabled
+    }
+
+    private val _saveLogsToFileEnabled =
+            MutableStateFlow(prefs.getBoolean(KEY_SAVE_LOGS_TO_FILE, false))
+    val saveLogsToFileEnabled: StateFlow<Boolean> = _saveLogsToFileEnabled.asStateFlow()
+
+    fun setSaveLogsToFileEnabled(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_SAVE_LOGS_TO_FILE, enabled) }
+        _saveLogsToFileEnabled.value = enabled
     }
 }

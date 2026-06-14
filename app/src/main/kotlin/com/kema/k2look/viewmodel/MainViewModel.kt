@@ -2,17 +2,18 @@ package com.kema.k2look.viewmodel
 
 // DisplayDebugService extension functions (split from DisplayDebugService.kt)
 import android.app.Application
-import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.activelook.activelooksdk.DiscoveredGlasses
 import com.kema.k2look.K2LookApplication
 import com.kema.k2look.data.DataFieldRegistry
+import com.kema.k2look.data.SettingsRepository
 import com.kema.k2look.model.DataFieldProfile
 import com.kema.k2look.model.IconSize
 import com.kema.k2look.model.LayoutDataField
 import com.kema.k2look.model.LayoutScreen
 import com.kema.k2look.service.ActiveLookService
+import com.kema.k2look.service.AppLog as Log
 import com.kema.k2look.service.DisplayDebugService
 import com.kema.k2look.service.KarooActiveLookBridge
 import com.kema.k2look.service.KarooDataService
@@ -38,6 +39,8 @@ import io.hammerhead.karooext.models.UserProfile
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
 /** ViewModel for managing Karoo data, ActiveLook connection, and UI state */
@@ -54,6 +57,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // Public access to preferences for UI
     val preferencesManager = PreferencesManager(application)
+    internal val settingsRepository = SettingsRepository(application)
 
     // Reference to LayoutBuilderViewModel for gesture actions
     internal var layoutBuilderViewModel: LayoutBuilderViewModel? = null
@@ -96,7 +100,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val rideState: RideState = RideState.Idle,
             val userProfile: UserProfile? = null,
             val useImperialUnits: Boolean = false,
-            val debugModeEnabled: Boolean = false,
+            val simulatorModeEnabled: Boolean = false,
+            val saveLogsToFileEnabled: Boolean = false,
             val speed: String = "--",
             val avgSpeed: String = "--",
             val maxSpeed: String = "--",
@@ -148,6 +153,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         observeUserProfile()
         observeGestureEvents()
         observeGesturePreferences()
+
+        _uiState.value =
+                _uiState.value.copy(
+                        saveLogsToFileEnabled = settingsRepository.saveLogsToFileEnabled.value
+                )
+        // Observe saveLogsToFileEnabled changes from SettingsRepository
+        settingsRepository
+                .saveLogsToFileEnabled
+                .onEach { enabled ->
+                    _uiState.value = _uiState.value.copy(saveLogsToFileEnabled = enabled)
+                    Log.d(TAG, "Save logs to file preference changed: $enabled")
+                }
+                .launchIn(viewModelScope)
     }
 
     /** Connect to Karoo System */
@@ -271,51 +289,39 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // setGestureAction / setTouchAction / setGestureEnabled / setTouchEnabled
     // → MainViewModelGestureHandlers.kt as extension functions
 
-    /** Toggle debug mode on/off */
-    fun setDebugMode(enabled: Boolean) {
-        if (!resolveDebugModeRequest(enabled, _uiState.value.rideState)) {
-            Log.w(TAG, "Debug mode cannot be enabled during an active ride")
-            _uiState.value = _uiState.value.copy(debugModeEnabled = false)
-            stopDebugLogging()
-            stopSimulator()
-            return
-        }
+    /** Toggle simulator mode on/off */
+    fun setSimulatorMode(enabled: Boolean) {
+        Log.i(TAG, "Simulator mode ${if (enabled) "enabled" else "disabled"}")
+        _uiState.value = _uiState.value.copy(simulatorModeEnabled = enabled)
 
-        Log.i(TAG, "Debug mode ${if (enabled) "enabled" else "disabled"}")
-        _uiState.value = _uiState.value.copy(debugModeEnabled = enabled)
-
-        if (enabled) {
-            startDebugLogging()
-        } else {
-            stopDebugLogging()
-
-            // Ensure simulator doesn't keep running if user disables debug mode.
+        if (!enabled) {
             stopSimulator()
         }
     }
 
-    /** Start debug logging to file */
+    /** Start debug logging to file (if enabled in settings) - stub for now */
     private fun startDebugLogging() {
-        // TODO: Implement file logging
-        Log.i(TAG, "Debug logging started - logs will be written to /sdcard/k2look_debug.log")
+        Log.i(TAG, "File logging handler initialized")
     }
 
-    /** Stop debug logging */
+    /** Stop debug logging - stub for now */
     private fun stopDebugLogging() {
-        Log.i(TAG, "Debug logging stopped")
+        Log.i(TAG, "File logging stopped")
     }
 
     /** Start simulator - sends test data to glasses */
     fun startSimulator() {
         Log.i(TAG, "🎮 START SIMULATOR REQUESTED")
-        Log.i(TAG, "  Debug mode: ${_uiState.value.debugModeEnabled}")
+        Log.i(TAG, "  Simulator mode: ${_uiState.value.simulatorModeEnabled}")
         Log.i(TAG, "  ActiveLook state: ${_uiState.value.activeLookState}")
         Log.i(TAG, "  Bridge state: ${_uiState.value.bridgeState}")
 
-        if (!_uiState.value.debugModeEnabled) {
-            Log.w(TAG, "❌ Simulator requires Debug Mode enabled")
+        if (!_uiState.value.simulatorModeEnabled) {
+            Log.w(TAG, "❌ Simulator requires Simulator Mode enabled")
             return
         }
+
+        startDebugLogging()
 
         // Push values to glasses via the bridge.
         Log.i(TAG, "📤 Calling bridge.startSimulator()")
@@ -327,7 +333,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 viewModelScope.launch {
                     var counter = 0
                     Log.i(TAG, "🔁 Simulator UI update loop starting")
-                    while (_uiState.value.debugModeEnabled) {
+                    while (_uiState.value.simulatorModeEnabled) {
                         counter++
                         _uiState.value =
                                 _uiState.value.copy(
@@ -356,6 +362,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         simulatorJob?.cancel()
         simulatorJob = null
         bridge.stopSimulator()
+        stopDebugLogging()
     }
 
     /**
@@ -370,8 +377,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * dimensions in ALooK config to find correct icon IDs
      */
     fun runDisplayDebugTest(testNumber: Int) {
-        if (!_uiState.value.debugModeEnabled) {
-            Log.w(TAG, "Display debug requires debug mode")
+        if (!_uiState.value.simulatorModeEnabled) {
+            Log.w(TAG, "Display debug requires simulator mode")
             return
         }
         if (_uiState.value.activeLookState !is ActiveLookService.ConnectionState.Connected) {
@@ -412,8 +419,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * 3, closest target at 20 m.
      */
     fun runProductionSimulation() {
-        if (!_uiState.value.debugModeEnabled) {
-            Log.w(TAG, "Production simulation requires debug mode")
+        if (!_uiState.value.simulatorModeEnabled) {
+            Log.w(TAG, "Production simulation requires simulator mode")
             return
         }
         if (_uiState.value.activeLookState !is ActiveLookService.ConnectionState.Connected) {
@@ -515,8 +522,4 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     companion object {
         private const val TAG = "MainViewModel"
     }
-}
-
-internal fun resolveDebugModeRequest(requestedEnabled: Boolean, rideState: RideState): Boolean {
-    return !requestedEnabled || rideState is RideState.Idle
 }

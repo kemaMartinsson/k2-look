@@ -1,7 +1,7 @@
 package com.kema.k2look.update
 
 import android.content.Context
-import android.util.Log
+import com.kema.k2look.service.AppLog as Log
 import com.kema.k2look.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -174,4 +174,5 @@ class UpdateChecker(private val context: Context) {
         }
     }
 }
+
 

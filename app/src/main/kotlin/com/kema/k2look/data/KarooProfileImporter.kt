@@ -1,6 +1,6 @@
 package com.kema.k2look.data
 
-import android.util.Log
+import com.kema.k2look.service.AppLog as Log
 import com.kema.k2look.layout.LayoutTemplateRegistry
 import com.kema.k2look.model.DataFieldProfile
 import com.kema.k2look.model.IconSize
@@ -91,3 +91,4 @@ object KarooProfileImporter {
         else -> "6D"
     }
 }
+
