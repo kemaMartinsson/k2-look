@@ -21,9 +21,13 @@ All notable changes to K2Look will be documented in this file.
 
 - Startup crash
   - Fixed a logger recursion loop (`AppLoggerService` -> `AppLog` -> `AppLoggerService`) that could crash app startup.
-  - Intermittent Bluetooth connection issue. The app would fail to connect to glasses after a new installation due to a race condition in the Bluetooth scanning and connection logic. This has been resolved by properly managing scan jobs and connection attempts.
-  If connection fails after a new installation, please try restarting the app once to allow the Bluetooth stack to initialize properly. This should only be necessary on the first launch after installation. Subsequent launches should connect without issues.
-  I noticed a connection fail, at that time I restarted K2 and waited,then it connected. It might have connected if waiting in the first place...
+  - Intermittent Bluetooth connection issue.  
+  The app would fail to connect to glasses after a new installation due to a race condition in the Bluetooth scanning and connection logic.  
+  This has been resolved by properly managing scan jobs and connection attempts.
+  If connection fails after a new installation, please try restarting the app once to allow the Bluetooth stack to initialize properly.  
+  It should only be necessary on the first launch after installation. Subsequent launches should connect without issues.
+  I noticed a connection fail on startup, at that time I restarted K2 and waited, then it connected.  
+  It might have connected if waiting in the first place...
 - Fixed a bug in Startup animation causing it not to be displayed at all.
 
 ## [1.0.11] - 2026-05-20
