@@ -1209,6 +1209,9 @@ class KarooActiveLookBridge(context: Context) {
         if (fields.isNotEmpty()) {
             layoutService.displayAllFieldValues(fields, screen)
         }
+        // Frame updates can repaint the warning area; re-apply the current warning icon
+        // so it stays visible while radar threat level is unchanged.
+        radarWarningController.refreshVisibleWarning()
     }
 
     // Formatter methods live in BridgeMetricFormatters.kt (package-level functions)

@@ -16,12 +16,12 @@ import android.util.Log
  * thread-safe. All calls must be made from the same coroutine/thread context.
  */
 class RadarWarningController(
-    private val renderSmall: () -> Unit,
-    private val eraseSmall: () -> Unit,
-    private val renderLarge: () -> Unit,
-    private val eraseLarge: () -> Unit,
-    private val renderCritical: () -> Unit,
-    private val eraseCritical: () -> Unit
+        private val renderSmall: () -> Unit,
+        private val eraseSmall: () -> Unit,
+        private val renderLarge: () -> Unit,
+        private val eraseLarge: () -> Unit,
+        private val renderCritical: () -> Unit,
+        private val eraseCritical: () -> Unit
 ) {
     private enum class State {
         HIDDEN,
@@ -37,10 +37,10 @@ class RadarWarningController(
      * Called on every radar packet while streaming.
      *
      * @param threatLevel Value of RADAR_THREAT_LEVEL.
-    * - 1: hidden
-    * - 2: small warning icon
-    * - 3: large warning icon
-    * - 4: critical warning icon
+     * - 1: hidden
+     * - 2: small warning icon
+     * - 3: large warning icon
+     * - 4: critical warning icon
      * @param closestRangeM Unused by threat-level mapping; kept for API compatibility.
      * @param elapsedMs Unused by threat-level mapping; kept for API compatibility.
      */
@@ -76,6 +76,25 @@ class RadarWarningController(
     fun reset() {
         state = State.HIDDEN
         Log.d(TAG, "RadarWarningController reset")
+    }
+
+    /**
+     * Re-renders the currently visible warning icon without changing state.
+     *
+     * Use this after operations that may repaint overlapping pixels (for example, layout
+     * clear-and-display calls) so the warning overlay remains visible while threat state is
+     * unchanged.
+     */
+    fun refreshVisibleWarning() {
+        if (!enabled) return
+        when (state) {
+            State.VISIBLE_SMALL -> renderSmall()
+            State.VISIBLE_LARGE -> renderLarge()
+            State.VISIBLE_CRITICAL -> renderCritical()
+            State.HIDDEN -> {
+                // Nothing to redraw.
+            }
+        }
     }
 
     // ── Private ──────────────────────────────────────────────────────────────

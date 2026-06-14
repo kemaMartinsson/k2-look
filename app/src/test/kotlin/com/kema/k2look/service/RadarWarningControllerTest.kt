@@ -19,12 +19,12 @@ class RadarWarningControllerTest {
     fun setUp() {
         controller =
                 RadarWarningController(
-                    renderSmall = { renderSmallCalls += "render_small" },
-                    eraseSmall = { eraseSmallCalls += "erase_small" },
-                    renderLarge = { renderLargeCalls += "render_large" },
-                    eraseLarge = { eraseLargeCalls += "erase_large" },
-                    renderCritical = { renderCriticalCalls += "render_critical" },
-                    eraseCritical = { eraseCriticalCalls += "erase_critical" }
+                        renderSmall = { renderSmallCalls += "render_small" },
+                        eraseSmall = { eraseSmallCalls += "erase_small" },
+                        renderLarge = { renderLargeCalls += "render_large" },
+                        eraseLarge = { eraseLargeCalls += "erase_large" },
+                        renderCritical = { renderCriticalCalls += "render_critical" },
+                        eraseCritical = { eraseCriticalCalls += "erase_critical" }
                 )
     }
 
@@ -196,6 +196,36 @@ class RadarWarningControllerTest {
         renderSmallCalls.clear()
         controller.onRadarUpdate(threatLevel = 4, closestRangeM = 999f, elapsedMs = 1L)
         assertEquals(listOf("render_critical"), renderCriticalCalls)
+    }
+
+    @Test
+    fun `refreshVisibleWarning re-renders icon for current visible state`() {
+        controller.onRadarUpdate(threatLevel = 2, closestRangeM = 200f)
+        renderSmallCalls.clear()
+
+        controller.refreshVisibleWarning()
+
+        assertEquals(listOf("render_small"), renderSmallCalls)
+    }
+
+    @Test
+    fun `refreshVisibleWarning does nothing while hidden`() {
+        controller.refreshVisibleWarning()
+
+        assertEquals(emptyList<String>(), renderSmallCalls)
+        assertEquals(emptyList<String>(), renderLargeCalls)
+        assertEquals(emptyList<String>(), renderCriticalCalls)
+    }
+
+    @Test
+    fun `refreshVisibleWarning is suppressed when disabled`() {
+        controller.onRadarUpdate(threatLevel = 3, closestRangeM = 150f)
+        renderLargeCalls.clear()
+        controller.setEnabled(false)
+
+        controller.refreshVisibleWarning()
+
+        assertEquals(emptyList<String>(), renderLargeCalls)
     }
 
     // ── End-to-end scenarios ─────────────────────────────────────────────────
