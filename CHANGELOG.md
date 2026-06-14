@@ -2,6 +2,30 @@
 
 All notable changes to K2Look will be documented in this file.
 
+## [1.0.12] - 2026-06
+
+### Added
+
+- New file logger for logging and troubleshooting. Guide added to README how to start and use the logger.
+- Adding support for larger font in profiles.
+
+### Changed
+
+- Karoo profile auto-switch behavior
+  - Auto-switch now runs on K2Look startup when Karoo already has an active profile.
+  - Auto-switch now runs whenever Karoo profile changes, including before ride start and mid-ride.
+  - Mid-ride profile switches now re-apply the matching K2Look profile to glasses at runtime.
+- Disable K2Look import function since K2Look doesn't support all layouts in K2. If and when all K2 layouts are supported it can be re-added.
+  
+### Fixed
+
+- Startup crash
+  - Fixed a logger recursion loop (`AppLoggerService` -> `AppLog` -> `AppLoggerService`) that could crash app startup.
+  - Intermittent Bluetooth connection issue. The app would fail to connect to glasses after a new installation due to a race condition in the Bluetooth scanning and connection logic. This has been resolved by properly managing scan jobs and connection attempts.
+  If connection fails after a new installation, please try restarting the app once to allow the Bluetooth stack to initialize properly. This should only be necessary on the first launch after installation. Subsequent launches should connect without issues.
+  I noticed a connection fail, at that time I restarted K2 and waited,then it connected. It might have connected if waiting in the first place...
+- Fixed a bug in Startup animation causing it not to be displayed at all.
+
 ## [1.0.11] - 2026-05-20
 
 ### Changed

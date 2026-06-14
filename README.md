@@ -63,7 +63,11 @@ Engo 2 has been used to test core functionality.
 Control your display without touching your Karoo during rides - perfect for safety and convenience!
 
 > [!Note]
-> Gestures and touch are sluggish and further optimizations is planned, the current implementation is functional but may not be fully responsive.
+> Gestures and touch are sluggish and further optimizations is planned, the current implementation is somewhat functional but not be fully responsive.
+> Seems to be due to Bluetooth latency and the way the glasses handle incoming data updates.  
+> Communication to glasses seems to be limited to one FIFO (First In, First Out) queue and each command needs to be added to the queue,  
+> sent to K2Look, then processed and new page sent back to the glasses.
+> This creates a bottleneck that can cause delays, especially if multiple commands are sent in quick succession. I'm exploring ways to optimize this in future updates.
 
 **✨ Gesture Actions (Wave Hand):**
 
@@ -91,6 +95,10 @@ Control your display without touching your Karoo during rides - perfect for safe
 - ☀️ **Changing Light** - Adjust brightness when entering tunnels or bright sun
 - 🔋 **Battery Saving** - Turn off display on long flat sections
 
+> [!Note]
+> After a couple of rides/runs in different conditions I have noticed "auto brightness".  
+> I think Engo2 has automatic brightness and adjustment that works pretty well, so I haven't prioritized brightness.
+
 #### 🎨 **Built-in DataField Builder**
 
 K2Look includes a **DataField Builder** that lets you create custom display layouts
@@ -105,7 +113,8 @@ directly on your Karoo 2 - no smartphone app needed!
 - ✅ **Karoo profile auto-switch** — automatically activates the matching K2Look profile when your Karoo ride profile changes
 - ✅ Configure everything **without glasses connected** - edit anytime, anywhere
 - ✅ Activate threat radar when using Garmin Varia or compatible radar devices.
-  Global setting and displays a 28 pixel warning icon in the lower right corner on the glasses when a threat is detected. Aprox 5sec before the threat catches up to you, the icon is replaced with a 40 pixel icon. The icon is removed at the same time as Karoo 2 detects threat passed.
+  Global setting — displays a 28 px warning icon when a threat is detected; replaced with a 40 px icon ~5 s before the threat passes; removed when Karoo clears the threat.
+- ✅ **Glasses battery overlay** — shows battery percentage in the top-left corner; icon changes when below 10%.
 
 **📊 Supported Metrics (74 total):**
 
@@ -142,8 +151,10 @@ directly on your Karoo 2 - no smartphone app needed!
 > ⚙️ **Possible future implementation:** Triangle layout, 4-field, 5-field, 6-field, and mixed half-width column templates
 
 **🔄 Real-time Updates:**
-All metrics update at **1Hz** (1 update/ 2 second)s for optimal Bluetooth performance and battery life.
-Radar metrics a prioritized for faster updates when present.
+All metrics update are capped at 1 update every 2seconds (**0.5 Hz**) for optimal Bluetooth performance and battery life.
+
+- Radar metrics a prioritized for faster updates when present.
+- Glasses battery metrics are updated on change.
 
 ## Project Overview
 
@@ -236,7 +247,7 @@ cd k2-look
 
 - Start K2Look
 - Connect glasses from the status tab
-- Configure your display in the Datafields tab (select metrics, visualization styles, and layout)
+- Configure your display in the Fields tab (select metrics, visualization styles, and layout)
 - Configure gesture and touch actions in the Gestures tab
 - Exit K2Look, it will continue to run in the background.
 - Start your ride and enjoy your custom glasses display!

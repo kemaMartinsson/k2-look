@@ -1,6 +1,6 @@
 # DataField Builder Guide
 
-**K2Look Version 1.0.0**
+**K2Look Version 1.0.12**
 
 The DataField Builder (select tab *Fields**) allows you to create custom display layouts for
 your glasses using **3 templates**.  
@@ -262,7 +262,7 @@ Traditional text display with optional label, unit, and icon.
 - **Show Icon** - Display ActiveLook icon (28×28px or 40×40px)
 - **Large Icon** - Use 40×40px icon instead of 28×28px
 
-**Font Size:** Automatically optimized based on zone size (Small/Medium/Large)
+**Font Size:** Font 2 (medium) by default. Enable **Large Font** to force Font 3 (large) for any individual field.
 
 **Best For:** Maximum information density, traditional display
 
@@ -308,7 +308,7 @@ Circular progress gauge showing current value as a percentage of max range.
 
 ---
 
-##### ▬ **Bar**
+##### ▬ **Bar (coming feature)**
 
 Horizontal or vertical progress bar showing current value as percentage of max range.
 
@@ -391,6 +391,11 @@ When using **Text** visualization, customize the display:
 - ☐ Small icon (28×28px) ✅ **Default**
 - ☑️ Large icon (40×40px) - More prominent
 
+**Large Font**
+
+- ☐ Font 2 (medium) ✅ **Default** — standard readable size
+- ☑️ Font 3 (large) — bigger digits, useful when focusing on a single key metric
+
 ---
 
 ## 📐 Layout Template Reference
@@ -469,13 +474,11 @@ Best for: Balanced view
 | 2D         | 2      | Simple rides, two priorities | ⭐⭐⭐⭐        |
 | Three Rows | 3      | Balanced general use         | ⭐⭐⭐⭐⭐       |
 
-**💡 Tip:** More fields = smaller text.
-
 ---
 
 ## 🔄 Automatic Profile Switching
 
-K2Look can automatically switch profiles when you start a ride, matching your Karoo profile name.
+K2Look can automatically switch profiles when you start a ride or mid ride, matching your Karoo profile name.
 
 ### How It Works
 
@@ -501,10 +504,10 @@ Road Bike" profile with Speed/Power/HR displayed on your glasses!
 
 ### Important Notes
 
-✅ **Auto-switch happens once**, at ride start  
+✅ **Auto-switch on startup** — if Karoo already has an active profile when K2Look opens  
+✅ **Auto-switch on profile change** — before and during a ride  
 ✅ **Case-insensitive matching** ("XC Bike" = "XC bike")  
-✅ **No mid-ride switching** - stays on selected profile if you change Karoo profile during ride  
-✅ **Manual override** - You can always manually select a different profile in Builder tab
+✅ **Manual override** - You can always manually select a different profile in the Fields tab
 
 ---
 
@@ -512,7 +515,7 @@ Road Bike" profile with Speed/Power/HR displayed on your glasses!
 
 ### Selecting a Profile
 
-1. In Datafields tab, tap the **profile dropdown**
+1. In Fields tab, tap the **profile dropdown**
 2. Select a profile from the list
 3. Profile (with its template and metrics) is immediately applied to glasses (if connected)
 
@@ -546,6 +549,28 @@ possible.
 
 ---
 
+## ⚙️ Global Settings
+
+Two global toggles are available at the top of the **Fields** tab. They apply across all profiles and screens.
+
+### ⚠ Radar Warning
+
+- **Default:** On
+- When enabled, K2Look overlays a warning icon on the glasses display whenever a radar threat is detected (e.g. Garmin Varia approaching vehicle).
+- The icon is rendered outside the data layout zones and does not displace any metric.
+- Threat levels 1–4 are supported; the icon style changes with severity.
+- If no radar device is connected nothing is displayed.
+
+### 🔋 Glasses Battery
+
+- **Default:** On
+- When enabled, the current glasses battery level is shown as a small percentage overlay in the top-left corner of the display.
+- Updates automatically during rides and whenever the battery level changes.
+- The icon changes style when battery drops below 10%.
+- Turn off if you prefer an uncluttered display and do not need battery monitoring.
+
+---
+
 ## 💡 Tips & Best Practices
 
 ### Debug a layout
@@ -560,13 +585,14 @@ possible.
 - **Two Data (2D)** - Great for simple rides with two priorities
 - **Three Rows (3D Full)** - Best balanced option for most rides ✅ **Recommended**
 
-### Font Sizes (Automatic)
+### Font Sizes
 
-Font sizes are **automatically optimized** based on your template:
+Font sizes default to **Font 2 (medium)** for all fields. You can override this per field:
 
-- **Large zones** get bigger fonts for better visibility
-- **Small zones** get compact fonts to fit all information
-- **No manual adjustment needed** - it just works! ✅
+- **Default (Font 2)** — balanced readability, fits icons and units comfortably
+- **Large Font (Font 3)** — bigger digits for a key metric you want to read at a glance
+
+Enable **Large Font** in the field's edit dialog (✏️). Works with TEXT visualization only.
 
 ### Visualization Style Selection
 
@@ -637,8 +663,8 @@ and Bar for Power (progress).
 
 ### Profile doesn't auto-switch
 
-- ✅ Check K2Look profile name **exactly matches** Karoo profile name
-- ✅ Ensure you **start the ride** in Karoo (auto-switch happens on ride start)
+- ✅ Check K2Look profile name **exactly matches** Karoo profile name (case-insensitive)
+- ✅ Ensure **Karoo Sync** is enabled in the Profiles screen
 - ✅ Check Datafields tab to see which profile is active
 
 ### Metrics show "--" or "N/A"
@@ -821,7 +847,9 @@ and Bar for Power (progress).
 - ✅ **Visual template selector** with preview images
 - ✅ **Automatic font sizing** optimized per zone
 - ✅ **Automatic profile switching** based on Karoo profile
-- ✅ **Flexible display options** (icons, labels, units)
+- ✅ **Flexible display options** (icons, labels, units, large font per field)
+- ✅ **Global radar warning overlay** — auto-triggered by Garmin Varia and compatible sensors
+- ✅ **Glasses battery overlay** — always-on percentage indicator with low-battery icon
 - ✅ **Multiple profiles** for different bikes/rides
 - ✅ **Live updates** at 1 update per second during rides
 
