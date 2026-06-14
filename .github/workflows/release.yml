@@ -77,16 +77,16 @@ jobs:
       - name: Convert selected markdown docs to HTML
         run: |
           mkdir -p release-assets
-          npx --yes marked docs/INSTALLATION.md -o docs/INSTALLATION.html
-          npx --yes marked docs/DataFieldBuilder.md -o docs/DataFieldBuilder.html
-          npx --yes marked CHANGELOG.md -o release-assets/CHANGELOG.html
+          npx --yes marked --gfm docs/INSTALLATION.md -o docs/INSTALLATION.html
+          npx --yes marked --gfm docs/DataFieldBuilder.md -o docs/DataFieldBuilder.html
+          npx --yes marked --gfm CHANGELOG.md -o release-assets/CHANGELOG.html
 
       - name: Prepare release README HTML with HTML links
         run: |
           cp README.md release-assets/README.release.md
           sed -i 's#\./docs/INSTALLATION\.md#./docs/INSTALLATION.html#g' release-assets/README.release.md
           sed -i 's#\./docs/DataFieldBuilder\.md#./docs/DataFieldBuilder.html#g' release-assets/README.release.md
-          npx --yes marked release-assets/README.release.md -o release-assets/README.html
+          npx --yes marked --gfm release-assets/README.release.md -o release-assets/README.html
 
       - name: Read Installation Guide
         id: installation
