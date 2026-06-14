@@ -30,6 +30,11 @@ jobs:
           distribution: "temurin"
           cache: "gradle"
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
@@ -69,6 +74,20 @@ jobs:
           mv "$APK_FILE" K2Look-${{ steps.get_version.outputs.VERSION }}.apk
           ls -la
 
+      - name: Convert selected markdown docs to HTML
+        run: |
+          mkdir -p release-assets
+          npx --yes marked docs/INSTALLATION.md -o docs/INSTALLATION.html
+          npx --yes marked docs/DataFieldBuilder.md -o docs/DataFieldBuilder.html
+          npx --yes marked CHANGELOG.md -o release-assets/CHANGELOG.html
+
+      - name: Prepare release README HTML with HTML links
+        run: |
+          cp README.md release-assets/README.release.md
+          sed -i 's#\./docs/INSTALLATION\.md#./docs/INSTALLATION.html#g' release-assets/README.release.md
+          sed -i 's#\./docs/DataFieldBuilder\.md#./docs/DataFieldBuilder.html#g' release-assets/README.release.md
+          npx --yes marked release-assets/README.release.md -o release-assets/README.html
+
       - name: Read Installation Guide
         id: installation
         run: |
@@ -101,10 +120,10 @@ jobs:
         with:
           files: |
             app/build/outputs/apk/release/K2Look-${{ steps.get_version.outputs.VERSION }}.apk
-            README.md
-            CHANGELOG.md
-            docs/DataFieldBuilder.md
-            docs/INSTALLATION.md
+            release-assets/README.html
+            release-assets/CHANGELOG.html
+            docs/DataFieldBuilder.html
+            docs/INSTALLATION.html
           body: |
             ## K2Look ${{ steps.get_version.outputs.VERSION }}
 
@@ -162,3 +181,11 @@ jobs:
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cleanup generated release artifacts
+        if: ${{ always() }}
+        run: |
+          rm -f keystore.jks release_notes.txt
+          rm -f docs/INSTALLATION.html docs/DataFieldBuilder.html
+          rm -f release-assets/README.release.md release-assets/README.html release-assets/CHANGELOG.html
+          rmdir --ignore-fail-on-non-empty release-assets || true
