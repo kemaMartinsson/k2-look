@@ -395,6 +395,10 @@ All commands assume you are in the repository root. On Linux/macOS replace `.\gr
 | Build everything (debug + release) | `.\gradlew.bat build` |
 | Clean build artifacts | `.\gradlew.bat clean` |
 
+> **Note:** Debug builds use a UTC timestamp-based `versionCode` to prevent
+> `INSTALL_FAILED_VERSION_DOWNGRADE` when switching or merging branches. Release builds still use
+> the normal release versioning flow.
+
 ### Install on Device
 
 ```bash

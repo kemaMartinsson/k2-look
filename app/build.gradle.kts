@@ -3,6 +3,7 @@ import java.io.FileInputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Properties
+import java.util.TimeZone
 
 // Load local.properties for secrets (gitignored)
 val localProps = Properties().apply {
@@ -42,6 +43,19 @@ fun getGitVersionCode(): Int {
         if (count.isNotEmpty()) count.toInt() else 1
     } catch (_: Exception) {
         1
+    }
+}
+
+// Use UTC hour precision to keep debug installs monotonic across branches.
+fun getDebugVersionCode(): Int {
+    return try {
+        val format = SimpleDateFormat("yyyyMMddHH").apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
+        format.format(Date()).toInt()
+    } catch (_: Exception) {
+        // Safe fallback near max int, still valid as versionCode.
+        2_000_000_000
     }
 }
 
@@ -158,6 +172,14 @@ android {
         unitTests.isReturnDefaultValues = true
         unitTests.all {
             it.reports.junitXml.required.set(true)
+        }
+    }
+}
+
+androidComponents {
+    onVariants(selector().withBuildType("debug")) { variant ->
+        variant.outputs.forEach { output ->
+            output.versionCode.set(getDebugVersionCode())
         }
     }
 }
