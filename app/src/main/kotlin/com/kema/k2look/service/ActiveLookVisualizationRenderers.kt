@@ -207,8 +207,9 @@ fun ActiveLookLayoutService.displayZoneCircles(
     val r = minOf(rBySlot, rByHeight).coerceAtLeast(2)
     val cy = geometry.y0 + geometry.height / 2
 
-    // Heart-rate zone mode applies to HR and HR-derived metrics.
-    val isHeartRateMode = sourceMetricId in setOf(4, 5, 6, 47, 57, 58)
+    // Overlay/text mode for zone circles (HR + Power families).
+    val isZoneOverlayMode =
+            sourceMetricId in setOf(4, 5, 6, 47, 57, 58, 7, 8, 9, 10, 48, 59, 60, 61, 62)
 
     // Determine active zone index (1-based). If value exceeds all zones, use last.
     val activeZoneIdx: Int =
@@ -221,10 +222,10 @@ fun ActiveLookLayoutService.displayZoneCircles(
                         if (idx < 0) zonedBar.zones.size else idx + 1
                     }
 
-    if (isHeartRateMode) {
+    if (isZoneOverlayMode) {
         Log.d(
                 TAG_VIS,
-                "Zone circles HR debug: sourceMetricId=$sourceMetricId overlayText=$overlayText activeZone=$activeZoneIdx value=$currentValue"
+                "Zone circles debug: sourceMetricId=$sourceMetricId overlayText=$overlayText activeZone=$activeZoneIdx value=$currentValue"
         )
     }
 
@@ -257,21 +258,21 @@ fun ActiveLookLayoutService.displayZoneCircles(
                 // Active zone: bright white and larger.
                 glasses.color(15)
                 outlineCircle(glasses, cx, cy, rActive)
-                if (isHeartRateMode && overlayText != null) {
-                    val hrText = overlayText
+                if (isZoneOverlayMode && overlayText != null) {
+                    val overlay = overlayText
                     val txtX = (cx + 16).toShort() // TODO: Perhaps adjust to 15px
                     val txtYCenter = (cy + 10).toShort()
-                    glasses.txt(txtX, txtYCenter, Rotation.TOP_LR, 1.toByte(), 15.toByte(), hrText)
+                    glasses.txt(txtX, txtYCenter, Rotation.TOP_LR, 1.toByte(), 15.toByte(), overlay)
                 }
             } else {
                 // Non-active zones are always visible.
                 glasses.color(6)
-                outlineCircle(glasses, cx, cy, if (isHeartRateMode) rInactive else r)
+                outlineCircle(glasses, cx, cy, if (isZoneOverlayMode) rInactive else r)
             }
         }
 
         // Icon pass: imgDisplay requires ALooK system config
-        if (iconId != null && !isHeartRateMode) {
+        if (iconId != null && !isZoneOverlayMode) {
             glasses.cfgSet("ALooK")
             glasses.imgDisplay(iconId.toByte(), iconX, (cy - iconPx / 2).toShort())
             activeConfigName?.let { glasses.cfgSet(it) }

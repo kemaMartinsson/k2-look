@@ -692,7 +692,11 @@ fun FieldConfigurationDialog(
                                                                                                         .id
                                                                                         ) {
                                                                                                 4,
-                                                                                                47 -> {
+                                                                                                5,
+                                                                                                6,
+                                                                                                47,
+                                                                                                57,
+                                                                                                58 -> {
                                                                                                         // Heart Rate zones
                                                                                                         android.util
                                                                                                                 .Log
@@ -720,7 +724,17 @@ fun FieldConfigurationDialog(
                                                                                                                 )
                                                                                                 }
                                                                                                 7,
-                                                                                                48 -> {
+                                                                                                8,
+                                                                                                9,
+                                                                                                10,
+                                                                                                48,
+                                                                                                59,
+                                                                                                60,
+                                                                                                61,
+                                                                                                62,
+                                                                                                63,
+                                                                                                64,
+                                                                                                66 -> {
                                                                                                         // Power or Power Zone
                                                                                                         android.util
                                                                                                                 .Log
@@ -857,9 +871,8 @@ private fun canShowAsBar(dataField: DataField): Boolean {
 /** Check if a metric can be displayed as a zoned bar Only metrics with defined zones work */
 private fun canShowAsZonedBar(dataField: DataField): Boolean {
         return when (dataField.id) {
-                4 -> true // Heart Rate (has HR zones Z1-Z5)
-                47 -> true // HR Zone (categorical)
-                48 -> true // Power Zone (has power zones based on FTP)
+                4, 5, 6, 47, 57, 58 -> true // HR + HR-derived metrics
+                7, 8, 9, 10, 48, 59, 60, 61, 62, 63, 64, 66 -> true // Power + variants
                 // Future: More zoned metrics could be added
                 else -> false
         }
