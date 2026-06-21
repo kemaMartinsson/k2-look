@@ -1480,10 +1480,8 @@ class KarooActiveLookBridge(context: Context) {
 
         // Render zone circles at the field's actual template zone position.
         // Respect showIcon so toggling the icon off also removes it from zone circles.
-        val iconId =
-                if (field.showIcon && sourceMetricId != 4 && sourceMetricId != 47)
-                        field.dataField.icon28
-                else null
+        val isHeartRateSource = sourceMetricId in setOf(4, 5, 6, 47, 57, 58)
+        val iconId = if (field.showIcon && !isHeartRateSource) field.dataField.icon28 else null
         scope.launch {
             layoutService.displayZoneCircles(
                     zonedBar,
@@ -1520,10 +1518,14 @@ class KarooActiveLookBridge(context: Context) {
     private fun resolveZonedBarOverlayValue(field: com.kema.k2look.model.LayoutDataField): String {
         val raw =
                 when (field.dataField.id) {
-                    47 -> currentData.heartRate
+                    47 -> currentData.hrZone
                     48 -> currentData.power
                     else -> currentData.valueFor(field.dataField.id)
                 }
+
+        // Preserve categorical zone label for HR zone mode (Z1..Z5).
+        if (field.dataField.id == 47) return raw
+
         return parseNumericValue(raw)?.let { "%.0f".format(it) } ?: raw
     }
 

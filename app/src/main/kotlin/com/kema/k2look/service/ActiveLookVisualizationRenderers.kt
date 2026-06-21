@@ -1,6 +1,5 @@
 package com.kema.k2look.service
 
-import com.kema.k2look.service.AppLog as Log
 import com.activelook.activelooksdk.Glasses
 import com.activelook.activelooksdk.types.Rotation
 import com.activelook.activelooksdk.types.holdFlushAction
@@ -8,6 +7,7 @@ import com.kema.k2look.layout.LayoutPositionDefaults
 import com.kema.k2look.model.Orientation
 import com.kema.k2look.model.ProgressBar
 import com.kema.k2look.model.ZonedProgressBar
+import com.kema.k2look.service.AppLog as Log
 
 private const val TAG_VIS = "ActiveLookLayoutService"
 
@@ -207,7 +207,8 @@ fun ActiveLookLayoutService.displayZoneCircles(
     val r = minOf(rBySlot, rByHeight).coerceAtLeast(2)
     val cy = geometry.y0 + geometry.height / 2
 
-    val isHeartRateMode = sourceMetricId == 47
+    // Heart-rate zone mode applies to HR and HR-derived metrics.
+    val isHeartRateMode = sourceMetricId in setOf(4, 5, 6, 47, 57, 58)
 
     // Determine active zone index (1-based). If value exceeds all zones, use last.
     val activeZoneIdx: Int =
@@ -219,6 +220,13 @@ fun ActiveLookLayoutService.displayZoneCircles(
                                 }
                         if (idx < 0) zonedBar.zones.size else idx + 1
                     }
+
+    if (isHeartRateMode) {
+        Log.d(
+                TAG_VIS,
+                "Zone circles HR debug: sourceMetricId=$sourceMetricId overlayText=$overlayText activeZone=$activeZoneIdx value=$currentValue"
+        )
+    }
 
     // Zone 1 (lowest effort) → highest display-x → viewer-left.
     // Zone N (max effort) → lowest display-x → viewer-right. Matches Test 13 geometry.
@@ -307,4 +315,3 @@ private fun outlineCircle(glasses: Glasses, cx: Int, cy: Int, r: Int, steps: Int
     }
     glasses.polyline(pts)
 }
-
