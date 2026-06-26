@@ -771,8 +771,8 @@ class KarooActiveLookBridge(context: Context) {
                     ?.imgStream(
                             getWarningBitmapSmall(),
                             com.activelook.activelooksdk.types.ImgStreamFormat.MONO_4BPP_HEATSHRINK,
-                            30,
-                            25
+                            RADAR_WARNING_X,
+                            RADAR_WARNING_Y
                     )
         } catch (e: Exception) {
             Log.e(TAG, "renderWarningSmall failed: ${e.message}", e)
@@ -784,7 +784,12 @@ class KarooActiveLookBridge(context: Context) {
             activeLookService.getConnectedGlasses()?.let { g ->
                 g.holdFlush(com.activelook.activelooksdk.types.holdFlushAction.HOLD)
                 g.color(0)
-                g.rectf(30, 25, 57, 52)
+                g.rectf(
+                        RADAR_WARNING_X,
+                        RADAR_WARNING_Y,
+                        RADAR_WARNING_SMALL_ERASE_X2,
+                        RADAR_WARNING_SMALL_ERASE_Y2
+                )
                 g.color(15)
                 g.holdFlush(com.activelook.activelooksdk.types.holdFlushAction.FLUSH)
             }
@@ -800,8 +805,8 @@ class KarooActiveLookBridge(context: Context) {
                     ?.imgStream(
                             getWarningBitmapLarge(),
                             com.activelook.activelooksdk.types.ImgStreamFormat.MONO_4BPP_HEATSHRINK,
-                            30,
-                            25
+                            RADAR_WARNING_X,
+                            RADAR_WARNING_Y
                     )
         } catch (e: Exception) {
             Log.e(TAG, "renderWarningLarge failed: ${e.message}", e)
@@ -813,7 +818,12 @@ class KarooActiveLookBridge(context: Context) {
             activeLookService.getConnectedGlasses()?.let { g ->
                 g.holdFlush(com.activelook.activelooksdk.types.holdFlushAction.HOLD)
                 g.color(0)
-                g.rectf(30, 25, 69, 64)
+                g.rectf(
+                        RADAR_WARNING_X,
+                        RADAR_WARNING_Y,
+                        RADAR_WARNING_LARGE_ERASE_X2,
+                        RADAR_WARNING_LARGE_ERASE_Y2
+                )
                 g.color(15)
                 g.holdFlush(com.activelook.activelooksdk.types.holdFlushAction.FLUSH)
             }
@@ -829,8 +839,8 @@ class KarooActiveLookBridge(context: Context) {
                     ?.imgStream(
                             getWarningBitmapCritical(),
                             com.activelook.activelooksdk.types.ImgStreamFormat.MONO_4BPP_HEATSHRINK,
-                            30,
-                            25
+                            RADAR_WARNING_X,
+                            RADAR_WARNING_Y
                     )
         } catch (e: Exception) {
             Log.e(TAG, "renderWarningCritical failed: ${e.message}", e)
@@ -1623,6 +1633,14 @@ class KarooActiveLookBridge(context: Context) {
     companion object {
         private const val TAG = "KarooActiveLookBridge"
         private const val BT_RESOURCE_ID = "k2look-activelook-ble"
+        // Radar warning overlay is pinned to the top battery band at viewer-right so metric row
+        // updates do not repaint over it.
+        private const val RADAR_WARNING_X: Short = 30
+        private const val RADAR_WARNING_Y: Short = 203
+        private const val RADAR_WARNING_SMALL_ERASE_X2: Short = 57
+        private const val RADAR_WARNING_SMALL_ERASE_Y2: Short = 230
+        private const val RADAR_WARNING_LARGE_ERASE_X2: Short = 69
+        private const val RADAR_WARNING_LARGE_ERASE_Y2: Short = 242
         /** Per-attempt scan window before retrying */
         private const val SCAN_ATTEMPT_DURATION_MS = 10_000L
         /** Base delay between scan retries (multiplied by attempt number) */
