@@ -1,6 +1,5 @@
 package com.kema.k2look.service
 
-import com.kema.k2look.service.AppLog as Log
 import com.activelook.activelooksdk.Glasses
 import com.activelook.activelooksdk.types.ConfigurationDescription
 import com.activelook.activelooksdk.types.FreeSpace
@@ -13,6 +12,7 @@ import com.kema.k2look.model.DataFieldProfile
 import com.kema.k2look.model.IconSize
 import com.kema.k2look.model.LayoutScreen
 import com.kema.k2look.model.VisualizationType
+import com.kema.k2look.service.AppLog as Log
 import com.kema.k2look.util.ValueFormatter
 import kotlin.coroutines.resume
 import kotlinx.coroutines.delay
@@ -94,16 +94,15 @@ class ActiveLookLayoutService(internal val activeLookService: ActiveLookService)
         private var nextLayoutId = LAYOUT_ID_BASE
 
         // ── Battery dedicated layout (ID 9 — below LAYOUT_ID_BASE=10, never conflicts) ──
-        // Matches a normal font-1 ride metric zone: same x0/width as all metric zones, icon at
-        // the same viewer-left position (ICON_ABS_X + 15 for 28px icons = 275), value text at
-        // txtXWithIcon=178 (font-1 calibrated). Placed at y=203 — just below the top metric zone
-        // (3D_FULL_H: y=153 h=50 → clears up to y=203).
+        // Battery uses only the battery-side half of the top status band so other overlays
+        // (for example radar warning) can occupy the opposite half without being cleared.
         const val BATTERY_LAYOUT_ID = 9
-        private const val BATTERY_ZONE_X = 30 // same left edge as all metric zones
+        private const val BATTERY_ZONE_X = 157 // battery-side half only
         private const val BATTERY_ZONE_Y = 203
-        private const val BATTERY_ZONE_WIDTH = 244 // same width as all metric zones
+        private const val BATTERY_ZONE_WIDTH = 117 // half-width zone prevents opposite-side clear
         private const val BATTERY_ZONE_HEIGHT = 30 // font-1 refHeight
-        private const val BATTERY_ZONE_TXT_X: Short = 240 // font-1 txtXWithIcon (relative to zone)
+        // Keep previous absolute text anchor (~x=270) after moving x0 to 157: 270 - 157 = 113.
+        private const val BATTERY_ZONE_TXT_X: Short = 113
         private const val BATTERY_ZONE_TXT_Y: Byte = 25 // font-1 calibrated txtY
         private const val BATTERY_ICON_X: Short = 275 // ICON_ABS_X(260) + 15 for 28px icon
         private const val BATTERY_ICON_Y: Short = 204 // y=203 + (30-28)/2 = 204 (centred in zone)
@@ -817,4 +816,3 @@ class ActiveLookLayoutService(internal val activeLookService: ActiveLookService)
     //   fun ActiveLookLayoutService.displayBarAtZone(...)
     //   fun ActiveLookLayoutService.displayZoneCircles(...)
 }
-
