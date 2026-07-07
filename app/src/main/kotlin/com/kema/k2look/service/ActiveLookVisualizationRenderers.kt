@@ -260,9 +260,10 @@ fun ActiveLookLayoutService.displayZoneCircles(
                 outlineCircle(glasses, cx, cy, rActive)
                 if (isZoneOverlayMode && overlayText != null) {
                     val overlay = overlayText
-                    // TOP_LR is right-anchored on-device; anchor at inner right edge of the
-                    // active circle so HR/power labels are right-aligned inside the ring.
-                    val txtX = (cx + rActive - 2).toShort()
+                    // TOP_LR is right-anchored on-device; keep text right-aligned but pull the
+                    // anchor slightly toward viewer-right to avoid left-edge collisions (e.g.
+                    // "67").
+                    val txtX = (cx + rActive - 19).toShort()
                     val txtYCenter = (cy + 10).toShort()
                     glasses.txt(txtX, txtYCenter, Rotation.TOP_LR, 1.toByte(), 15.toByte(), overlay)
                 }
